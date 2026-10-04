@@ -734,7 +734,7 @@ const myStudents=()=>{
   myLessonAll().forEach(l=>{if(l.type==='private')(l.students||[]).forEach(id=>ok[id]=1);else S.students.forEach(s=>{if((l.classes||[]).indexOf(s.cls)>-1)ok[s.id]=1;});});
   return S.students.filter(s=>ok[s.id]);
 };
-const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>['dash','review','students','mark','schedule','tasks','reports'].indexOf(t[0])>-1);
+const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>['dash','review','students','mark','schedule','tasks','reports'].indexOf(t[0])>-1).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
 const domains=()=>S.config.domains&&S.config.domains.length?S.config.domains:SEED_DOMAINS;
 
 /* ---- שליפות ---- */
@@ -1399,7 +1399,10 @@ function lessonChip(l){
 function viewSchedule(){
   const P=periods(),sel=S.ttSlot;
   if(S.ttImport)return ttImportView();
-  if(!isAdmin()&&!S.ttInit){S.ttInit=1;if(S.me.teacher){S.ttMode='teacher';S.ttTeacher=S.me.teacher;}}
+  if(!isAdmin()){
+    if(!S.me.teacher)return '<div class="head"><div><h2>המערכת שלי</h2></div></div><div class="card"><div class="empty">החשבון שלך עוד לא קושר למורה במערכת השעות. בקשו מהמנהל לקשר אותו בהגדרות.</div></div>';
+    S.ttMode='teacher';S.ttTeacher=S.me.teacher;
+  }
   if(S.ttMode==='teacher'&&!S.ttTeacher)S.ttTeacher=teachersList()[0]||'';
   const head='<div class="head"><div><h2>מערכת שעות</h2><div class="sub">'+S.timetable.length+' שיעורים בשבוע · '+teachersList().length+' מורים</div></div>'+
     '<div class="row"><button class="btn" data-act="tt-pick-file">ייבוא מקובץ</button><input type="file" id="ttFile" accept=".xlsx,.xls" style="display:none">'+
@@ -1427,7 +1430,7 @@ function viewSchedule(){
   const hr=S.config.homeroom||{};
   const hrCard=isAdmin()?'<div class="card"><h3>מחנכי כיתות</h3><p class="note" style="margin-bottom:10px">המחנך רואה את כל מה שקורה בכיתה שלו, כולל נוכחות בכל השיעורים. מורה שאינו מחנך רואה רק את השיעורים שלו.</p><div class="grid g3">'+
     S.config.classes.map(c=>'<label class="field"><span>'+esc(c)+'</span><select data-hr="'+esc(c)+'">'+opt('—','',hr[c]||'')+teachersList().map(t=>opt(t,t,hr[c]||'')).join('')+'</select></label>').join('')+'</div></div>':'';
-  if(!isAdmin())return '<div class="head"><div><h2>מערכת שעות</h2></div></div><div class="card">'+modes+chips+grid+mob+'</div>';
+  if(!isAdmin())return '<div class="head"><div><h2>המערכת שלי</h2><div class="sub">'+esc(S.me.teacher||'')+' · '+S.timetable.filter(l=>l.teacher===S.me.teacher).length+' שיעורים בשבוע</div></div></div><div class="card">'+grid+mob+'</div>';
   return head+(S.ttPeriods?periodsCard():'')+'<div class="card">'+modes+chips+grid+mob+legend+'</div>'+(sel?slotCard():'')+hrCard+
     '<div class="card"><h3>שנה חדשה</h3><p class="note" style="margin-bottom:10px">בתחילת שנה אפשר לרוקן את המערכת ולהזין מחדש (ידנית או מקובץ). התלמידים, הנוכחות והנתונים האחרים לא נמחקים.</p>'+
     '<button class="btn" data-v="danger" data-act="tt-clear">ריקון מערכת השעות</button></div>';
@@ -1539,7 +1542,7 @@ function ttImportView(){
 }
 function ttEnsureStaff(name){if(name&&!S.staff.some(x=>x.name===name)){S.staff=S.staff.concat([{id:uid(),name:name,role:'מורה',cls:'',phone:'',hours:'',start:''}]);return true;}return false;}
 async function ttAction(a,el){
-  if(!isAdmin()&&['tt-mode','tt-cls','tt-teacher','tt-day'].indexOf(a)<0)return;
+  if(!isAdmin()&&a!=='tt-day')return;
   if(a==='tt-mode'){S.ttMode=el.dataset.m;S.ttSlot=null;S.ttEdit=null;return render();}
   if(a==='tt-cls'){S.ttCls=el.dataset.c;S.ttSlot=null;S.ttEdit=null;return render();}
   if(a==='tt-teacher'){S.ttTeacher=el.dataset.t;S.ttSlot=null;S.ttEdit=null;return render();}
