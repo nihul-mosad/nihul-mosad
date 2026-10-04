@@ -534,7 +534,7 @@ async function enterInst(inst,user,typed){
   S.att=await load(K.att,{});S.reviews=await load(K.reviews,[]);S.tasks=await load(K.tasks,[]);S.timetable=await load(K.timetable,[]);S.latt=await load(K.latt,{});LIDX=null;
   S.me={id:user.uid,user:m.user,role:m.role==='admin'?'admin':'teacher',cls:m.cls||'',teacher:m.teacher||'',mustChange:false};S.markLesson=null;S.markView='lessons';S.ttInit=0;S.ttMode='class';S.ttTeacher='';
   try{localStorage.setItem('tt:inst',inst);localStorage.setItem('tt:instName',S.config.name||'');}catch(e){}
-  S.tab='dash';S.markCls=myClasses()[0]||'';S.revCls=myClasses()[0]||'';S.filter='';S.repCls='';S.revIdx=null;
+  S.tab=(isAdmin()||myClasses().length)?'dash':'mark';S.markCls=myClasses()[0]||'';S.revCls=myClasses()[0]||'';S.filter='';S.repCls='';S.revIdx=null;
   S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;
   document.getElementById('login').style.display='none';
   document.getElementById('shell').classList.add('on');
@@ -729,12 +729,13 @@ const myClasses=()=>isAdmin()?S.config.classes:Array.from(new Set((S.me.cls?[S.m
 function myLessonAll(){return S.timetable.filter(l=>l.teacher&&l.teacher===S.me.teacher);}
 const myStudents=()=>{
   if(isAdmin())return S.students;
-  const mc=myClasses(),ok={};
-  S.students.forEach(s=>{if(mc.indexOf(s.cls)>-1)ok[s.id]=1;});
-  myLessonAll().forEach(l=>{if(l.type==='private')(l.students||[]).forEach(id=>ok[id]=1);else S.students.forEach(s=>{if((l.classes||[]).indexOf(s.cls)>-1)ok[s.id]=1;});});
-  return S.students.filter(s=>ok[s.id]);
+  const mc=myClasses();return S.students.filter(s=>mc.indexOf(s.cls)>-1);
 };
-const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>['dash','review','students','mark','schedule','tasks','reports'].indexOf(t[0])>-1).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
+const canSeeStudent=id=>isAdmin()||myStudents().some(s=>s.id===id);
+const myTasks=()=>isAdmin()?S.tasks:S.tasks.filter(t=>t.by===S.me.user);
+function myLessonIds(){const o={};myLessonAll().forEach(l=>o[l.id]=1);return o;}
+function myLessonStudents(){const ok={};myLessonAll().forEach(l=>lessonStudents(l).list.forEach(s=>ok[s.id]=1));return S.students.filter(s=>ok[s.id]);}
+const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','students','mark','schedule','tasks','reports']:['mark','schedule','tasks','reports']).indexOf(t[0])>-1).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
 const domains=()=>S.config.domains&&S.config.domains.length?S.config.domains:SEED_DOMAINS;
 
 /* ---- שליפות ---- */
@@ -748,11 +749,11 @@ function lidx(){
     (LIDX[sid]=LIDX[sid]||[]).push({d:d,l:k.slice(0,i),v:v});});});
   return LIDX;
 }
-function attStats(sid,from,to){
+function attStats(sid,from,to,only){
   let p=0,l=0,a=0,x=0,t=0;const ld={};
-  (lidx()[sid]||[]).forEach(function(e){if(e.d<from||e.d>to)return;ld[e.d]=1;t++;
+  (lidx()[sid]||[]).forEach(function(e){if(e.d<from||e.d>to)return;if(only&&!only[e.l])return;ld[e.d]=1;t++;
     if(e.v==='present')p++;else if(e.v==='late')l++;else if(e.v==='absent')a++;else x++;});
-  Object.keys(S.att).forEach(function(d){
+  if(!only)Object.keys(S.att).forEach(function(d){
     if(d<from||d>to||ld[d])return;
     const v=S.att[d][sid];if(!v)return;t++;
     if(v==='present')p++;else if(v==='late')l++;else if(v==='absent')a++;else x++;
@@ -841,10 +842,10 @@ function viewDash(){
   const cutoff=daysAgo(21);
   const stale=list.filter(function(s){const r=lastReview(s.id);return !r||r.date<cutoff;});
   if(stale.length)alerts.push({t:'תמונת מצב',x:stale.length+' תלמידים ללא תמונת מצב מעל שלושה שבועות',act:'goto-review'});
-  const overdue=S.tasks.filter(t=>t.status!=='done'&&t.due&&t.due<today);
+  const overdue=myTasks().filter(t=>t.status!=='done'&&t.due&&t.due<today);
   if(overdue.length)alerts.push({t:'משימות',x:overdue.length+' משימות באיחור',act:'goto-tasks'});
 
-  const openTasks=S.tasks.filter(t=>t.status!=='done').slice(0,5);
+  const openTasks=myTasks().filter(t=>t.status!=='done').slice(0,5);
   const recent=S.reviews.slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,6);
 
   return printHead()+
@@ -960,6 +961,7 @@ function reviewDone(){
 function viewCard(){
   const s=studentById(S.cardId);
   if(!s)return '<div class="empty">התלמיד לא נמצא.</div>';
+  if(!canSeeStudent(s.id))return '<div class="empty">כרטיס התלמיד זמין רק למחנך הכיתה ולמנהל.</div>';
   const revs=reviewsOf(s.id).slice().reverse();
   const a30=attStats(s.id,daysAgo(30),iso(new Date()));
   const aAll=attStats(s.id,'2000-01-01','2100-01-01');
@@ -1601,7 +1603,7 @@ async function ttAction(a,el){
 /* ================= משימות ================= */
 function viewTasks(){
   const today=iso(new Date());
-  let list=S.tasks.slice().sort(function(a,b){
+  let list=myTasks().slice().sort(function(a,b){
     if(a.status==='done'!==(b.status==='done'))return a.status==='done'?1:-1;
     return (a.due||'9999')<(b.due||'9999')?-1:1;
   });
@@ -1744,13 +1746,21 @@ function viewMessages(){
          numbersFor(s).map(n=>'<a class="btn sm" target="_blank" rel="noreferrer" href="https://wa.me/'+intl(n)+'?text='+encodeURIComponent(S.msgText)+'">וואטסאפ</a>').join(' ')]))
         :'<div class="empty">אין נמענים בקבוצה הזו.</div>')+'</div>';
 }
+function repScope(){
+  if(isAdmin())return 'class';
+  const hasC=myClasses().length>0,hasL=myLessonAll().length>0;
+  if(!hasC)return 'mine';if(!hasL)return 'class';
+  return S.repScope==='mine'?'mine':'class';
+}
 function reportRows(){
   const dates=Array.from(new Set(Object.keys(S.att).concat(Object.keys(S.latt)))).filter(d=>d>=S.repFrom&&d<=S.repTo).sort();
-  const rows=myStudents().filter(s=>!S.repCls||s.cls===S.repCls).map(function(s){
-    const a=attStats(s.id,S.repFrom,S.repTo);
+  const sc=repScope(),only=sc==='mine'?myLessonIds():null;
+  const base=sc==='mine'?myLessonStudents():myStudents();
+  const rows=base.filter(s=>sc==='mine'||!S.repCls||s.cls===S.repCls).map(function(s){
+    const a=attStats(s.id,S.repFrom,S.repTo,only);
     return Object.assign({},s,a,{pct:a.pct===null?0:a.pct});
   }).sort((x,y)=>x.pct-y.pct);
-  return {dates:dates,rows:rows};
+  return {dates:dates,rows:rows,scope:sc};
 }
 function viewReports(){
   const R=reportRows(),rows=R.rows;
@@ -1762,12 +1772,13 @@ function viewReports(){
     '<div class="card"><div class="grid g3">'+
       '<label class="field"><span>מתאריך</span><input type="date" data-ch="repFrom" value="'+S.repFrom+'"></label>'+
       '<label class="field"><span>עד תאריך</span><input type="date" data-ch="repTo" value="'+S.repTo+'"></label>'+
-      '<label class="field"><span>כיתה</span><select data-ch="repCls">'+(isAdmin()?opt('כל הכיתות','',S.repCls):'')+myClasses().map(c=>opt(c,c,S.repCls)).join('')+'</select></label></div></div>'+
+      (!isAdmin()&&myClasses().length&&myLessonAll().length?'<label class="field"><span>מה להציג</span><select data-ch="repScope">'+opt('הכיתה שלי (כל השיעורים)','class',R.scope)+opt('השיעורים שאני מלמד','mine',R.scope)+'</select></label>':'')+
+      (R.scope==='class'?'<label class="field"><span>כיתה</span><select data-ch="repCls">'+(isAdmin()?opt('כל הכיתות','',S.repCls):'')+myClasses().map(c=>opt(c,c,S.repCls)).join('')+'</select></label>':'<div class="note" style="align-self:center">נוכחות התלמידים בשיעורים שלך בלבד</div>')+'</div></div>'+
     '<div class="grid g3" style="margin-bottom:14px">'+stat(avg+'%','נוכחות ממוצעת','')+
       stat(watch,'תלמידים מתחת ל־90%',watch?'var(--late)':'var(--present)')+stat(R.dates.length,'ימים שנרשמו','')+'</div>'+
     '<div class="card"><h3>פירוט לפי תלמיד</h3>'+
-      (rows.length?table(['שם','כיתה','ימים','איחורים','חיסורים','נוכחות',''],rows.map(r=>
-        ['<button class="link" data-act="card" data-id="'+r.id+'">'+esc(r.name)+'</button>',esc(r.cls),r.total,r.late,r.absent,
+      (rows.length?table(['שם','כיתה','רישומים','איחורים','חיסורים','נוכחות',''],rows.map(r=>
+        [(canSeeStudent(r.id)?'<button class="link" data-act="card" data-id="'+r.id+'">'+esc(r.name)+'</button>':'<b>'+esc(r.name)+'</b>'),esc(r.cls),r.total,r.late,r.absent,
          r.total?'<b>'+r.pct+'%</b>':'—','<div class="bar"><i style="width:'+(r.total?r.pct:0)+'%" data-low="'+(r.pct<80?2:r.pct<90?1:0)+'"></i></div>']))
         :'<div class="empty">אין נתונים בטווח התאריכים הזה.</div>')+'</div>';
 }
@@ -2018,6 +2029,7 @@ function render(){
     '<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
     reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,account:viewAccount,import:viewImport,card:viewCard};
+  if(S.inst&&!isAdmin()&&['card','account'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
   const v=map[S.tab]||viewDash;
   let warn='';
   if(window.claude&&!DB)warn+='<div class="warn">אין חיבור למאגר הנתונים המשותף, ולכן שינויים יישמרו רק במכשיר הזה. נסו לרענן את הדף.</div>';
