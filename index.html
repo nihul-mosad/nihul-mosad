@@ -443,7 +443,7 @@ const FB_CONFIG={apiKey:"AIzaSyC1T3SBl84VJ9iMhXTgxpO2N0Vcw5VJpdk",authDomain:"ni
 const OWNER_UID='OPqeXR8eV9fR5Js5TmaEwTyjlZ82',OWNER_EMAIL='admin@nihul-mosad.app',MAIL_DOMAIN='nihul-mosad.app';
 let FS=null,AUTH=null;
 function ukey(u){
-  const t=String(u||'').trim(),l=t.toLowerCase();
+  const t=String(u||'').trim().replace(/\s+/g,' ').replace(/[׳']/g,"'").replace(/[״"]/g,'"'),l=t.toLowerCase();
   if(/^[a-z0-9._-]+$/.test(l))return l;
   return 'h'+Array.from(new TextEncoder().encode(t)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
@@ -487,13 +487,32 @@ async function createInst(code,name,adminUid,adminUser,adminEmail,classes){
   b.set(FS.doc('insts/'+code+'/store/config'),{v:{name:name,classes:classes||[],logo:'',domains:SEED_DOMAINS}});
   await b.commit();
 }
+function logAct(act,info){
+  try{if(!FS||!S.inst||!S.me)return;
+    FS.collection('insts/'+S.inst+'/log').add({ts:Date.now(),uid:S.me.id,user:S.me.user||'',act:act,info:String(info||'').slice(0,240)}).catch(()=>{});}catch(e){}
+}
+function enterSystem(user){
+  S.inst=null;S.owner=true;S.instList=null;DB=null;
+  S.config={name:'מסוף המערכת',classes:[],logo:'',users:[],domains:SEED_DOMAINS};
+  S.students=[];S.staff=[];S.att={};S.latt={};S.reviews=[];S.tasks=[];S.timetable=[];LIDX=null;
+  S.me={id:user.uid,user:'בעל המערכת',role:'admin',cls:'',teacher:'',mustChange:false};
+  S.tab='console';S.console=null;
+  try{localStorage.setItem('tt:inst','system');localStorage.setItem('tt:instName','מסוף המערכת');}catch(e){}
+  document.getElementById('login').style.display='none';document.getElementById('shell').classList.add('on');
+  render();return true;
+}
 async function enterInst(inst,user,typed){
   const owner=user.uid===OWNER_UID;
+  if(inst==='system'){if(owner)return enterSystem(user);await AUTH.signOut();throw {code:'no-inst'};}
   let mem=null;
   try{mem=await FS.doc('insts/'+inst+'/members/'+user.uid).get();}catch(e){mem=null;}
   const isMem=mem&&mem.exists&&mem.data().active!==false;
-  if(!isMem&&!owner){await AUTH.signOut();throw {code:'no-member'};}
+  if(!isMem&&!owner){
+    let pend=false;try{const rq=await FS.doc('insts/'+inst+'/requests/'+user.uid).get();pend=rq.exists;}catch(e){}
+    await AUTH.signOut();throw {code:pend?'pending':'no-member'};
+  }
   let isnap=await FS.doc('insts/'+inst).get();
+  if(isnap.exists&&(isnap.data()||{}).disabled&&!owner){await AUTH.signOut();throw {code:'disabled'};}
   if(!isnap.exists){
     if(!owner){await AUTH.signOut();throw {code:'no-inst'};}
     if(!confirm('המוסד "'+inst+'" עוד לא קיים במערכת. ליצור אותו עכשיו?'))return false;
@@ -502,7 +521,7 @@ async function enterInst(inst,user,typed){
     mem=await FS.doc('insts/'+inst+'/members/'+user.uid).get();
   }
   const m=(mem&&mem.exists)?mem.data():{user:'בעל המערכת',role:'admin',cls:''};
-  S.inst=inst;S.owner=owner;S.instList=null;
+  S.inst=inst;S.owner=owner;S.instList=null;S.joinReqs=null;S.instLog=null;S.creds=null;S.bulk=null;
   DB=fsAdapter('insts/'+inst);
   Object.keys(LAST).forEach(k=>delete LAST[k]);
   let cfg=await load(K.config,null);
@@ -715,7 +734,7 @@ const myStudents=()=>{
   myLessonAll().forEach(l=>{if(l.type==='private')(l.students||[]).forEach(id=>ok[id]=1);else S.students.forEach(s=>{if((l.classes||[]).indexOf(s.cls)>-1)ok[s.id]=1;});});
   return S.students.filter(s=>ok[s.id]);
 };
-const tabsFor=()=>isAdmin()?ALL_TABS:ALL_TABS.filter(t=>['dash','review','students','mark','schedule','tasks','reports'].indexOf(t[0])>-1);
+const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>['dash','review','students','mark','schedule','tasks','reports'].indexOf(t[0])>-1);
 const domains=()=>S.config.domains&&S.config.domains.length?S.config.domains:SEED_DOMAINS;
 
 /* ---- שליפות ---- */
@@ -767,10 +786,12 @@ async function doLogin(){
     if(!email&&ukey(u)==='admin')email=OWNER_EMAIL;
     if(!email)throw {code:'auth/invalid-credential'};
     const cred=await AUTH.signInWithEmailAndPassword(email,p);
-    await enterInst(inst,cred.user,u);
+    const ok=await enterInst(inst,cred.user,u);
+    try{localStorage.removeItem('tt:joined');}catch(e){}
     document.getElementById('lp').value='';
+    if(ok&&S.inst)logAct('כניסה למערכת','');
   }catch(e){
-    err.textContent=e&&e.code==='no-member'?'למשתמש הזה אין הרשאה למוסד הזה':e&&e.code==='no-inst'?'קוד המוסד לא נמצא':fbErr(e);
+    err.textContent=e&&e.code==='no-member'?'למשתמש הזה אין הרשאה למוסד הזה':e&&e.code==='no-inst'?'קוד המוסד לא נמצא':e&&e.code==='pending'?'הבקשה שלך להצטרף עוד ממתינה לאישור המנהל':e&&e.code==='disabled'?'המוסד הזה מושבת כרגע. פנו למנהל המערכת':fbErr(e)+(/invalid-credential/.test((e&&e.code)||'')&&localStorage.getItem('tt:joined')?' · אם נרשמתם דרך קישור הצטרפות, ייתכן שהמנהל עוד לא אישר את הבקשה':'');
   }finally{btn.disabled=false;btn.textContent='כניסה';}
 }
 async function logout(){
@@ -989,6 +1010,238 @@ function decorateDates(){
   });
 }
 document.addEventListener('input',function(e){const t=e.target;if(t&&t.type==='date'){const h=t.nextElementSibling;if(h&&h.classList.contains('hd'))h.textContent=t.value?hebLabel(t.value):'';}});
+
+/* ================= משתמשים: יצירה מרוכזת, קודים, הצטרפות ================= */
+const SITE_URL='https://nihul-mosad.github.io/nihul-mosad/';
+const FB_DOMAINS='nihul-mosad.github.io\nfirestore.googleapis.com\nidentitytoolkit.googleapis.com\nsecuretoken.googleapis.com';
+function newPin(){const a=new Uint32Array(1);crypto.getRandomValues(a);return String(100000+a[0]%900000);}
+function newToken(){const a=new Uint8Array(15);crypto.getRandomValues(a);return Array.from(a).map(b=>'abcdefghijkmnpqrstuvwxyz23456789'[b%32]).join('');}
+function intlPhone(p){const d=String(p||'').replace(/\D/g,'');return d.indexOf('0')===0?'972'+d.slice(1):d;}
+function credMsg(c){
+  return 'שלום '+(c.teacher||c.user)+',\n\nמעכשיו מסמנים נוכחות ועוקבים אחרי התלמידים במערכת ניהול המוסד.\n\nקישור: '+SITE_URL+'\nקוד מוסד: '+S.inst+'\nשם משתמש: '+c.user+'\nקוד כניסה: '+c.pin+
+    '\n\nכדאי לסמן "להישאר מחובר", וכך מקלידים את הפרטים רק פעם אחת. בטלפון אפשר להוסיף למסך הבית מהתפריט של כרום.\n\nמי שמסונן בנטפרי צריך לבקש לפתוח את הכתובות:\n'+FB_DOMAINS;
+}
+function teacherPhone(t){const x=S.staff.find(s=>s.name===t);return x?x.phone:'';}
+function bulkForm(){
+  const b=S.bulk;
+  if(!b.list.length)return '<div class="card" style="margin-top:12px;background:var(--surface2)"><p class="note">לכל המורים במערכת השעות כבר יש משתמש.</p><div class="row" style="margin-top:8px"><button class="btn" data-act="bulk-close">סגירה</button></div></div>';
+  return '<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px"><h3>יצירת משתמשים למורים</h3>'+
+    '<p class="note" style="margin-bottom:10px">אלה המורים ממערכת השעות שעוד אין להם משתמש. לכל אחד ייווצר קוד כניסה בן 6 ספרות. אפשר לשנות את שם המשתמש לפני היצירה.</p>'+
+    table(['','מורה','שם משתמש'],b.list.map((x,i)=>['<input type="checkbox" data-bk="'+i+'"'+(x.on?' checked':'')+' style="width:20px;height:20px">',esc(x.teacher),
+      '<input class="inp" data-bku="'+i+'" value="'+esc(x.user)+'" style="width:100%;min-width:140px">']))+
+    '<div class="row" style="margin-top:12px"><button class="btn" data-v="primary" data-act="bulk-run">יצירת '+b.list.filter(x=>x.on).length+' משתמשים</button><button class="btn" data-v="ghost" data-act="bulk-close">ביטול</button></div></div>';
+}
+function credsCard(){
+  return '<div class="card" style="border-color:var(--gold)"><h3>פרטי כניסה לשליחה</h3><p class="note" style="margin-bottom:10px;color:var(--late)">הקודים מוצגים עכשיו בלבד ולא נשמרים בשום מקום. שלחו לכל אחד את הפרטים שלו לפני שסוגרים את החלון.</p>'+
+    table(['מורה','שם משתמש','קוד',''],S.creds.map((c,i)=>{const ph=intlPhone(teacherPhone(c.teacher));
+      return [esc(c.teacher||'—'),'<b>'+esc(c.user)+'</b>','<b class="ltr" style="font-size:16px;letter-spacing:.08em">'+esc(c.pin)+'</b>',
+      '<a class="btn sm" target="_blank" rel="noreferrer" href="https://wa.me/'+(ph||'')+'?text='+encodeURIComponent(credMsg(c))+'">וואטסאפ</a> <button class="btn sm" data-act="cred-copy" data-i="'+i+'">העתקה</button>'];}))+
+    '<div class="row" style="margin-top:12px"><button class="btn" data-act="cred-copyall">העתקת הכול</button><button class="btn" data-v="ghost" data-act="cred-close">סיימתי, סגירה</button></div></div>';
+}
+function joinCard(){
+  const tk=S.config.joinToken,link=tk?SITE_URL+'?join='+tk:'';
+  return '<div class="card"><h3>קישור הצטרפות לצוות</h3><p class="note" style="margin-bottom:10px">שולחים קישור אחד לקבוצת הצוות. כל מורה בוחר את שמו, קובע לעצמו סיסמה, ואתם מאשרים אותו כאן בלחיצה. מתאים במיוחד למורים חדשים במהלך השנה.</p>'+
+    (tk?'<div class="row" style="margin-bottom:10px"><input class="inp" dir="ltr" readonly value="'+esc(link)+'" style="flex:1;min-width:220px"></div>'+
+      '<div class="row"><button class="btn" data-act="join-copy">העתקת הקישור</button><a class="btn" target="_blank" rel="noreferrer" href="https://wa.me/?text='+encodeURIComponent('הצטרפות למערכת ניהול המוסד של '+S.config.name+':\n'+link+'\n\nבוחרים את השם שלכם, קובעים סיסמה, ואחרי אישור המנהל אפשר להיכנס.')+'">שליחה בוואטסאפ</a>'+
+      '<button class="btn" data-act="join-new">קישור חדש</button><button class="btn" data-v="danger" data-act="join-off">ביטול הקישור</button></div>'+
+      '<p class="note" style="margin-top:8px">קישור חדש מבטל את הקודם. אחרי שכל הצוות הצטרף, אפשר לבטל את הקישור.</p>'
+      :'<button class="btn" data-v="primary" data-act="join-new">יצירת קישור הצטרפות</button>')+'</div>';
+}
+function requestsCard(){
+  if(!S.joinReqs){S.joinReqs=[];FS.collection('insts/'+S.inst+'/requests').get().then(q=>{S.joinReqs=q.docs.map(d=>Object.assign({uid:d.id},d.data()));if(S.tab==='settings'&&S.joinReqs.length)render();}).catch(()=>{});}
+  if(!S.joinReqs.length)return '';
+  return '<div class="card" style="border-color:var(--accent)"><h3>בקשות הצטרפות ממתינות ('+S.joinReqs.length+')</h3>'+
+    table(['שם','שם משתמש','מורה במערכת','הרשאה',''],S.joinReqs.map((r,i)=>[esc(r.name||r.teacher||''),'<b>'+esc(r.user)+'</b>',
+      '<select class="inp" id="jr-t-'+i+'">'+opt('—','',r.teacher||'')+teachersList().map(t=>opt(t,t,r.teacher||'')).join('')+'</select>',
+      '<select class="inp" id="jr-r-'+i+'">'+opt('מורה','teacher','teacher')+opt('מנהל','admin','teacher')+'</select>',
+      '<button class="btn sm" data-v="primary" data-act="jr-ok" data-i="'+i+'">אישור</button> <button class="btn sm" data-v="ghost" data-act="jr-no" data-i="'+i+'">דחייה</button>']))+'</div>';
+}
+function logCard(){
+  if(!S.instLog){S.instLog=[];FS.collection('insts/'+S.inst+'/log').orderBy('ts','desc').limit(60).get().then(q=>{S.instLog=q.docs.map(d=>d.data());if(S.tab==='settings')render();}).catch(()=>{S.instLog=[{err:1}];});}
+  return '<div class="card"><h3>יומן פעולות</h3>'+(S.instLog.length&&!S.instLog[0].err?logTable(S.instLog,false):'<p class="note">'+(S.instLog[0]&&S.instLog[0].err?'היומן יופעל אחרי עדכון חוקי האבטחה.':'עוד אין פעולות ביומן.')+'</p>')+'</div>';
+}
+function tsLabel(ts){const d=new Date(ts),i=iso(d);return shortDate(i)+' · '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function logTable(rows,withInst){
+  return table(['מתי'].concat(withInst?['מוסד']:[]).concat(['מי','פעולה','פרטים']),rows.map(r=>['<span class="note" style="white-space:nowrap">'+tsLabel(r.ts)+'</span>'].concat(withInst?[esc(r.instName||r.inst||'')]:[]).concat([esc(r.user||''),'<b>'+esc(r.act||'')+'</b>','<span class="note">'+esc(r.info||'')+'</span>'])));
+}
+async function userAction(a,el){
+  if(a==='bulk-open'){
+    const linked={};S.config.users.forEach(u=>{if(u.teacher)linked[u.teacher]=1;});
+    S.bulk={list:teachersList().filter(t=>!linked[t]).map(t=>({teacher:t,user:t,on:true}))};S.editUser=null;return render();
+  }
+  if(a==='bulk-close'){S.bulk=null;return render();}
+  if(a==='bulk-run'){
+    document.querySelectorAll('#main [data-bku]').forEach(inp=>{S.bulk.list[+inp.dataset.bku].user=inp.value.trim();});
+    const todo=S.bulk.list.filter(x=>x.on&&x.user);if(!todo.length)return toast('לא נבחרו מורים');
+    const taken={};S.config.users.forEach(u=>taken[ukey(u.user)]=1);
+    for(const x of todo){if(taken[ukey(x.user)])return toast('שם המשתמש "'+x.user+'" כבר קיים');taken[ukey(x.user)]=1;}
+    const out=[];let i=0;
+    for(const x of todo){
+      i++;toast('יוצר '+i+' מתוך '+todo.length+'…');
+      try{
+        const pin=newPin(),r=await createAuthUser(S.inst,x.user,pin),b=FS.batch();
+        b.set(FS.doc('insts/'+S.inst+'/members/'+r.uid),{user:x.user,role:'teacher',cls:'',teacher:x.teacher,active:true});
+        b.set(FS.doc('logins/'+S.inst+'_'+ukey(x.user)),{email:r.email,inst:S.inst,key:ukey(x.user)});
+        await b.commit();out.push({teacher:x.teacher,user:x.user,pin:pin});
+      }catch(e){toast(x.user+': '+fbErr(e));break;}
+    }
+    await reloadMembers();S.bulk=null;S.creds=out;logAct('יצירת משתמשים',out.length+' מורים');
+    toast(out.length+' משתמשים נוצרו');return render();
+  }
+  if(a==='user-pin'){
+    const u=S.config.users.find(x=>x.id===el.dataset.id);if(!u)return;
+    if(!confirm('ליצור קוד כניסה חדש ל"'+u.user+'"? הקוד הקודם יפסיק לעבוד.'))return;
+    try{
+      const pin=newPin(),r=await createAuthUser(S.inst,u.user,pin),b=FS.batch();
+      b.delete(FS.doc('insts/'+S.inst+'/members/'+u.id));
+      b.set(FS.doc('insts/'+S.inst+'/members/'+r.uid),{user:u.user,role:u.role,cls:'',teacher:u.teacher||'',active:true});
+      b.set(FS.doc('logins/'+S.inst+'_'+ukey(u.user)),{email:r.email,inst:S.inst,key:ukey(u.user)});
+      await b.commit();await reloadMembers();S.creds=[{teacher:u.teacher,user:u.user,pin:pin}];logAct('קוד כניסה חדש',u.user);return render();
+    }catch(e){return toast(fbErr(e));}
+  }
+  if(a==='cred-copy'){const c=S.creds[+el.dataset.i];try{await navigator.clipboard.writeText(credMsg(c));toast('הועתק');}catch(e){toast('ההעתקה לא הצליחה');}return;}
+  if(a==='cred-copyall'){const t=S.creds.map(c=>(c.teacher||'')+' | '+c.user+' | '+c.pin).join('\n');try{await navigator.clipboard.writeText('קוד מוסד: '+S.inst+'\n'+t);toast('הועתק');}catch(e){toast('ההעתקה לא הצליחה');}return;}
+  if(a==='cred-close'){if(!confirm('לסגור? אחרי הסגירה לא תוכלו לראות שוב את הקודים.'))return;S.creds=null;return render();}
+  if(a==='join-new'){
+    try{
+      const old=S.config.joinToken,tk=newToken();
+      await FS.doc('joins/'+tk).set({inst:S.inst,instName:S.config.name,active:true,teachers:teachersList(),created:Date.now()});
+      if(old)FS.doc('joins/'+old).delete().catch(()=>{});
+      S.config.joinToken=tk;await save(K.config,S.config);logAct('קישור הצטרפות חדש','');toast('הקישור מוכן');return render();
+    }catch(e){return toast(fbErr(e));}
+  }
+  if(a==='join-off'){
+    if(!confirm('לבטל את קישור ההצטרפות? מי שעוד לא נרשם לא יוכל להשתמש בו.'))return;
+    try{if(S.config.joinToken)await FS.doc('joins/'+S.config.joinToken).delete();}catch(e){}
+    S.config.joinToken='';await save(K.config,S.config);toast('הקישור בוטל');return render();
+  }
+  if(a==='join-copy'){try{await navigator.clipboard.writeText(SITE_URL+'?join='+S.config.joinToken);toast('הקישור הועתק');}catch(e){toast('ההעתקה לא הצליחה');}return;}
+  if(a==='jr-ok'||a==='jr-no'){
+    const i=+el.dataset.i,r=S.joinReqs[i];if(!r)return;
+    try{
+      if(a==='jr-no'){if(!confirm('לדחות את הבקשה של '+(r.name||r.user)+'?'))return;await FS.doc('insts/'+S.inst+'/requests/'+r.uid).delete();logAct('בקשת הצטרפות נדחתה',r.user);}
+      else{
+        const tch=document.getElementById('jr-t-'+i).value,role=document.getElementById('jr-r-'+i).value;
+        if(role==='teacher'&&!tch)return toast('בחרו את המורה ממערכת השעות');
+        if(S.config.users.some(u=>ukey(u.user)===ukey(r.user)))return toast('שם המשתמש הזה כבר קיים. דחו את הבקשה ובקשו להירשם בשם אחר.');
+        const b=FS.batch();
+        b.set(FS.doc('insts/'+S.inst+'/members/'+r.uid),{user:r.user,role:role,cls:'',teacher:tch,active:true});
+        b.set(FS.doc('logins/'+S.inst+'_'+ukey(r.user)),{email:r.email,inst:S.inst,key:ukey(r.user)});
+        b.delete(FS.doc('insts/'+S.inst+'/requests/'+r.uid));
+        await b.commit();await reloadMembers();logAct('הצטרפות אושרה',r.user);toast(r.user+' אושר/ה');
+      }
+      S.joinReqs=null;return render();
+    }catch(e){return toast(fbErr(e));}
+  }
+}
+
+/* ================= מסך הצטרפות (מהקישור) ================= */
+async function showJoin(tk){
+  const box=document.querySelector('#login .box');
+  document.getElementById('boot').style.display='none';document.getElementById('login').style.display='flex';
+  box.innerHTML='<h1>הצטרפות לצוות</h1><p class="note" style="margin-bottom:16px">טוען…</p>';
+  let j=null;try{const d=await FS.doc('joins/'+tk).get();if(d.exists)j=d.data();}catch(e){}
+  if(!j||!j.active){box.innerHTML='<h1>הצטרפות לצוות</h1><p class="note" style="margin:10px 0 16px">הקישור הזה כבר לא בתוקף. בקשו מהמנהל קישור חדש.</p><a class="btn full" href="'+SITE_URL+'">למסך הכניסה</a>';return;}
+  S.joinInfo=Object.assign({token:tk},j);
+  box.innerHTML='<h1>הצטרפות לצוות</h1><div class="sub" style="margin-bottom:16px">'+esc(j.instName||j.inst)+'</div>'+
+    '<label class="field"><span>מי אתה במערכת השעות?</span><select id="jn-t"><option value="">בחרו את השם שלכם</option>'+(j.teachers||[]).map(t=>'<option>'+esc(t)+'</option>').join('')+'<option value="__other">השם שלי לא ברשימה</option></select></label>'+
+    '<label class="field" id="jn-namew" style="display:none"><span>שם מלא</span><input id="jn-name"></label>'+
+    '<label class="field"><span>שם משתמש לכניסה</span><input id="jn-u" autocapitalize="none"></label>'+
+    '<label class="field"><span>סיסמה (לפחות 6 תווים)</span><input id="jn-p" type="password" autocomplete="new-password"></label>'+
+    '<label class="field"><span>שוב את הסיסמה</span><input id="jn-p2" type="password" autocomplete="new-password"></label>'+
+    '<button class="btn full" data-v="primary" id="jn-go">שליחת בקשה</button><p id="jn-err" class="note" style="color:var(--absent);margin-top:10px"></p>';
+  const sel=document.getElementById('jn-t');
+  sel.addEventListener('change',function(){document.getElementById('jn-namew').style.display=sel.value==='__other'?'block':'none';if(sel.value&&sel.value!=='__other')document.getElementById('jn-u').value=sel.value;});
+  document.getElementById('jn-go').addEventListener('click',doJoin);
+}
+async function doJoin(){
+  const J=S.joinInfo,g=id=>document.getElementById(id).value,err=document.getElementById('jn-err'),btn=document.getElementById('jn-go');
+  const t=g('jn-t'),name=t==='__other'?g('jn-name').trim():t,user=g('jn-u').trim(),p=g('jn-p'),p2=g('jn-p2');
+  if(!t)return err.textContent='בחרו את השם שלכם';
+  if(!name)return err.textContent='כתבו את השם המלא';
+  if(!user)return err.textContent='בחרו שם משתמש';
+  if(p.length<6)return err.textContent='הסיסמה צריכה להיות לפחות 6 תווים';
+  if(p!==p2)return err.textContent='הסיסמאות לא זהות';
+  btn.disabled=true;btn.textContent='שולח…';err.textContent='';
+  try{
+    const ex=await FS.doc('logins/'+J.inst+'_'+ukey(user)).get();if(ex.exists)throw {code:'taken'};
+    try{await AUTH.setPersistence(firebase.auth.Auth.Persistence.LOCAL);}catch(e){}
+    const email=ukey(user).slice(0,40)+'.'+Math.random().toString(36).slice(2,7)+'@'+J.inst+'.'+MAIL_DOMAIN;
+    const c=await AUTH.createUserWithEmailAndPassword(email,p);
+    await FS.doc('insts/'+J.inst+'/requests/'+c.user.uid).set({user:user,name:name,teacher:t==='__other'?'':t,email:email,token:J.token,ts:Date.now()});
+    try{localStorage.setItem('tt:inst',J.inst);localStorage.setItem('tt:instName',J.instName||'');localStorage.setItem('tt:joined','1');}catch(e){}
+    await AUTH.signOut();
+    document.querySelector('#login .box').innerHTML='<h1>הבקשה נשלחה</h1><p style="margin:12px 0">המנהל יאשר אותה בקרוב. אחרי האישור נכנסים כאן עם:</p>'+
+      '<p style="margin-bottom:16px;line-height:1.9">קוד מוסד: <b dir="ltr">'+esc(J.inst)+'</b><br>שם משתמש: <b>'+esc(user)+'</b><br>והסיסמה שבחרתם.</p><a class="btn full" data-v="primary" href="'+SITE_URL+'">למסך הכניסה</a>';
+  }catch(e){
+    err.textContent=e&&e.code==='taken'?'שם המשתמש הזה תפוס. בחרו שם אחר.':fbErr(e);btn.disabled=false;btn.textContent='שליחת בקשה';
+  }
+}
+
+/* ================= מסוף המערכת ================= */
+function weekStart(){const d=new Date();d.setDate(d.getDate()-d.getDay());return iso(d);}
+async function loadConsole(){
+  const q=await FS.collection('insts').get(),list=[],today=iso(new Date()),ws=weekStart();
+  const days=[];for(let d=new Date(ws+'T12:00:00');iso(d)<=today;d.setDate(d.getDate()+1))days.push(iso(d));
+  for(const d of q.docs){
+    const code=d.id,data=d.data()||{},o={code:code,name:data.name||code,disabled:!!data.disabled,students:0,users:0,pend:0,usage:null,log:[]};
+    try{const st=await FS.doc('insts/'+code+'/store/students').get();o.students=st.exists?Object.values((st.data()||{}).m||{}).filter(Boolean).length:0;}catch(e){}
+    try{const mm=await FS.collection('insts/'+code+'/members').get();o.users=mm.docs.filter(x=>(x.data()||{}).active!==false).length;}catch(e){}
+    try{const rq=await FS.collection('insts/'+code+'/requests').get();o.pend=rq.docs.length;}catch(e){}
+    try{const lg=await FS.collection('insts/'+code+'/log').orderBy('ts','desc').limit(30).get();o.log=lg.docs.map(x=>Object.assign({inst:code,instName:o.name},x.data()));}catch(e){}
+    try{
+      const tt=await FS.doc('insts/'+code+'/store/timetable').get(),m=tt.exists?((tt.data()||{}).m||{}):{};
+      const lessons=Object.values(m).filter(Boolean);
+      if(lessons.length){
+        const months=Array.from(new Set(days.map(x=>x.slice(0,7)))),marks={};
+        for(const mo of months){const a=await FS.doc('insts/'+code+'/att/L'+mo).get();const dd=a.exists?((a.data()||{}).d||{}):{};Object.keys(dd).forEach(k=>marks[k]=dd[k]||{});}
+        let tot=0,done=0;
+        days.forEach(function(day){const dw=new Date(day+'T12:00:00').getDay();if(dw>5)return;const mk=marks[day]||{};
+          lessons.filter(l=>l.day===dw).forEach(l=>{tot++;if(Object.keys(mk).some(k=>k.indexOf(l.id+':')===0&&mk[k]))done++;});});
+        o.usage=tot?Math.round(done/tot*100):null;
+      }
+    }catch(e){}
+    o.last=o.log[0]?o.log[0].ts:null;list.push(o);
+  }
+  let log=[];list.forEach(o=>log=log.concat(o.log));log.sort((a,b)=>b.ts-a.ts);
+  S.console={list:list,log:log.slice(0,120),at:Date.now()};
+}
+function viewConsole(){
+  if(!S.owner)return '<div class="empty">אין הרשאה</div>';
+  if(!S.console){S.console={loading:1};loadConsole().then(render).catch(e=>{S.console={error:fbErr(e)};render();});}
+  const C=S.console;
+  const head='<div class="head"><div><h2>מסוף המערכת</h2><div class="sub">'+(C.list?C.list.length+' מוסדות · '+C.list.reduce((a,o)=>a+o.students,0)+' תלמידים · '+C.list.reduce((a,o)=>a+o.users,0)+' משתמשים':'כל המוסדות במבט אחד')+'</div></div>'+
+    '<button class="btn" data-act="con-refresh">רענון</button></div>';
+  if(C.loading)return head+'<div class="card"><div class="empty">טוען נתונים מכל המוסדות…</div></div>';
+  if(C.error)return head+'<div class="card"><p class="note" style="color:var(--absent)">'+esc(C.error)+'</p></div>';
+  const ago=ts=>{if(!ts)return '<span class="note">אין פעילות</span>';const m=Math.round((Date.now()-ts)/60000);return m<60?'לפני '+Math.max(m,1)+' דק׳':m<1440?'לפני '+Math.round(m/60)+' שע׳':'לפני '+Math.round(m/1440)+' ימים';};
+  const insts='<div class="card"><h3>מוסדות</h3>'+table(['מוסד','תלמידים','משתמשים','סימון נוכחות השבוע','פעילות אחרונה','מצב',''],C.list.map(o=>[
+    '<b>'+esc(o.name)+'</b><div class="note" dir="ltr" style="text-align:right">'+esc(o.code)+'</div>',o.students,o.users+(o.pend?' <span class="tag" data-s="late">'+o.pend+' ממתינים</span>':''),
+    o.usage===null?'<span class="note">אין מערכת שעות</span>':'<div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar" style="flex:1"><i style="width:'+o.usage+'%" data-low="'+(o.usage<50?2:o.usage<80?1:0)+'"></i></div><b>'+o.usage+'%</b></div>',
+    ago(o.last),o.disabled?'<span class="tag" data-s="absent">מושבת</span>':'<span class="tag" data-s="present">פעיל</span>',
+    '<button class="btn sm" data-act="con-open" data-code="'+esc(o.code)+'">כניסה</button> <button class="btn sm" data-v="ghost" data-act="con-toggle" data-code="'+esc(o.code)+'">'+(o.disabled?'הפעלה':'השבתה')+'</button>']))+'</div>';
+  const fl=S.conFilter||'',logs=C.log.filter(r=>!fl||r.inst===fl);
+  const logc='<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3 style="margin:0">יומן פעולות</h3><select class="inp" data-ch="conFilter">'+opt('כל המוסדות','',fl)+C.list.map(o=>opt(o.name,o.code,fl)).join('')+'</select></div>'+
+    (logs.length?logTable(logs,!fl):'<p class="note">אין פעולות ביומן. היומן מתמלא מרגע שחוקי האבטחה עודכנו.</p>')+'</div>';
+  const nw='<div class="card"><h3>מוסד חדש</h3><div class="grid g2">'+
+      '<label class="field"><span>קוד מוסד (באנגלית)</span><input id="ni-code" dir="ltr" placeholder="למשל: beitar-boys" autocapitalize="none"></label>'+
+      '<label class="field"><span>שם המוסד</span><input id="ni-name"></label>'+
+      '<label class="field"><span>שם משתמש למנהל/ת</span><input id="ni-user" autocapitalize="none"></label>'+
+      '<label class="field"><span>סיסמה ראשונית</span><input id="ni-pass" type="text"></label>'+
+    '</div><div class="row"><button class="btn" data-v="primary" data-act="inst-new">יצירת המוסד</button></div></div>';
+  const tip=S.inst?'':'<div class="warn">נכנסת כבעל המערכת. לעבודה השוטפת במוסד שלך מומלץ ליצור לעצמך משתמש מנהל רגיל בתוך המוסד (בהגדרות ← משתמשים), ולהשתמש בחשבון הזה רק לניהול המערכת.</div>';
+  return head+tip+insts+logc+nw;
+}
+async function consoleAction(a,el){
+  if(a==='con-refresh'){S.console=null;return render();}
+  if(a==='con-open'){try{await enterInst(el.dataset.code,AUTH.currentUser,null);S.console=null;toast('נכנסת ל: '+S.config.name);}catch(e){toast(fbErr(e));}return;}
+  if(a==='con-toggle'){
+    const o=S.console.list.find(x=>x.code===el.dataset.code);if(!o)return;
+    if(!confirm((o.disabled?'להפעיל':'להשבית')+' את "'+o.name+'"?'+(o.disabled?'':' המשתמשים שלו לא יוכלו להיכנס עד שתפעיל מחדש.')))return;
+    try{await FS.doc('insts/'+o.code).set({disabled:!o.disabled},{merge:true});o.disabled=!o.disabled;toast(o.disabled?'המוסד הושבת':'המוסד הופעל');return render();}catch(e){return toast(fbErr(e));}
+  }
+}
+
 /* ================= נוכחות לפי שיעור ================= */
 function dow(date){return new Date(date+'T12:00:00').getDay();}
 function lessonsOn(date){const d=dow(date);return d>5?[]:S.timetable.filter(l=>l.day===d);}
@@ -1088,7 +1341,9 @@ async function markAction(a,el){
   if(a==='lm-save'){
     const lid=S.markLesson,day=Object.assign({},S.latt[S.markDate]||{});
     Object.keys(S.ldraft).forEach(sid=>{if(S.ldraft[sid])day[lid+':'+sid]=S.ldraft[sid];});
-    S.latt[S.markDate]=day;LIDX=null;save(K.latt,S.latt);S.ldirty=false;toast('הנוכחות נשמרה');S.markLesson=null;return render();
+    S.latt[S.markDate]=day;LIDX=null;save(K.latt,S.latt);S.ldirty=false;toast('הנוכחות נשמרה');
+    {const l=S.timetable.find(x=>x.id===lid)||{},v=Object.values(S.ldraft);logAct('סימון נוכחות',(l.subject||'')+' · '+(l.classes||[]).join(', ')+' · '+shortDate(S.markDate)+' · '+v.filter(x=>x==='absent').length+' חסרים מתוך '+v.length);}
+    S.markLesson=null;return render();
   }
 }
 
@@ -1306,7 +1561,7 @@ async function ttAction(a,el){
     let st=false;r.teachers.forEach(t=>{if(ttEnsureStaff(t))st=true;});
     S.timetable=r.lessons;
     save(K.config,S.config);save(K.timetable,S.timetable);if(st)save(K.staff,S.staff);
-    S.ttImport=null;S.ttSlot=null;S.ttMode='class';toast(r.lessons.length+' שיעורים נטענו');return render();
+    logAct('ייבוא מערכת שעות',r.lessons.length+' שיעורים');S.ttImport=null;S.ttSlot=null;S.ttMode='class';toast(r.lessons.length+' שיעורים נטענו');return render();
   }
   if(a==='tt-clear'){
     if(!S.timetable.length)return toast('המערכת כבר ריקה');
@@ -1661,14 +1916,16 @@ function viewSettings(){
     '<div class="row" style="margin-bottom:12px">'+domains().map(d=>'<span class="chip" style="cursor:default">'+esc(d.name)+
       '<button class="btn sm" data-v="ghost" style="padding:0 4px" data-act="del-dom" data-id="'+d.id+'">✕</button></span>').join('')+'</div>'+
     '<div class="row"><input class="inp" id="newDom" placeholder="למשל: שקידה"><button class="btn" data-act="add-dom">הוספה</button></div></div>'+
-  ownerCard()+
+  joinCard()+requestsCard()+
   '<div class="card"><h3>משתמשים והרשאות</h3>'+
     '<p class="note" style="margin-bottom:12px">מנהל רואה את כל המוסד. מורה רואה את השיעורים שלו, ואם הוא מחנך גם את כל מה שקורה בכיתה שלו. מחנכים מגדירים בלשונית "מערכת שעות".</p>'+
     table(['שם משתמש','הרשאה','מורה במערכת',''],S.config.users.map(u=>
       ['<b>'+esc(u.user)+'</b>','<span class="tag" data-s="'+u.role+'">'+(u.role==='admin'?'מנהל':'מורה')+'</span>',esc(u.role==='admin'?(u.teacher||'כל המוסד'):(u.teacher||'— לא קושר')),
        '<button class="btn sm" data-v="ghost" data-act="user-edit" data-id="'+u.id+'">עריכה</button>'+
+       (u.id===S.me.id?'':'<button class="btn sm" data-v="ghost" data-act="user-pin" data-id="'+u.id+'">קוד חדש</button>')+
        (u.id===S.me.id?'':'<button class="btn sm" data-v="ghost" data-act="user-del" data-id="'+u.id+'">מחיקה</button>')]))+
-    (S.editUser?userForm():'<div class="row" style="margin-top:12px"><button class="btn" data-act="user-new">הוספת משתמש</button></div>')+'</div>'+
+    (S.editUser?userForm():S.bulk?bulkForm():'<div class="row" style="margin-top:12px"><button class="btn" data-act="user-new">הוספת משתמש</button><button class="btn" data-v="primary" data-act="bulk-open">יצירת משתמשים לכל המורים</button></div>')+'</div>'+
+  (S.creds?credsCard():'')+logCard()+
   '<div class="card"><h3>כיתות</h3><div class="row" style="margin-bottom:12px">'+
     (S.config.classes.map(c=>'<span class="chip" style="cursor:default">'+esc(c)+
       '<button class="btn sm" data-v="ghost" style="padding:0 4px" data-act="del-cls" data-cls="'+esc(c)+'">✕</button></span>').join('')||'<span class="note">אין כיתות.</span>')+'</div>'+
@@ -1727,12 +1984,12 @@ function render(){
   document.getElementById('brandName').textContent=S.config.name;
   const bl=document.getElementById('brandLogo');
   if(S.config.logo){bl.src=S.config.logo;bl.style.display='block';}else bl.style.display='none';
-  document.getElementById('brandSub').textContent=isAdmin()?'ניהול המוסד':(myClasses().length?'מחנך '+myClasses().join(', '):'מורה');
+  document.getElementById('brandSub').textContent=!S.inst?'בעל המערכת':isAdmin()?'ניהול המוסד':(myClasses().length?'מחנך '+myClasses().join(', '):'מורה');
   document.getElementById('nav').innerHTML=tabsFor().map(t=>'<button data-tab="'+t[0]+'" data-on="'+(S.tab===t[0]?1:0)+'">'+t[1]+'</button>').join('');
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
     '<div style="margin-top:8px"><button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
-    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,import:viewImport,card:viewCard};
+    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,import:viewImport,card:viewCard};
   const v=map[S.tab]||viewDash;
   let warn='';
   if(window.claude&&!DB)warn+='<div class="warn">אין חיבור למאגר הנתונים המשותף, ולכן שינויים יישמרו רק במכשיר הזה. נסו לרענן את הדף.</div>';
@@ -1779,6 +2036,8 @@ document.getElementById('main').addEventListener('click',async function(e){
   const a=el.dataset.act,id=el.dataset.id;
   if(a.indexOf('tt-')===0||a.indexOf('per-')===0)return ttAction(a,el);
   if(a.indexOf('lm-')===0||a==='mark-view')return markAction(a,el);
+  if(/^(bulk-|cred-|join-|jr-)/.test(a)||a==='user-pin')return userAction(a,el);
+  if(a.indexOf('con-')===0)return consoleAction(a,el);
 
   if(a==='logout')return logout();
   if(a==='goto-mark'){S.tab='mark';if(el.dataset.cls)S.markCls=el.dataset.cls;S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;return render();}
@@ -1796,7 +2055,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a==='rev-score'){S.revDraft.scores[el.dataset.d]=Number(el.dataset.n);return render();}
   if(a==='rev-next'){
     if(!S.revDraft.light)return toast('בחרו ירוק, צהוב או אדום');
-    saveRev();S.revIdx++;loadRevDraft();toast('נשמר');return render();
+    saveRev();{const st=S.revList[S.revIdx];logAct('תמונת מצב',(st&&st.name||'')+' · '+LIGHTNAME[S.revDraft.light]);}S.revIdx++;loadRevDraft();toast('נשמר');return render();
   }
   if(a==='rev-skip'){S.revIdx++;loadRevDraft();return render();}
   if(a==='rev-back'){S.revIdx--;loadRevDraft();return render();}
@@ -1822,7 +2081,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a==='save-att'){
     const day=Object.assign({},S.att[S.markDate]||{});
     myStudents().filter(s=>!S.markCls||s.cls===S.markCls).forEach(function(s){if(S.draft[s.id])day[s.id]=S.draft[s.id];});
-    S.att[S.markDate]=day;save(K.att,S.att);S.dirty=false;toast('הנוכחות נשמרה');return render();
+    S.att[S.markDate]=day;save(K.att,S.att);S.dirty=false;toast('הנוכחות נשמרה');logAct('סימון נוכחות יומית',(S.markCls||'כל הכיתות')+' · '+shortDate(S.markDate));return render();
   }
 
   /* תלמידים */
@@ -1837,7 +2096,7 @@ document.getElementById('main').addEventListener('click',async function(e){
     if(Object.keys(ex).length)o.extra=ex;
     if(!o.name)return toast('צריך למלא שם');
     S.students=S.editStudent.id?S.students.map(s=>s.id===o.id?o:s):S.students.concat([o]);
-    save(K.students,S.students);S.editStudent=null;toast('התלמיד נשמר');return render();
+    save(K.students,S.students);logAct(S.editStudent.id?'עדכון תלמיד':'תלמיד חדש',o.name);S.editStudent=null;toast('התלמיד נשמר');return render();
   }
   if(a==='student-del'){
     if(!confirm('להסיר את התלמיד? הנוכחות ותמונות המצב שלו יימחקו גם.'))return;
@@ -1889,7 +2148,7 @@ document.getElementById('main').addEventListener('click',async function(e){
     S.students=a==='import-replace'?p.rows:S.students.concat(p.rows);
     if(a==='import-replace'){S.att={};S.reviews=[];save(K.att,S.att);save(K.reviews,S.reviews);}
     save(K.students,S.students);save(K.config,S.config);
-    S.importPreview=null;S.tab='students';toast(p.rows.length+' תלמידים יובאו');return render();
+    logAct('ייבוא תלמידים',p.rows.length+' תלמידים'+(a==='import-replace'?' (החלפה)':' (הוספה)'));S.importPreview=null;S.tab='students';toast(p.rows.length+' תלמידים יובאו');return render();
   }
 
   /* הגדרות */
@@ -1942,7 +2201,7 @@ document.getElementById('main').addEventListener('click',async function(e){
         await b.commit();
         if(S.me.id===id){S.me.user=name;S.me.teacher=data.teacher;}
       }
-      await reloadMembers();S.editUser=null;toast('המשתמש נשמר');return render();
+      await reloadMembers();logAct(S.editUser.id?'עדכון משתמש':'משתמש חדש',name);S.editUser=null;toast('המשתמש נשמר');return render();
     }catch(e){return toast(fbErr(e));}
   }
   if(a==='user-del'){
@@ -1951,7 +2210,7 @@ document.getElementById('main').addEventListener('click',async function(e){
     const u=S.config.users.find(x=>x.id===id);if(!u)return;
     try{
       const b=FS.batch();b.delete(FS.doc('insts/'+S.inst+'/members/'+id));b.delete(FS.doc('logins/'+S.inst+'_'+ukey(u.user)));await b.commit();
-      await reloadMembers();toast('המשתמש נמחק');return render();
+      await reloadMembers();logAct('מחיקת משתמש',u.user);toast('המשתמש נמחק');return render();
     }catch(e){return toast(fbErr(e));}
   }
   if(a==='inst-open'){
@@ -1970,7 +2229,7 @@ document.getElementById('main').addEventListener('click',async function(e){
       toast('יוצר מוסד…');
       const r=await createAuthUser(code,au,ap);
       await createInst(code,name,r.uid,au,r.email,[]);
-      S.instList=null;toast('המוסד נוצר. קוד: '+code+' · משתמש: '+au);return render();
+      S.instList=null;S.console=null;logAct('מוסד חדש',code);toast('המוסד נוצר. קוד: '+code+' · משתמש: '+au);return render();
     }catch(e){return toast(fbErr(e));}
   }
   if(a==='save-name'){S.config.name=document.getElementById('cfgName').value.trim()||'המוסד';save(K.config,S.config);toast('השם עודכן');return render();}
@@ -1997,6 +2256,8 @@ document.getElementById('main').addEventListener('change',function(e){
   const el=e.target;
   if(el.id==='importFile'&&el.files&&el.files[0])return handleImportFile(el.files[0]);
   if(el.id==='ttFile'&&el.files&&el.files[0]){const f=el.files[0];el.value='';return handleTtFile(f);}
+  if(el.dataset&&el.dataset.bk!==undefined&&S.bulk){document.querySelectorAll('#main [data-bku]').forEach(inp=>{S.bulk.list[+inp.dataset.bku].user=inp.value.trim();});S.bulk.list[+el.dataset.bk].on=el.checked;return render();}
+  if(el.dataset&&el.dataset.bku!==undefined)return;
   if(el.dataset&&el.dataset.ttf){ttCapture();if(el.dataset.ttstu||(el.tagName==='INPUT'&&el.type!=='checkbox'))return;return render();}
   if(el.dataset&&el.dataset.per!==undefined)return;
   if(el.dataset&&el.dataset.hr!==undefined){S.config.homeroom=Object.assign({},S.config.homeroom||{});if(el.value)S.config.homeroom[el.dataset.hr]=el.value;else delete S.config.homeroom[el.dataset.hr];save(K.config,S.config);toast('המחנך עודכן');return render();}
@@ -2029,7 +2290,7 @@ document.getElementById('main').addEventListener('change',function(e){
       const keepUsers=S.config.users;S.config=Object.assign({},d.config||S.config,{users:keepUsers});S.students=d.students||[];S.staff=d.staff||[];
       S.att=d.att||{};S.reviews=d.reviews||[];S.tasks=d.tasks||[];if(d.timetable)S.timetable=d.timetable;if(d.latt)S.latt=d.latt;LIDX=null;
       [[K.config,S.config],[K.students,S.students],[K.staff,S.staff],[K.att,S.att],[K.reviews,S.reviews],[K.tasks,S.tasks],[K.timetable,S.timetable],[K.latt,S.latt]].forEach(p=>save(p[0],p[1]));
-      toast('הגיבוי נטען');render();
+      logAct('טעינת גיבוי','');toast('הגיבוי נטען');render();
     }catch(err){toast('הקובץ לא תקין');}};
     r.readAsText(el.files[0]);return;
   }
@@ -2061,6 +2322,8 @@ document.getElementById('main').addEventListener('input',function(e){
   FS=firebase.firestore();AUTH=firebase.auth();
   try{FS.settings({experimentalForceLongPolling:true,merge:true});}catch(e){}
   try{await FS.enablePersistence({synchronizeTabs:true});}catch(e){}
+  const jt=new URLSearchParams(location.search).get('join');
+  if(jt){try{await AUTH.signOut();}catch(e){}return showJoin(jt);}
   const user=await new Promise(r=>{const un=AUTH.onAuthStateChanged(x=>{un();r(x);});});
   let ok=false;
   if(user&&inst){try{ok=await enterInst(inst,user,null);}catch(e){}}
