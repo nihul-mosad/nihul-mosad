@@ -396,6 +396,8 @@ th{font-weight:600}
 }
 @media(hover:none){.btn[data-v="primary"]:hover{background:var(--accent)}}
 .hd{display:block;text-align:right;direction:rtl;font-size:12.5px;color:var(--accent);margin-top:4px;font-weight:500;min-height:1em}
+#netBanner{position:fixed;top:0;left:0;right:0;z-index:200;background:#DB4537;color:#fff;text-align:center;font-size:13.5px;padding:8px 14px calc(8px);padding-top:calc(8px + env(safe-area-inset-top,0px));line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+#netBanner b{font-weight:700}
 </style>
 </head>
 <body>
@@ -500,7 +502,7 @@ function enterSystem(user){
   S.tab='console';S.console=null;
   try{localStorage.setItem('tt:inst','system');localStorage.setItem('tt:instName','מסוף המערכת');}catch(e){}
   document.getElementById('login').style.display='none';document.getElementById('shell').classList.add('on');
-  render();return true;
+  render();startProbe();return true;
 }
 async function enterInst(inst,user,typed){
   const owner=user.uid===OWNER_UID;
@@ -543,7 +545,7 @@ async function enterInst(inst,user,typed){
   S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;
   document.getElementById('login').style.display='none';
   document.getElementById('shell').classList.add('on');
-  render();
+  render();startProbe();
   return true;
 }
 function queued(path,fn){const p=(WQ[path]||Promise.resolve()).then(fn);WQ[path]=p.catch(()=>{});return p;}
@@ -949,7 +951,7 @@ async function doLogin(){
   }finally{btn.disabled=false;btn.textContent='כניסה';}
 }
 async function logout(){
-  S.me=null;DB=null;closeDrawer(true);
+  S.me=null;DB=null;closeDrawer(true);clearInterval(NET_TIMER);{const b=document.getElementById('netBanner');if(b)b.remove();}NET_OK=true;
   try{if(AUTH)await AUTH.signOut();}catch(e){}
   document.getElementById('shell').classList.remove('on');
   document.getElementById('login').style.display='flex';
@@ -1426,6 +1428,26 @@ async function accountAction(a){
     logAct('החלפת סיסמה','');toast('הסיסמה הוחלפה');return goTab('dash');
   }catch(e){return toast(/invalid-credential|wrong-password/.test((e&&e.code)||'')?'הסיסמה הנוכחית לא נכונה':fbErr(e));}
 }
+
+
+/* ===== בדיקת חיבור לשרת ===== */
+let NET_OK=true,NET_TIMER=null;
+async function probeServer(){
+  if(!FS||!S.me)return;
+  const path=S.inst?'insts/'+S.inst:'logins/__probe';
+  let ok=false;
+  try{
+    await Promise.race([FS.doc(path).get({source:'server'}),new Promise((_,rej)=>setTimeout(()=>rej({code:'timeout'}),9000))]);
+    ok=true;
+  }catch(e){ok=!(e&&/unavailable|timeout|network/.test(e.code||''));}
+  const changed=ok!==NET_OK;NET_OK=ok;
+  let b=document.getElementById('netBanner');
+  if(!ok){
+    if(!b){b=document.createElement('div');b.id='netBanner';document.body.appendChild(b);}
+    b.innerHTML='<b>אין חיבור למאגר הנתונים</b> · ייתכן שהכתובות של Firebase חסומות בסינון (נטפרי). מה שמוצג עשוי להיות לא מעודכן, ושינויים לא יישמרו בשרת עד שהחיבור יחזור.';
+  }else if(b){b.remove();if(changed)toast('החיבור לשרת חזר');}
+}
+function startProbe(){clearInterval(NET_TIMER);probeServer();NET_TIMER=setInterval(probeServer,45000);}
 
 /* ================= נוכחות לפי שיעור ================= */
 function dow(date){return new Date(date+'T12:00:00').getDay();}
