@@ -475,9 +475,10 @@ async function createAuthUser(inst,u,pass){
   return {uid:id,email:email};
 }
 async function reloadMembers(){
+  if(!isAdmin()){S.config.users=[];return;}
   const q=await FS.collection('insts/'+S.inst+'/members').get();
   S.config.users=q.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.active!==false)
-    .map(m=>({id:m.id,user:m.user,role:m.role==='admin'?'admin':'teacher',cls:m.cls||'',teacher:m.teacher||''}));
+    .map(m=>({id:m.id,user:m.user,role:m.role==='admin'?'admin':'teacher',cls:m.cls||'',teacher:m.teacher||'',_sync:JSON.stringify([(m.classes||[]).slice().sort(),(m.tclasses||[]).slice().sort(),m.tk||''])}));
 }
 async function createInst(code,name,adminUid,adminUser,adminEmail,classes){
   const b=FS.batch();
@@ -529,10 +530,14 @@ async function enterInst(inst,user,typed){
   S.config=cfg;
   if(!S.config.domains||!S.config.domains.length)S.config.domains=SEED_DOMAINS;
   if(!S.config.classes)S.config.classes=[];
+  S.me={id:user.uid,user:m.user,role:m.role==='admin'?'admin':'teacher',cls:m.cls||'',teacher:m.teacher||'',mustChange:false};
   await reloadMembers();
-  S.students=await load(K.students,[]);S.staff=await load(K.staff,[]);
-  S.att=await load(K.att,{});S.reviews=await load(K.reviews,[]);S.tasks=await load(K.tasks,[]);S.timetable=await load(K.timetable,[]);S.latt=await load(K.latt,{});LIDX=null;
-  S.me={id:user.uid,user:m.user,role:m.role==='admin'?'admin':'teacher',cls:m.cls||'',teacher:m.teacher||'',mustChange:false};S.markLesson=null;S.markView='lessons';S.ttInit=0;S.ttMode='class';S.ttTeacher='';
+  S.timetable=await load(K.timetable,[]);
+  const sec=await loadSec();
+  if(!sec){
+    S.students=await load(K.students,[]);S.att=await load(K.att,{});S.reviews=await load(K.reviews,[]);S.tasks=await load(K.tasks,[]);S.latt=await load(K.latt,{});LIDX=null;
+  }
+  S.staff=isAdmin()?await load(K.staff,[]):[];S.markLesson=null;S.markView='lessons';S.ttInit=0;S.ttMode='class';S.ttTeacher='';
   try{localStorage.setItem('tt:inst',inst);localStorage.setItem('tt:instName',S.config.name||'');}catch(e){}
   S.tab=(isAdmin()||myClasses().length)?'dash':'mark';S.markCls=myClasses()[0]||'';S.revCls=myClasses()[0]||'';S.filter='';S.repCls='';S.revIdx=null;
   S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;
@@ -567,6 +572,153 @@ function saveFailed(e){
   const c=e&&e.code;
   toast(c==='quota_exceeded'?'המאגר מלא — לא נשמר':c==='revoked'||c==='not_granted'?'אין הרשאה לשמור':'השמירה נכשלה — בדקו את החיבור');
 }
+
+/* ===== אחסון מופרד: כל מורה מקבל מהשרת רק את מה שמותר לו ===== */
+const LD={};const SECKEYS={'tt:students':1,'tt:attendance':1,'tt:latt':1,'tt:reviews':1,'tt:tasks':1};
+function hexs(t){return Array.from(new TextEncoder().encode(t)).map(b=>b.toString(16).padStart(2,'0')).join('');}
+function keyify(x){const t=String(x||'').trim().replace(/\s+/g,' ');if(!t)return '0';const l=t.toLowerCase();if(/^[a-z0-9-]+$/.test(l))return l;return 'h'+hexs(t);}
+const ckOf=c=>keyify(c||'');
+const tkOf=t=>t?keyify(t):'';
+function schoolMonths(){const n=new Date();const y=n.getFullYear(),m=n.getMonth()+1,sy=m>=8?y:y-1,out=[];let yy=sy,mm=8;
+  while(yy<y||(yy===y&&mm<=m)){out.push(yy+'-'+String(mm).padStart(2,'0'));mm++;if(mm>12){mm=1;yy++;}}return out;}
+const IB=()=>'insts/'+S.inst+'/';
+function nn(m){const o={};Object.keys(m||{}).forEach(k=>{if(m[k]!=null)o[k]=m[k];});return o;}
+function nn2(d){const o={};Object.keys(d||{}).forEach(k=>{const x=nn(d[k]);if(Object.keys(x).length)o[k]=x;});return o;}
+async function fsGet(p){const d=await FS.doc(IB()+p).get();return d.exists?(d.data()||{}):null;}
+async function fsList(c){const q=await FS.collection(IB()+c).get();return q.docs.map(d=>({id:d.id,data:d.data()||{}}));}
+async function inChunks(items,fn,n){for(let i=0;i<items.length;i+=n)await Promise.all(items.slice(i,i+n).map(fn));}
+function teachClasses(t){t=t===undefined?S.me.teacher:t;const o={};S.timetable.forEach(l=>{if(t&&l.teacher===t)(l.classes||[]).forEach(c=>o[c]=1);});return Object.keys(o);}
+async function writeDoc(path,field,depth,newMap,order){
+  const prev=LD[path]||{},pairs=[],J=JSON.stringify,DEL=firebase.firestore.FieldValue.delete();
+  const keys=Array.from(new Set(Object.keys(prev).concat(Object.keys(newMap))));
+  if(depth===1)keys.forEach(k=>{const a=prev[k],b=newMap[k];if(b===undefined){if(a!==undefined)pairs.push([[field,k],DEL]);}else if(J(a)!==J(b))pairs.push([[field,k],b]);});
+  else keys.forEach(d=>{const A=prev[d]||{},B=newMap[d]||{};Array.from(new Set(Object.keys(A).concat(Object.keys(B)))).forEach(k=>{
+    if(B[k]===undefined){if(A[k]!==undefined)pairs.push([[field,d,k],DEL]);}else if(A[k]!==B[k])pairs.push([[field,d,k],B[k]]);});});
+  const ordJ=order?J(order):null,ordCh=order&&LD[path+'#o']!==ordJ;
+  if(!pairs.length&&!ordCh)return;
+  await queued(path,async function(){
+    const ref=FS.doc(IB()+path),args=[];
+    pairs.forEach(p=>{args.push(new firebase.firestore.FieldPath(...p[0]));args.push(p[1]);});
+    if(ordCh){args.push(new firebase.firestore.FieldPath('o'));args.push(order);}
+    try{await ref.update(...args);}
+    catch(e){
+      if(e&&(e.code==='not-found'||e.code==='invalid_argument')){const full={};full[field]=newMap;if(order)full.o=order;await ref.set(full);}
+      else throw e;
+    }
+    LD[path]=clone(newMap);if(order)LD[path+'#o']=ordJ;
+  });
+}
+function knownPaths(pre){return Object.keys(LD).filter(k=>k.indexOf(pre)===0&&k.indexOf('#')<0);}
+async function saveStudentsSec(){
+  if(!isAdmin())return;
+  const byC={},rC={},ord={};
+  knownPaths('cls/').forEach(p=>{const c=p.slice(4);byC[c]={};ord[c]=[];});
+  knownPaths('roster/').forEach(p=>{const c=p.slice(7);rC[c]={};});
+  S.students.forEach(function(st){if(!st.id)st.id=uid();const c=ckOf(st.cls);(byC[c]=byC[c]||{})[st.id]=st;(ord[c]=ord[c]||[]).push(st.id);(rC[c]=rC[c]||{})[st.id]={id:st.id,name:st.name,cls:st.cls||''};});
+  for(const c of Object.keys(byC))await writeDoc('cls/'+c,'m',1,clone(byC[c]),ord[c]||[]);
+  for(const c of Object.keys(rC))await writeDoc('roster/'+c,'m',1,rC[c]);
+}
+function attTargets(isL){
+  const src=isL?S.latt:S.att,out={},sc={},lt={};
+  S.students.forEach(x=>sc[x.id]=x.cls);S.timetable.forEach(l=>lt[l.id]=l.teacher||'');
+  knownPaths('att/'+(isL?'L':'D')).forEach(p=>out[p]={});
+  Object.keys(src).forEach(function(date){const day=src[date]||{};Object.keys(day).forEach(function(k){
+    const v=day[k];if(!v)return;let sid=k,tk='';
+    if(isL){const i=k.indexOf(':');if(i<0)return;sid=k.slice(i+1);tk=tkOf(lt[k.slice(0,i)]);}
+    if(sc[sid]===undefined)return;
+    const p='att/'+(isL?'L':'D')+month(date)+'_'+ckOf(sc[sid])+'_'+tk;
+    ((out[p]=out[p]||{})[date]=out[p][date]||{})[k]=v;});});
+  return out;
+}
+async function saveAttSec(isL){const t=attTargets(isL);for(const p of Object.keys(t))await writeDoc(p,'d',2,t[p]);}
+async function saveReviewsSec(){
+  const sc={},out={};S.students.forEach(x=>sc[x.id]=x.cls);
+  knownPaths('rev/').forEach(p=>out[p]={});
+  S.reviews.forEach(function(r){if(!r.id)r.id=uid();if(sc[r.studentId]===undefined)return;const p='rev/'+month(r.date)+'_'+ckOf(sc[r.studentId]);(out[p]=out[p]||{})[r.id]=r;});
+  for(const p of Object.keys(out))await writeDoc(p,'r',1,clone(out[p]));
+}
+async function saveTasksSec(){
+  const out={},ord={};knownPaths('tasks/').forEach(p=>{out[p]={};ord[p]=[];});
+  S.tasks.forEach(function(t){if(!t.id)t.id=uid();if(!t.uid)t.uid=S.me.id;const p='tasks/'+t.uid;(out[p]=out[p]||{})[t.id]=t;(ord[p]=ord[p]||[]).push(t.id);});
+  if(!isAdmin())Object.keys(out).forEach(p=>{if(p!=='tasks/'+S.me.id)delete out[p];});
+  for(const p of Object.keys(out))await writeDoc(p,'m',1,clone(out[p]),ord[p]);
+}
+async function saveSec(key){
+  if(key===K.students)return saveStudentsSec();
+  if(key===K.latt)return saveAttSec(true);
+  if(key===K.att)return saveAttSec(false);
+  if(key===K.reviews)return saveReviewsSec();
+  if(key===K.tasks)return saveTasksSec();
+}
+function orderedFrom(m,o){const out=[],seen={};(o||[]).forEach(id=>{if(m[id]&&!seen[id]){out.push(clone(m[id]));seen[id]=1;}});Object.keys(m).forEach(id=>{if(m[id]&&!seen[id])out.push(clone(m[id]));});return out;}
+function addAtt(tL,tD,id,data){const d=data.d||{},t=id.charAt(0)==='L'?tL:tD;Object.keys(d).forEach(date=>{const day=d[date]||{};Object.keys(day).forEach(k=>{if(day[k]!=null)(t[date]=t[date]||{})[k]=day[k];});});}
+async function loadSec(){
+  Object.keys(LD).forEach(k=>delete LD[k]);
+  const admin=isAdmin(),months=schoolMonths();
+  // בדיקה שהחוקים החדשים פעילים
+  try{if(admin)await FS.collection(IB()+'cls').get();else await FS.doc(IB()+'tasks/'+S.me.id).get();}
+  catch(e){if(e&&/permission/.test(e.code||'')){S.legacy=true;return false;}}
+  S.legacy=false;
+  const L={},D={};let studs=[],revs=[],tasks=[];
+  if(admin){
+    const cl=await fsList('cls');
+    cl.forEach(x=>{const m=nn(x.data.m);LD['cls/'+x.id]=clone(m);LD['cls/'+x.id+'#o']=JSON.stringify(x.data.o||[]);studs=studs.concat(orderedFrom(m,x.data.o));});
+    (await fsList('roster')).forEach(x=>LD['roster/'+x.id]=nn(x.data.m));
+    const at=await fsList('att'),legacyAtt=[];
+    at.forEach(x=>{if(x.id.indexOf('_')>-1){addAtt(L,D,x.id,x.data);LD['att/'+x.id]=nn2(x.data.d);}else legacyAtt.push(x);});
+    const rv=await fsList('rev'),legacyRev=[];
+    rv.forEach(x=>{if(x.id.indexOf('_')>-1){const r=nn(x.data.r);LD['rev/'+x.id]=clone(r);revs=revs.concat(Object.values(r));}else legacyRev.push(x);});
+    (await fsList('tasks')).forEach(x=>{const m=nn(x.data.m);LD['tasks/'+x.id]=clone(m);LD['tasks/'+x.id+'#o']=JSON.stringify(x.data.o||[]);tasks=tasks.concat(orderedFrom(m,x.data.o).map(t=>Object.assign(t,{uid:x.id})));});
+    S.students=studs;S.latt=L;S.att=D;S.reviews=revs;S.tasks=tasks;
+    // העברת נתונים מהמבנה הקודם
+    let legS=null,legT=null;try{legS=await fsGet('store/students');}catch(e){}try{legT=await fsGet('store/tasks');}catch(e){}
+    const need=(legS&&legS.m&&!cl.length)||legacyAtt.length||legacyRev.length||(legT&&legT.m);
+    if(need){
+      toast('מעדכן את מבנה הנתונים…');
+      if(legS&&legS.m&&!cl.length)S.students=orderedFrom(nn(legS.m),legS.o);
+      legacyAtt.forEach(x=>addAtt(S.latt,S.att,x.id,x.data));
+      legacyRev.forEach(x=>{S.reviews=S.reviews.concat(Object.values(nn(x.data.r)));});
+      if(legT&&legT.m){const byName={};S.config.users.forEach(u=>byName[u.user]=u.id);S.tasks=S.tasks.concat(orderedFrom(nn(legT.m),legT.o).map(t=>Object.assign(t,{uid:byName[t.by]||S.me.id})));}
+      try{
+        await saveStudentsSec();await saveAttSec(true);await saveAttSec(false);await saveReviewsSec();await saveTasksSec();
+        const dels=[];if(legS)dels.push('store/students');if(legT)dels.push('store/tasks');
+        legacyAtt.forEach(x=>dels.push('att/'+x.id));legacyRev.forEach(x=>dels.push('rev/'+x.id));
+        for(const p of dels){try{await FS.doc(IB()+p).delete();}catch(e){}}
+        logAct('עדכון מבנה נתונים','הפרדה לפי כיתות ומורים');
+      }catch(e){toast('עדכון המבנה נכשל: '+fbErr(e));}
+    }
+  }else{
+    const mc=myClasses(),tc=teachClasses().filter(c=>mc.indexOf(c)<0),myTk=tkOf(S.me.teacher);
+    await inChunks(mc,async c=>{const d=await fsGet('cls/'+ckOf(c)).catch(()=>null);if(d)studs=studs.concat(orderedFrom(nn(d.m),d.o));},10);
+    await inChunks(tc,async c=>{const d=await fsGet('roster/'+ckOf(c)).catch(()=>null);if(d)studs=studs.concat(Object.values(nn(d.m)));},10);
+    const ids=[];
+    mc.forEach(c=>{const ck=ckOf(c),tks={'':1};S.timetable.forEach(l=>{if((l.classes||[]).indexOf(c)>-1)tks[tkOf(l.teacher)]=1;});
+      months.forEach(mo=>{Object.keys(tks).forEach(tk=>ids.push('L'+mo+'_'+ck+'_'+tk));ids.push('D'+mo+'_'+ck+'_');});});
+    if(myTk)tc.forEach(c=>months.forEach(mo=>ids.push('L'+mo+'_'+ckOf(c)+'_'+myTk)));
+    await inChunks(ids,async id=>{const d=await fsGet('att/'+id).catch(()=>null);if(d){addAtt(L,D,id,d);LD['att/'+id]=nn2(d.d);}},20);
+    const rids=[];mc.forEach(c=>months.forEach(mo=>rids.push(mo+'_'+ckOf(c))));
+    await inChunks(rids,async id=>{const d=await fsGet('rev/'+id).catch(()=>null);if(d){const r=nn(d.r);LD['rev/'+id]=clone(r);revs=revs.concat(Object.values(r));}},20);
+    const td=await fsGet('tasks/'+S.me.id).catch(()=>null);
+    if(td){const m=nn(td.m);LD['tasks/'+S.me.id]=clone(m);LD['tasks/'+S.me.id+'#o']=JSON.stringify(td.o||[]);tasks=orderedFrom(m,td.o).map(t=>Object.assign(t,{uid:S.me.id}));}
+    S.students=studs;S.latt=L;S.att=D;S.reviews=revs;S.tasks=tasks;
+  }
+  revs=S.reviews.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  LIDX=null;return true;
+}
+let SYNCING=false;
+async function syncMembers(){
+  if(SYNCING||!S.inst||!isAdmin()||S.legacy||!FS||!S.config.users)return;SYNCING=true;
+  try{
+    const b=FS.batch();let n=0;
+    S.config.users.forEach(function(u){
+      const t=u.teacher||'',cls=homeroomOf(t).map(ckOf).sort(),tc=teachClasses(t).map(ckOf).sort(),tk=tkOf(t),want=JSON.stringify([cls,tc,tk]);
+      if(u._sync===want)return;
+      b.set(FS.doc(IB()+'members/'+u.id),{classes:cls,tclasses:tc,tk:tk},{merge:true});n++;u._sync=want;
+    });
+    if(n)await b.commit();
+  }catch(e){}finally{SYNCING=false;}
+}
+
 async function load(key,fb){
   if(DB){
     try{
@@ -605,6 +757,7 @@ async function load(key,fb){
   return fb;
 }
 async function save(key,val){
+  if(DB&&SECKEYS[key]&&!S.legacy&&S.inst){try{await saveSec(key);}catch(e){saveFailed(e);}return;}
   if(DB){
     try{
       if(ARRKEYS[key]){
@@ -1187,7 +1340,8 @@ async function loadConsole(){
   const days=[];for(let d=new Date(ws+'T12:00:00');iso(d)<=today;d.setDate(d.getDate()+1))days.push(iso(d));
   for(const d of q.docs){
     const code=d.id,data=d.data()||{},o={code:code,name:data.name||code,disabled:!!data.disabled,students:0,users:0,pend:0,usage:null,log:[]};
-    try{const st=await FS.doc('insts/'+code+'/store/students').get();o.students=st.exists?Object.values((st.data()||{}).m||{}).filter(Boolean).length:0;}catch(e){}
+    try{const cq=await FS.collection('insts/'+code+'/cls').get();o.students=cq.docs.reduce((a,x)=>a+Object.values((x.data()||{}).m||{}).filter(Boolean).length,0);
+      if(!cq.docs.length){const st=await FS.doc('insts/'+code+'/store/students').get();o.students=st.exists?Object.values((st.data()||{}).m||{}).filter(Boolean).length:0;}}catch(e){}
     try{const mm=await FS.collection('insts/'+code+'/members').get();o.users=mm.docs.filter(x=>(x.data()||{}).active!==false).length;}catch(e){}
     try{const rq=await FS.collection('insts/'+code+'/requests').get();o.pend=rq.docs.length;}catch(e){}
     try{const lg=await FS.collection('insts/'+code+'/log').orderBy('ts','desc').limit(30).get();o.log=lg.docs.map(x=>Object.assign({inst:code,instName:o.name},x.data()));}catch(e){}
@@ -1196,7 +1350,8 @@ async function loadConsole(){
       const lessons=Object.values(m).filter(Boolean);
       if(lessons.length){
         const months=Array.from(new Set(days.map(x=>x.slice(0,7)))),marks={};
-        for(const mo of months){const a=await FS.doc('insts/'+code+'/att/L'+mo).get();const dd=a.exists?((a.data()||{}).d||{}):{};Object.keys(dd).forEach(k=>marks[k]=dd[k]||{});}
+        const aq=await FS.collection('insts/'+code+'/att').get();
+        aq.docs.forEach(a=>{if(!months.some(mo=>a.id.indexOf('L'+mo)===0))return;const dd=(a.data()||{}).d||{};Object.keys(dd).forEach(k=>marks[k]=Object.assign(marks[k]||{},dd[k]||{}));});
         let tot=0,done=0;
         days.forEach(function(day){const dw=new Date(day+'T12:00:00').getDay();if(dw>5)return;const mk=marks[day]||{};
           lessons.filter(l=>l.day===dw).forEach(l=>{tot++;if(Object.keys(mk).some(k=>k.indexOf(l.id+':')===0&&mk[k]))done++;});});
@@ -2032,10 +2187,12 @@ function render(){
   if(S.inst&&!isAdmin()&&['card','account'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
   const v=map[S.tab]||viewDash;
   let warn='';
+  if(S.legacy&&isAdmin())warn+='<div class="warn">צריך לעדכן את חוקי האבטחה ב-Firebase כדי להפעיל את ההפרדה המלאה בין המורים. עד אז המערכת עובדת במצב הקודם.</div>';
   if(window.claude&&!DB)warn+='<div class="warn">אין חיבור למאגר הנתונים המשותף, ולכן שינויים יישמרו רק במכשיר הזה. נסו לרענן את הדף.</div>';
   if(S.me.mustChange)warn+='<div class="warn">הסיסמה שלך היא עדיין ברירת המחדל. '+(isAdmin()?'החליפו אותה בהגדרות ← משתמשים.':'בקשו מהמנהל להחליף אותה.')+'</div>';
   document.getElementById('main').innerHTML=warn+v();
   paintMobile();syncHistory();decorateDates();
+  if(S.inst&&isAdmin())syncMembers();
   if(S.focus){const el=document.getElementById(S.focus);if(el){el.focus();const n=el.value.length;try{el.setSelectionRange(n,n);}catch(e){}}S.focus=null;}
 }
 
@@ -2106,7 +2263,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a==='task-add'){
     const t=document.getElementById('taskText').value.trim();
     if(!t)return toast('צריך לכתוב משימה');
-    S.tasks.push({id:uid(),text:t,due:document.getElementById('taskDue').value,status:'open',by:S.me.user});
+    S.tasks.push({id:uid(),text:t,due:document.getElementById('taskDue').value,status:'open',by:S.me.user,uid:S.me.id});
     S.taskText='';save(K.tasks,S.tasks);toast('המשימה נוספה');return render();
   }
   if(a==='task-toggle'){
