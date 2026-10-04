@@ -1066,7 +1066,10 @@ function viewReview(){
 
       '<div class="row"><button class="btn big" data-v="primary" data-act="rev-next">שמירה והבא</button>'+
       '<button class="btn" data-act="rev-skip">דילוג</button>'+
-      (S.revIdx>0?'<button class="btn" data-v="ghost" data-act="rev-back">הקודם</button>':'')+'</div>'+
+      (S.revIdx>0?'<button class="btn" data-v="ghost" data-act="rev-back">הקודם</button>':'')+
+      ((d.light||d.note||Object.keys(d.scores).length)?'<button class="btn" data-v="ghost" data-act="rev-clear">ניקוי הסימונים</button>':'')+
+      (S.reviews.some(r=>S.revList[S.revIdx]&&r.studentId===S.revList[S.revIdx].id&&r.date===S.revDate)?'<button class="btn" data-v="danger" data-act="rev-del" style="margin-right:auto">מחיקת תמונת המצב</button>':'')+'</div>'+
+      '<p class="note" style="margin-top:8px">לחיצה נוספת על צבע או ציון שכבר נבחר מבטלת אותו.</p>'+
     '</div>'+
 
     '<div><div class="card"><h3 style="margin-bottom:8px">בפעם הקודמת</h3>'+
@@ -1148,7 +1151,7 @@ function viewCard(){
       }).join(''):'<p class="note">עוד לא נרשמה תמונת מצב.</p>')+'</div></div>'+
     '<div class="card"><h3>היסטוריית תמונות מצב</h3>'+
       (revs.length?'<div class="tl">'+revs.map(function(r){
-        return '<div class="tl-item" data-l="'+r.light+'"><div class="tl-date">'+dual(r.date)+' · '+esc(r.by||'')+'</div>'+
+        return '<div class="tl-item" data-l="'+r.light+'"><div class="tl-date" style="display:flex;justify-content:space-between;gap:8px"><span>'+dual(r.date)+' · '+esc(r.by||'')+'</span><button class="link" style="color:var(--muted);font-weight:500;font-size:12.5px" data-act="rev-del-id" data-id="'+r.id+'">מחיקה</button></div>'+
         '<div class="row" style="gap:6px;margin:4px 0"><span class="tag" data-s="'+r.light+'">'+LIGHTNAME[r.light]+'</span>'+
         domains().map(function(d){return r.scores&&r.scores[d.id]?'<span class="note">'+esc(d.name)+' '+r.scores[d.id]+'</span>':'';}).join(' · ')+'</div>'+
         (r.note?'<div>'+esc(r.note)+'</div>':'')+'</div>';
@@ -2249,8 +2252,20 @@ document.getElementById('main').addEventListener('click',async function(e){
   /* תמונת מצב */
   if(a==='rev-start'){startReview(myStudents().filter(s=>s.cls===S.revCls));return render();}
   if(a==='rev-one'){const s=studentById(id);S.revCls=s.cls;startReview([s]);return render();}
-  if(a==='rev-light'){S.revDraft.light=el.dataset.l;return render();}
-  if(a==='rev-score'){S.revDraft.scores[el.dataset.d]=Number(el.dataset.n);return render();}
+  if(a==='rev-light'){S.revDraft.light=S.revDraft.light===el.dataset.l?'':el.dataset.l;return render();}
+  if(a==='rev-score'){const k=el.dataset.d,n=Number(el.dataset.n);if(S.revDraft.scores[k]===n)delete S.revDraft.scores[k];else S.revDraft.scores[k]=n;return render();}
+  if(a==='rev-clear'){S.revDraft={light:'',scores:{},note:''};return render();}
+  if(a==='rev-del'){
+    const st=S.revList[S.revIdx];if(!st)return;
+    if(!confirm('למחוק את תמונת המצב של '+st.name+' מתאריך זה?'))return;
+    S.reviews=S.reviews.filter(r=>!(r.studentId===st.id&&r.date===S.revDate));save(K.reviews,S.reviews);
+    logAct('מחיקת תמונת מצב',st.name);loadRevDraft();toast('נמחק');return render();
+  }
+  if(a==='rev-del-id'){
+    const r=S.reviews.find(x=>x.id===id);if(!r||!canSeeStudent(r.studentId))return;
+    if(!confirm('למחוק את תמונת המצב מ־'+shortDate(r.date)+'?'))return;
+    S.reviews=S.reviews.filter(x=>x.id!==id);save(K.reviews,S.reviews);logAct('מחיקת תמונת מצב',(studentById(r.studentId)||{}).name||'');toast('נמחק');return render();
+  }
   if(a==='rev-next'){
     if(!S.revDraft.light)return toast('בחרו ירוק, צהוב או אדום');
     saveRev();{const st=S.revList[S.revIdx];logAct('תמונת מצב',(st&&st.name||'')+' · '+LIGHTNAME[S.revDraft.light]);}S.revIdx++;loadRevDraft();toast('נשמר');return render();
