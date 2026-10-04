@@ -703,7 +703,7 @@ const S={tab:'dash',me:null,config:{name:'המוסד',classes:[],logo:'',users:[
   msgGroup:'all',msgText:'',msgTo:'both',importPreview:null,focus:null,
   repFrom:daysAgo(30),repTo:iso(new Date()),repCls:''};
 
-const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['mark','נוכחות'],['schedule','מערכת שעות'],['tasks','משימות'],['messages','הודעות'],['reports','דוחות'],['staff','צוות'],['settings','הגדרות']];
+const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['mark','נוכחות'],['schedule','מערכת שעות'],['tasks','משימות'],['reports','דוחות'],['staff','צוות'],['settings','הגדרות']];
 const isAdmin=()=>S.me&&S.me.role==='admin';
 function homeroomOf(t){const h=S.config.homeroom||{};return S.config.classes.filter(c=>t&&h[c]===t);}
 const myClasses=()=>isAdmin()?S.config.classes:Array.from(new Set((S.me.cls?[S.me.cls]:[]).concat(homeroomOf(S.me.teacher))));
@@ -715,7 +715,7 @@ const myStudents=()=>{
   myLessonAll().forEach(l=>{if(l.type==='private')(l.students||[]).forEach(id=>ok[id]=1);else S.students.forEach(s=>{if((l.classes||[]).indexOf(s.cls)>-1)ok[s.id]=1;});});
   return S.students.filter(s=>ok[s.id]);
 };
-const tabsFor=()=>isAdmin()?ALL_TABS:ALL_TABS.filter(t=>['dash','review','students','mark','schedule','tasks','messages','reports'].indexOf(t[0])>-1);
+const tabsFor=()=>isAdmin()?ALL_TABS:ALL_TABS.filter(t=>['dash','review','students','mark','schedule','tasks','reports'].indexOf(t[0])>-1);
 const domains=()=>S.config.domains&&S.config.domains.length?S.config.domains:SEED_DOMAINS;
 
 /* ---- שליפות ---- */
@@ -1732,7 +1732,7 @@ function render(){
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
     '<div style="margin-top:8px"><button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
-    messages:viewMessages,reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,import:viewImport,card:viewCard};
+    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,import:viewImport,card:viewCard};
   const v=map[S.tab]||viewDash;
   let warn='';
   if(window.claude&&!DB)warn+='<div class="warn">אין חיבור למאגר הנתונים המשותף, ולכן שינויים יישמרו רק במכשיר הזה. נסו לרענן את הדף.</div>';
