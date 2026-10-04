@@ -1019,7 +1019,7 @@ function newToken(){const a=new Uint8Array(15);crypto.getRandomValues(a);return 
 function intlPhone(p){const d=String(p||'').replace(/\D/g,'');return d.indexOf('0')===0?'972'+d.slice(1):d;}
 function credMsg(c){
   return 'שלום '+(c.teacher||c.user)+',\n\nמעכשיו מסמנים נוכחות ועוקבים אחרי התלמידים במערכת ניהול המוסד.\n\nקישור: '+SITE_URL+'\nקוד מוסד: '+S.inst+'\nשם משתמש: '+c.user+'\nקוד כניסה: '+c.pin+
-    '\n\nכדאי לסמן "להישאר מחובר", וכך מקלידים את הפרטים רק פעם אחת. בטלפון אפשר להוסיף למסך הבית מהתפריט של כרום.\n\nמי שמסונן בנטפרי צריך לבקש לפתוח את הכתובות:\n'+FB_DOMAINS;
+    '\n\nאחרי הכניסה אפשר להחליף את הקוד לסיסמה משלכם (בתפריט: "החלפת סיסמה").\nכדאי לסמן "להישאר מחובר", וכך מקלידים את הפרטים רק פעם אחת. בטלפון אפשר להוסיף למסך הבית מהתפריט של כרום.\n\nמי שמסונן בנטפרי צריך לבקש לפתוח את הכתובות:\n'+FB_DOMAINS;
 }
 function teacherPhone(t){const x=S.staff.find(s=>s.name===t);return x?x.phone:'';}
 function bulkForm(){
@@ -1240,6 +1240,31 @@ async function consoleAction(a,el){
     if(!confirm((o.disabled?'להפעיל':'להשבית')+' את "'+o.name+'"?'+(o.disabled?'':' המשתמשים שלו לא יוכלו להיכנס עד שתפעיל מחדש.')))return;
     try{await FS.doc('insts/'+o.code).set({disabled:!o.disabled},{merge:true});o.disabled=!o.disabled;toast(o.disabled?'המוסד הושבת':'המוסד הופעל');return render();}catch(e){return toast(fbErr(e));}
   }
+}
+
+
+/* ================= החלפת סיסמה עצמית ================= */
+function viewAccount(){
+  return '<div class="head"><div><h2>החלפת סיסמה</h2><div class="sub">'+esc(S.me.user)+' · קוד מוסד '+esc(S.inst||'')+'</div></div></div>'+
+    '<div class="card" style="max-width:440px"><p class="note" style="margin-bottom:14px">אפשר להחליף את קוד הכניסה שקיבלתם לסיסמה משלכם. אחרי ההחלפה רק אתם יודעים אותה.</p>'+
+    '<label class="field"><span>הסיסמה או הקוד הנוכחי</span><input id="ac-old" type="password" autocomplete="current-password"></label>'+
+    '<label class="field"><span>סיסמה חדשה (לפחות 6 תווים)</span><input id="ac-new" type="password" autocomplete="new-password"></label>'+
+    '<label class="field"><span>שוב את הסיסמה החדשה</span><input id="ac-new2" type="password" autocomplete="new-password"></label>'+
+    '<div class="row"><button class="btn" data-v="primary" data-act="ac-save">שמירת הסיסמה</button><button class="btn" data-v="ghost" data-act="ac-cancel">ביטול</button></div></div>';
+}
+async function accountAction(a){
+  if(a==='ac-cancel')return goTab('dash');
+  const g=i=>document.getElementById(i).value,o=g('ac-old'),n=g('ac-new'),n2=g('ac-new2');
+  if(!o)return toast('הקלידו את הסיסמה הנוכחית');
+  if(n.length<6)return toast('הסיסמה החדשה צריכה להיות לפחות 6 תווים');
+  if(n!==n2)return toast('הסיסמאות החדשות לא זהות');
+  if(n===o)return toast('הסיסמה החדשה זהה לנוכחית');
+  try{
+    const u=AUTH.currentUser;
+    await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,o));
+    await u.updatePassword(n);
+    logAct('החלפת סיסמה','');toast('הסיסמה הוחלפה');return goTab('dash');
+  }catch(e){return toast(/invalid-credential|wrong-password/.test((e&&e.code)||'')?'הסיסמה הנוכחית לא נכונה':fbErr(e));}
 }
 
 /* ================= נוכחות לפי שיעור ================= */
@@ -1987,9 +2012,9 @@ function render(){
   document.getElementById('brandSub').textContent=!S.inst?'בעל המערכת':isAdmin()?'ניהול המוסד':(myClasses().length?'מחנך '+myClasses().join(', '):'מורה');
   document.getElementById('nav').innerHTML=tabsFor().map(t=>'<button data-tab="'+t[0]+'" data-on="'+(S.tab===t[0]?1:0)+'">'+t[1]+'</button>').join('');
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
-    '<div style="margin-top:8px"><button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
+    '<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
-    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,import:viewImport,card:viewCard};
+    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,account:viewAccount,import:viewImport,card:viewCard};
   const v=map[S.tab]||viewDash;
   let warn='';
   if(window.claude&&!DB)warn+='<div class="warn">אין חיבור למאגר הנתונים המשותף, ולכן שינויים יישמרו רק במכשיר הזה. נסו לרענן את הדף.</div>';
@@ -2009,7 +2034,7 @@ document.getElementById('nav').addEventListener('click',function(e){
   const b=e.target.closest('button[data-tab]');if(!b)return;
   closeDrawer(true);goTab(b.dataset.tab);window.scrollTo(0,0);
 });
-document.getElementById('who').addEventListener('click',function(e){if(e.target.closest('[data-act="logout"]'))logout();});
+document.getElementById('who').addEventListener('click',function(e){if(e.target.closest('[data-act="logout"]'))logout();if(e.target.closest('[data-act="go-account"]')){closeDrawer(true);goTab('account');}});
 
 function startReview(list){
   S.revList=list;S.revIdx=0;S.revDone=0;loadRevDraft();
@@ -2038,6 +2063,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a.indexOf('lm-')===0||a==='mark-view')return markAction(a,el);
   if(/^(bulk-|cred-|join-|jr-)/.test(a)||a==='user-pin')return userAction(a,el);
   if(a.indexOf('con-')===0)return consoleAction(a,el);
+  if(a.indexOf('ac-')===0)return accountAction(a);
 
   if(a==='logout')return logout();
   if(a==='goto-mark'){S.tab='mark';if(el.dataset.cls)S.markCls=el.dataset.cls;S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;return render();}
