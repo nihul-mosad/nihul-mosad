@@ -1449,6 +1449,38 @@ async function probeServer(){
 }
 function startProbe(){clearInterval(NET_TIMER);probeServer();NET_TIMER=setInterval(probeServer,45000);}
 
+
+/* ===== מיזוג ייבוא תלמידים ===== */
+function nmKey(n){return String(n||'').replace(/[\u200e\u200f]/g,'').replace(/[׳'״"\-]/g,'').replace(/\s+/g,' ').trim();}
+function idOf(st){const x=st.extra||{};const k=Object.keys(x).find(k=>/ת\s*\.?\s*ז|תעודת\s*זהות|ת"ז|ת״ז|מספר\s*זהות/.test(k));return k?String(x[k]).replace(/\D/g,''):'';}
+function mergePlan(rows){
+  const byId={},byName={},used={};
+  S.students.forEach(st=>{const i=idOf(st);if(i)byId[i]=st;const n=nmKey(st.name);(byName[n]=byName[n]||[]).push(st);});
+  const plan=rows.map(function(r){
+    let m=null;const i=idOf(r);
+    if(i&&byId[i]&&!used[byId[i].id])m=byId[i];
+    if(!m){m=(byName[nmKey(r.name)]||[]).find(st=>!used[st.id]&&(!r.cls||!st.cls||st.cls===r.cls))||(byName[nmKey(r.name)]||[]).find(st=>!used[st.id]);}
+    if(m)used[m.id]=1;
+    let changed=false;
+    if(m){['name','cls','father','fatherPhone','mother','motherPhone','notes'].forEach(f=>{if(r[f]&&r[f]!==m[f])changed=true;});
+      Object.keys(r.extra||{}).forEach(k=>{if(r.extra[k]&&(!m.extra||m.extra[k]!==r.extra[k]))changed=true;});}
+    return {row:r,match:m,changed:changed};
+  });
+  const missing=S.students.filter(st=>!used[st.id]);
+  return {plan:plan,upd:plan.filter(x=>x.match&&x.changed).length,same:plan.filter(x=>x.match&&!x.changed).length,add:plan.filter(x=>!x.match).length,missing:missing};
+}
+function applyMerge(removeMissing){
+  const M=mergePlan(S.importPreview.rows);
+  M.plan.forEach(function(x){
+    if(!x.match){S.students.push(x.row);return;}
+    const m=x.match,r=x.row;
+    ['name','cls','father','fatherPhone','mother','motherPhone','notes'].forEach(f=>{if(r[f])m[f]=r[f];});
+    if(r.extra&&Object.keys(r.extra).length){m.extra=Object.assign({},m.extra||{});Object.keys(r.extra).forEach(k=>{if(r.extra[k])m.extra[k]=r.extra[k];});}
+  });
+  if(removeMissing){const gone={};M.missing.forEach(st=>gone[st.id]=1);S.students=S.students.filter(st=>!gone[st.id]);}
+  return M;
+}
+
 /* ================= נוכחות לפי שיעור ================= */
 function dow(date){return new Date(date+'T12:00:00').getDay();}
 function lessonsOn(date){const d=dow(date);return d>5?[]:S.timetable.filter(l=>l.day===d);}
@@ -1994,10 +2026,16 @@ function viewImport(){
           .concat(xk.slice(0,4).map(k=>esc((s.extra||{})[k]||'')))))+
         (xk.length>4?'<p class="note">ועוד '+(xk.length-4)+' שדות נוספים שיישמרו בכרטיס: '+esc(xk.slice(4).join(' · '))+'</p>':'')+
         (p.rows.length>8?'<p class="note">…ועוד '+(p.rows.length-8)+' שורות</p>':'')+
-        '<div class="row" style="margin-top:16px"><button class="btn" data-v="primary" data-act="import-replace">החלפת הרשימה כולה</button>'+
-        '<button class="btn" data-act="import-add">הוספה לרשימה הקיימת</button>'+
-        '<button class="btn" data-v="ghost" data-act="import-reset">ביטול</button></div>'+
-        '<p class="note" style="margin-top:10px">החלפה מלאה מוחקת גם נוכחות ותמונות מצב קיימות, כי המזהים משתנים.</p>';
+        (S.students.length?(function(){const M=mergePlan(p.rows);
+          return '<div class="card" style="margin-top:16px;background:var(--surface2);border-color:var(--accent)"><h3>עדכון ומיזוג (מומלץ)</h3>'+
+          '<p style="margin-bottom:8px">התלמידים מזוהים לפי '+(p.rows.some(r=>idOf(r))?'תעודת זהות, ואם אין, לפי שם':'שם')+'. הנוכחות ותמונות המצב שלהם נשמרות.</p>'+
+          '<div class="row" style="gap:14px;margin-bottom:8px"><span><b>'+M.add+'</b> תלמידים חדשים יתווספו</span><span><b>'+M.upd+'</b> יעודכנו</span><span><b>'+M.same+'</b> ללא שינוי</span></div>'+
+          (M.missing.length?'<label class="chk" style="margin:4px 0 10px"><input type="checkbox" id="impRemove"> להסיר '+M.missing.length+' תלמידים שקיימים במערכת ולא מופיעים בקובץ <span class="note">('+esc(M.missing.slice(0,4).map(x=>x.name).join(', '))+(M.missing.length>4?'…':'')+')</span></label>':'')+
+          '<div class="row"><button class="btn" data-v="primary" data-act="import-merge">עדכון ומיזוג</button><button class="btn" data-v="ghost" data-act="import-reset">ביטול</button></div>'+
+          '<p class="note" style="margin-top:10px">שדה ריק בקובץ לא מוחק מידע קיים. רק ערכים שמופיעים בקובץ מעדכנים.</p></div>'+
+          '<div class="row" style="margin-top:12px"><button class="btn" data-v="danger" data-act="import-replace">החלפת הרשימה כולה</button><span class="note">מוחק את כל התלמידים הקיימים, כולל הנוכחות ותמונות המצב שלהם</span></div>';})():
+        '<div class="row" style="margin-top:16px"><button class="btn" data-v="primary" data-act="import-replace">ייבוא התלמידים</button>'+
+        '<button class="btn" data-v="ghost" data-act="import-reset">ביטול</button></div>');
     }
   }
   return '<div class="head"><div><h2>ייבוא תלמידים</h2><div class="sub">כרגע רשומים '+S.students.length+' תלמידים</div></div>'+
@@ -2377,7 +2415,17 @@ document.getElementById('main').addEventListener('click',async function(e){
   /* ייבוא */
   if(a==='pick-file')return document.getElementById('importFile').click();
   if(a==='import-reset'){S.importPreview=null;return render();}
+  if(a==='import-merge'){
+    const p=S.importPreview,rm=!!(document.getElementById('impRemove')||{}).checked;
+    if(rm&&!confirm('להסיר את התלמידים שלא מופיעים בקובץ? גם הנוכחות ותמונות המצב שלהם יוסרו מהרשימות.'))return;
+    p.classes.forEach(function(c){if(S.config.classes.indexOf(c)<0)S.config.classes.push(c);});
+    const M=applyMerge(rm);
+    save(K.students,S.students);save(K.config,S.config);
+    const msg=M.add+' חדשים · '+M.upd+' עודכנו'+(rm&&M.missing.length?' · '+M.missing.length+' הוסרו':'');
+    logAct('ייבוא תלמידים (מיזוג)',msg);S.importPreview=null;S.tab='students';toast(msg);return render();
+  }
   if(a==='import-replace'||a==='import-add'){
+    if(a==='import-replace'&&S.students.length&&!confirm('החלפה מלאה מוחקת את כל התלמידים הקיימים, וגם את הנוכחות ותמונות המצב שלהם. להמשיך?'))return;
     const p=S.importPreview;
     p.classes.forEach(function(c){if(S.config.classes.indexOf(c)<0)S.config.classes.push(c);});
     S.students=a==='import-replace'?p.rows:S.students.concat(p.rows);
