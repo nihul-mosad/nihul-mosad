@@ -1450,6 +1450,67 @@ async function probeServer(){
 function startProbe(){clearInterval(NET_TIMER);probeServer();NET_TIMER=setInterval(probeServer,45000);}
 
 
+
+/* ===== ייבוא קובץ "מצבת" (שתי שורות לתלמיד, כיתות לפי גיליון) ===== */
+const MZ_CLS=/^[א-ת]{1,2}\s*['׳]?\s*(-\s*)?\d*$/;
+function mzPhone(v){const parts=String(v||'').split(/[,;\/]| {2,}/).map(x=>x.trim()).filter(Boolean);return {first:cleanPhone(parts[0]||''),more:parts.slice(1).map(cleanPhone).filter(Boolean)};}
+function parseMazevet(wb,X){
+  const sheets=wb.SheetNames.map(n=>({n:n.trim(),m:X.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:false,defval:''})}));
+  const isStu=r=>!!r&&MZ_CLS.test(String(r[2]||'').trim())&&!!String(r[2]||'').trim()&&!!String(r[5]||'').trim();
+  if(!sheets.some(sh=>sh.m.filter(isStu).length>=3))return null;
+  const per=n=>/^כי?תה/.test(n);
+  sheets.sort((a,b)=>(per(b.n)?1:0)-(per(a.n)?1:0));
+  const rows=[],seen={},labels={};
+  sheets.forEach(function(sh){
+    sh.m.forEach(function(r,i){
+      if(!isStu(r))return;
+      const nx=sh.m[i+1]||[],mom=isStu(nx)?[]:nx,id=String(r[4]||'').replace(/\D/g,''),name=String(r[5]).trim();
+      const key=id||(name+'|'+r[3]);if(seen[key])return;seen[key]=1;
+      const label=per(sh.n)?sh.n:String(r[2]).trim();labels[label]=(labels[label]||0)+1;
+      const fp=mzPhone(r[0]),mp=mzPhone(mom[0]),extra={};
+      if(id)extra['ת.ז']=id;if(String(r[3]).trim())extra['תאריך לידה']=String(r[3]).trim();
+      const more=fp.more.concat(mp.more);if(more.length)extra['טלפונים נוספים']=more.join(', ');
+      rows.push({id:uid(),name:name,cls:'',src:label,father:String(r[1]||'').trim(),fatherPhone:fp.first,mother:String(mom[1]||'').trim(),motherPhone:mp.first,notes:'',extra:extra});
+    });
+  });
+  return {rows:rows,labels:labels};
+}
+function mzSuggest(label){
+  const saved=(S.config.clsMap||{})[label];if(saved&&S.config.classes.indexOf(saved)>-1)return saved;
+  const bare=label.replace(/^כי?תה\s*:?\s*/,'').replace(/['׳"״]/g,'').replace(/\s*-\s*/,'').replace(/\s+/g,'').trim();
+  const letter=bare.replace(/\d+/g,''),num=(bare.match(/\d+/)||[''])[0];
+  if(num&&num!=='1')return '';
+  const c=clsFromBare(letter);return S.config.classes.indexOf(c)>-1?c:'';
+}
+function computeMz(p){
+  p.rows.forEach(r=>{r.cls=p.cmap[r.src]||'';});
+  const cl={};let np=0;p.rows.forEach(r=>{if(r.cls)cl[r.cls]=1;if(!r.fatherPhone&&!r.motherPhone)np++;});
+  p.classes=Object.keys(cl).sort();p.noPhone=np;
+  p.error=Object.keys(p.labels).some(l=>!p.cmap[l])?'cls':null;
+  return p;
+}
+function mzBody(p){
+  const mapCard='<h3>שיוך כיתות</h3><p class="note" style="margin-bottom:10px">כך מופיעות הכיתות בקובץ. בחרו לכל אחת את הכיתה המתאימה במערכת. השיוך נשמר, ובייבוא הבא ייבחר אוטומטית.</p>'+
+    table(['בקובץ','תלמידים','כיתה במערכת'],Object.keys(p.labels).map(l=>['<b>'+esc(l)+'</b>',p.labels[l],
+      '<select data-cmap="'+esc(l)+'">'+opt('— לבחור —','',p.cmap[l])+S.config.classes.map(c=>opt(c,c,p.cmap[l])).join('')+'</select>'+(p.cmap[l]?'':' <span class="tag" data-s="late">צריך לבחור</span>')]));
+  const stats='<div class="grid g3" style="margin-bottom:14px">'+stat(p.rows.length,'תלמידים בקובץ','')+stat(Object.keys(p.labels).length,'קבוצות בקובץ','')+stat(p.noPhone,'ללא טלפון כלל',p.noPhone?'var(--late)':'var(--present)')+'</div>';
+  const prev='<h3 style="margin-top:18px">תצוגה מקדימה</h3>'+table(['שם','כיתה','אב','טלפון אב','אם','טלפון אם','ת.ז'],p.rows.slice(0,6).map(s=>['<b>'+esc(s.name)+'</b>',esc(s.cls||'—'),esc(s.father),'<span class="ltr">'+esc(s.fatherPhone)+'</span>',esc(s.mother),'<span class="ltr">'+esc(s.motherPhone)+'</span>','<span class="ltr">'+esc((s.extra||{})['ת.ז']||'')+'</span>']))+
+    (p.rows.length>6?'<p class="note">…ועוד '+(p.rows.length-6)+' תלמידים</p>':'');
+  if(p.error)return stats+mapCard+'<p class="note" style="color:var(--absent);margin-top:12px">כדי להמשיך צריך לשייך כל קבוצה מהקובץ לכיתה.</p><div class="row" style="margin-top:12px"><button class="btn" data-v="ghost" data-act="import-reset">ביטול</button></div>';
+  return stats+mapCard+prev+importButtons(p);
+}
+function importButtons(p){
+  if(!S.students.length)return '<div class="row" style="margin-top:16px"><button class="btn" data-v="primary" data-act="import-replace">ייבוא התלמידים</button><button class="btn" data-v="ghost" data-act="import-reset">ביטול</button></div>';
+  const M=mergePlan(p.rows);
+  return '<div class="card" style="margin-top:16px;background:var(--surface2);border-color:var(--accent)"><h3>עדכון ומיזוג (מומלץ)</h3>'+
+    '<p style="margin-bottom:8px">התלמידים מזוהים לפי '+(p.rows.some(r=>idOf(r))?'תעודת זהות, ואם אין, לפי שם':'שם')+'. הנוכחות ותמונות המצב שלהם נשמרות.</p>'+
+    '<div class="row" style="gap:14px;margin-bottom:8px"><span><b>'+M.add+'</b> תלמידים חדשים יתווספו</span><span><b>'+M.upd+'</b> יעודכנו</span><span><b>'+M.same+'</b> ללא שינוי</span></div>'+
+    (M.missing.length?'<label class="chk" style="margin:4px 0 10px"><input type="checkbox" id="impRemove"> להסיר '+M.missing.length+' תלמידים שקיימים במערכת ולא מופיעים בקובץ <span class="note">('+esc(M.missing.slice(0,4).map(x=>x.name).join(', '))+(M.missing.length>4?'…':'')+')</span></label>':'')+
+    '<div class="row"><button class="btn" data-v="primary" data-act="import-merge">עדכון ומיזוג</button><button class="btn" data-v="ghost" data-act="import-reset">ביטול</button></div>'+
+    '<p class="note" style="margin-top:10px">שדה ריק בקובץ לא מוחק מידע קיים. רק ערכים שמופיעים בקובץ מעדכנים.</p></div>'+
+    '<div class="row" style="margin-top:12px"><button class="btn" data-v="danger" data-act="import-replace">החלפת הרשימה כולה</button><span class="note">מוחק את כל התלמידים הקיימים, כולל הנוכחות ותמונות המצב שלהם</span></div>';
+}
+
 /* ===== מיזוג ייבוא תלמידים ===== */
 function nmKey(n){return String(n||'').replace(/[\u200e\u200f]/g,'').replace(/[׳'״"\-]/g,'').replace(/\s+/g,' ').trim();}
 function idOf(st){const x=st.extra||{};const k=Object.keys(x).find(k=>/ת\s*\.?\s*ז|תעודת\s*זהות|ת"ז|ת״ז|מספר\s*זהות/.test(k));return k?String(x[k]).replace(/\D/g,''):'';}
@@ -2003,6 +2064,8 @@ function viewImport(){
     body='<p class="note" style="margin-bottom:14px">בחרו קובץ אקסל (xlsx) או CSV. המערכת תזהה את העמודות לבד, ותוכלו לתקן את ההתאמה לפני הייבוא. כל עמודה נוספת בקובץ (ת״ז, כתובת, תאריך לידה וכו׳) תישמר בכרטיס התלמיד.</p>'+
       '<div class="row"><button class="btn" data-v="primary" data-act="pick-file">בחירת קובץ</button>'+
       '<input type="file" id="importFile" accept=".xlsx,.xls,.csv" style="display:none"></div>';
+  }else if(p.mz){
+    body=mzBody(p);
   }else if(p.error&&!p.matrix){
     body='<p class="note" style="color:var(--absent)">'+esc(p.error)+'</p><div class="row" style="margin-top:12px"><button class="btn" data-act="import-reset">ניסיון נוסף</button></div>';
   }else{
@@ -2150,6 +2213,8 @@ async function handleImportFile(file){
       try{X=await loadSheetJS();}
       catch(e){S.importPreview={error:'לקריאת קובץ אקסל צריך חיבור לאינטרנט בפעם הראשונה. אפשר גם לשמור באקסל כ־CSV UTF-8 ולייבא — זה עובד גם בלי אינטרנט.'};return render();}
       const wb=X.read(await file.arrayBuffer(),{type:'array'});
+      const mz=parseMazevet(wb,X);
+      if(mz){const p={mz:true,rows:mz.rows,labels:mz.labels,cmap:{}};Object.keys(mz.labels).forEach(l=>p.cmap[l]=mzSuggest(l));S.importPreview=computeMz(p);return render();}
       let best=null;
       wb.SheetNames.forEach(function(n){const mtx=X.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:false,defval:''}).filter(r=>r.some(c=>String(c).trim()));if(!best||mtx.length>best.length)best=mtx;});
       S.importPreview=buildPreview(best||[]);
@@ -2417,6 +2482,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a==='import-reset'){S.importPreview=null;return render();}
   if(a==='import-merge'){
     const p=S.importPreview,rm=!!(document.getElementById('impRemove')||{}).checked;
+    if(p.mz){S.config.clsMap=Object.assign({},S.config.clsMap||{},p.cmap);p.rows.forEach(r=>delete r.src);}
     if(rm&&!confirm('להסיר את התלמידים שלא מופיעים בקובץ? גם הנוכחות ותמונות המצב שלהם יוסרו מהרשימות.'))return;
     p.classes.forEach(function(c){if(S.config.classes.indexOf(c)<0)S.config.classes.push(c);});
     const M=applyMerge(rm);
@@ -2425,6 +2491,7 @@ document.getElementById('main').addEventListener('click',async function(e){
     logAct('ייבוא תלמידים (מיזוג)',msg);S.importPreview=null;S.tab='students';toast(msg);return render();
   }
   if(a==='import-replace'||a==='import-add'){
+    if(S.importPreview&&S.importPreview.mz){S.config.clsMap=Object.assign({},S.config.clsMap||{},S.importPreview.cmap);S.importPreview.rows.forEach(r=>delete r.src);}
     if(a==='import-replace'&&S.students.length&&!confirm('החלפה מלאה מוחקת את כל התלמידים הקיימים, וגם את הנוכחות ותמונות המצב שלהם. להמשיך?'))return;
     const p=S.importPreview;
     p.classes.forEach(function(c){if(S.config.classes.indexOf(c)<0)S.config.classes.push(c);});
@@ -2544,6 +2611,7 @@ document.getElementById('main').addEventListener('change',function(e){
   if(el.dataset&&el.dataset.ttf){ttCapture();if(el.dataset.ttstu||(el.tagName==='INPUT'&&el.type!=='checkbox'))return;return render();}
   if(el.dataset&&el.dataset.per!==undefined)return;
   if(el.dataset&&el.dataset.hr!==undefined){S.config.homeroom=Object.assign({},S.config.homeroom||{});if(el.value)S.config.homeroom[el.dataset.hr]=el.value;else delete S.config.homeroom[el.dataset.hr];save(K.config,S.config);toast('המחנך עודכן');return render();}
+  if(el.dataset&&el.dataset.cmap!==undefined&&S.importPreview&&S.importPreview.mz){S.importPreview.cmap[el.dataset.cmap]=el.value;computeMz(S.importPreview);return render();}
   if(el.dataset&&el.dataset.map!==undefined&&S.importPreview&&S.importPreview.map){
     const i=+el.dataset.map,t=el.value,p=S.importPreview;
     if(['extra','skip'].indexOf(t)<0)p.map.forEach(function(x,j){if(j!==i&&x===t)p.map[j]='extra';});
