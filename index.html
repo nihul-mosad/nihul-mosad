@@ -1140,6 +1140,7 @@ function viewCard(){
       stat(revs.length,'תמונות מצב','')+'</div>'+
     '<div class="grid g2">'+
     '<div class="card"><h3>פרטי קשר</h3>'+
+      (isAdmin()?(s.parentCheck?'<div class="warn" style="margin-bottom:10px">לא בטוח מי האב ומי האם. בדקו את הטבלה:<div class="row" style="margin-top:8px"><button class="btn sm" data-v="primary" data-act="parents-ok" data-id="'+s.id+'">נכון, האב והאם במקום</button><button class="btn sm" data-act="parents-swap" data-id="'+s.id+'">החלפה בין ההורים</button></div></div>':''):'')+
       table(['','שם','טלפון'],[
         ['<span class="note">אב</span>',esc(s.father||'—'),s.fatherPhone?'<span class="ltr">'+esc(s.fatherPhone)+'</span>':'—'],
         ['<span class="note">אם</span>',esc(s.mother||'—'),s.motherPhone?'<span class="ltr">'+esc(s.motherPhone)+'</span>':'—']])+
@@ -1451,6 +1452,33 @@ function startProbe(){clearInterval(NET_TIMER);probeServer();NET_TIMER=setInterv
 
 
 
+
+/* ===== זיהוי אב / אם לפי השם הפרטי ===== */
+const FEM=new Set(('שרה רבקה רחל לאה חנה חיה מושקא מושקה מושקי דבורה אסתר מרים יהודית נעמי אפרת הודיה רות שושנה שולמית צפורה ציפורה ברכה בתיה בתשבע תמר דינה מלכה פרידה פריידא גולדה ביילא פייגא הדסה אילנה מיכל טליה אורית אביטל אביגיל אלישבע שירה שירי נחמה יוכבד זהבה זהבית רינה רונית יעל מיטל סיגל הילה הדס ליאת לימור אסנת אושרת אתי אורנה אורלי ענבל ענת נורית נועה נעה עינב קרן רעות שני שרית שלומית אלה איילת אילה בלומה חוה טובה יפה יפית לבנה מזל מרגלית סימה עליזה פנינה צביה רחלי רבקי שושי שפרה חדוה גאולה הניה ויקטוריה אנה ליבא רייזל שיינדל אהובה נעמה רוחמה דליה גילה יונית נגה חסיה פרומה ליבי שירן איבון אנאל מזי עדן שטערנא שטרנא שטרנה רג׳ינה רגינה מירי מרים טלי בתאל אביה הללי חני חנהלה דבורי רבקלה שולה ריקי מינדי פערל פנינה אסנת לירון שלהבת מלכי חנית הדסי נחמי אודליה ספיר אליאנה אלינור אליענה גאיה הלל').split(' '));
+const MAL=new Set(('שמואל משה יוסף יצחק אברהם יעקב דוד אהרון אהרן מנחם מענדל לוי שניאור זלמן חיים אליהו אלימלך שלום דובער בער ישראל מרדכי שמעון ראובן יהודה נתנאל נתן אמיר יואל איתי עידו אביתר אושרי אריאל אליעזר אלחנן אפרים בנימין ברוך גבריאל גדליה דניאל זאב זכריה חנוך טוביה יחיאל יהושע יונתן יחזקאל ישעיהו ירמיהו מאיר מיכאל מתתיהו נחום נחמן עזרא עמרם פנחס צבי צמח קלמן רפאל שאול שלמה שמריהו עוזיאל כפיר שניר מאור רחמים אורי יגאל ניסים סעדיה עובדיה פסח שבתאי יוחנן יוסי אבי אבנר בועז דן חגי יאיר יובל יוני מתן עוז עמוס רועי רון תומר אלון אילן אסף ארז גלעד יואב ירון רן אורן אריה ליב הירש וולף הערשל זושא מוטי נפתלי גרשון איתמר אלנתן עקיבא עמיחי שמשון נח ידידיה אהוד אליאב אוריאל יהונתן אליאור עדן אלעד מנשה יחזקאל חזקיהו יוחאי אליקים עמנואל חנניה שמואלי מנדי לייבי יענקי שמוליק אבישי יקותיאל ברק נדב עמית שחר').split(' '));
+function nameTokens(full,other){
+  const a=String(full||'').replace(/['׳"״\-]/g,'').trim().split(/\s+/).filter(Boolean),b=String(other||'').replace(/['׳"״\-]/g,'').trim().split(/\s+/).filter(Boolean);
+  let i=0;while(i<a.length-1&&i<b.length-1&&a[i]===b[i])i++;
+  if(i===0){i=1;if(['בן','בר','אבו','אל','די','דה','ואן'].indexOf(a[0])>-1&&a.length>2)i=2;}
+  return a.slice(i);
+}
+function genderOf(full,other){
+  let sc=0;nameTokens(full,other).forEach(t=>{if(FEM.has(t))sc++;else if(MAL.has(t))sc--;else if(/ית$/.test(t))sc+=0.5;else if(/(אל|יהו)$/.test(t))sc-=0.5;});
+  return sc>0?'f':sc<0?'m':'?';
+}
+function assignParents(p1,p2){
+  const g1=genderOf(p1.name,p2.name),g2=genderOf(p2.name,p1.name);
+  let swap=false,sure=true;
+  if(g1==='f'&&g2!=='f')swap=true;
+  else if(g2==='m'&&g1!=='m')swap=true;
+  if(!p2.name)sure=(g1!=='?');
+  else if(g1===g2||(g1==='?'&&g2==='?'))sure=false;
+  const f=swap?p2:p1,m=swap?p1:p2;
+  return {father:f,mother:m,sure:sure};
+}
+function alignedToExisting(m,r){return m&&r&&m.father&&r.father&&m.father===r.mother&&m.mother===r.father;}
+function swapParents(o){const f=o.father,fp=o.fatherPhone;o.father=o.mother;o.fatherPhone=o.motherPhone;o.mother=f;o.motherPhone=fp;}
+
 /* ===== ייבוא קובץ "מצבת" (שתי שורות לתלמיד, כיתות לפי גיליון) ===== */
 const MZ_CLS=/^[א-ת]{1,2}\s*['׳]?\s*(-\s*)?\d*$/;
 function mzPhone(v){const parts=String(v||'').split(/[,;\/]| {2,}/).map(x=>x.trim()).filter(Boolean);return {first:cleanPhone(parts[0]||''),more:parts.slice(1).map(cleanPhone).filter(Boolean)};}
@@ -1470,7 +1498,10 @@ function parseMazevet(wb,X){
       const fp=mzPhone(r[0]),mp=mzPhone(mom[0]),extra={};
       if(id)extra['ת.ז']=id;if(String(r[3]).trim())extra['תאריך לידה']=String(r[3]).trim();
       const more=fp.more.concat(mp.more);if(more.length)extra['טלפונים נוספים']=more.join(', ');
-      rows.push({id:uid(),name:name,cls:'',src:label,father:String(r[1]||'').trim(),fatherPhone:fp.first,mother:String(mom[1]||'').trim(),motherPhone:mp.first,notes:'',extra:extra});
+      const P=assignParents({name:String(r[1]||'').trim(),phone:fp.first},{name:String(mom[1]||'').trim(),phone:mp.first});
+      const row={id:uid(),name:name,cls:'',src:label,father:P.father.name,fatherPhone:P.father.phone,mother:P.mother.name,motherPhone:P.mother.phone,notes:'',extra:extra};
+      if(!P.sure)row.parentCheck=true;
+      rows.push(row);
     });
   });
   return {rows:rows,labels:labels};
@@ -1493,11 +1524,13 @@ function mzBody(p){
   const mapCard='<h3>שיוך כיתות</h3><p class="note" style="margin-bottom:10px">כך מופיעות הכיתות בקובץ. בחרו לכל אחת את הכיתה המתאימה במערכת. השיוך נשמר, ובייבוא הבא ייבחר אוטומטית.</p>'+
     table(['בקובץ','תלמידים','כיתה במערכת'],Object.keys(p.labels).map(l=>['<b>'+esc(l)+'</b>',p.labels[l],
       '<select data-cmap="'+esc(l)+'">'+opt('— לבחור —','',p.cmap[l])+S.config.classes.map(c=>opt(c,c,p.cmap[l])).join('')+'</select>'+(p.cmap[l]?'':' <span class="tag" data-s="late">צריך לבחור</span>')]));
+  const uns=p.rows.filter(r=>r.parentCheck).length;
   const stats='<div class="grid g3" style="margin-bottom:14px">'+stat(p.rows.length,'תלמידים בקובץ','')+stat(Object.keys(p.labels).length,'קבוצות בקובץ','')+stat(p.noPhone,'ללא טלפון כלל',p.noPhone?'var(--late)':'var(--present)')+'</div>';
-  const prev='<h3 style="margin-top:18px">תצוגה מקדימה</h3>'+table(['שם','כיתה','אב','טלפון אב','אם','טלפון אם','ת.ז'],p.rows.slice(0,6).map(s=>['<b>'+esc(s.name)+'</b>',esc(s.cls||'—'),esc(s.father),'<span class="ltr">'+esc(s.fatherPhone)+'</span>',esc(s.mother),'<span class="ltr">'+esc(s.motherPhone)+'</span>','<span class="ltr">'+esc((s.extra||{})['ת.ז']||'')+'</span>']))+
+  const prev='<h3 style="margin-top:18px">תצוגה מקדימה</h3>'+table(['שם','כיתה','אב','טלפון אב','אם','טלפון אם','ת.ז'],p.rows.slice().sort((a,b)=>(b.parentCheck?1:0)-(a.parentCheck?1:0)).slice(0,6).map(s=>['<b>'+esc(s.name)+'</b>'+(s.parentCheck?' <span class="tag" data-s="late">לבדוק</span>':''),esc(s.cls||'—'),esc(s.father),'<span class="ltr">'+esc(s.fatherPhone)+'</span>',esc(s.mother),'<span class="ltr">'+esc(s.motherPhone)+'</span>','<span class="ltr">'+esc((s.extra||{})['ת.ז']||'')+'</span>']))+
     (p.rows.length>6?'<p class="note">…ועוד '+(p.rows.length-6)+' תלמידים</p>':'');
   if(p.error)return stats+mapCard+'<p class="note" style="color:var(--absent);margin-top:12px">כדי להמשיך צריך לשייך כל קבוצה מהקובץ לכיתה.</p><div class="row" style="margin-top:12px"><button class="btn" data-v="ghost" data-act="import-reset">ביטול</button></div>';
-  return stats+mapCard+prev+importButtons(p);
+  const pinfo='<p class="note" style="margin-top:10px">האב והאם זוהו לפי השמות הפרטיים.'+(uns?' <b style="color:var(--late)">'+uns+' משפחות לא זוהו בוודאות</b> ויסומנו לבדיקה ברשימת התלמידים. בכרטיס התלמיד אפשר לאשר או להחליף בלחיצה.':' כולם זוהו בוודאות.')+'</p>';
+  return stats+mapCard+prev+pinfo+importButtons(p);
 }
 function importButtons(p){
   if(!S.students.length)return '<div class="row" style="margin-top:16px"><button class="btn" data-v="primary" data-act="import-replace">ייבוא התלמידים</button><button class="btn" data-v="ghost" data-act="import-reset">ביטול</button></div>';
@@ -1523,6 +1556,7 @@ function mergePlan(rows){
     if(!m){m=(byName[nmKey(r.name)]||[]).find(st=>!used[st.id]&&(!r.cls||!st.cls||st.cls===r.cls))||(byName[nmKey(r.name)]||[]).find(st=>!used[st.id]);}
     if(m)used[m.id]=1;
     let changed=false;
+    if(m&&alignedToExisting(m,r))swapParents(r);
     if(m){['name','cls','father','fatherPhone','mother','motherPhone','notes'].forEach(f=>{if(r[f]&&r[f]!==m[f])changed=true;});
       Object.keys(r.extra||{}).forEach(k=>{if(r.extra[k]&&(!m.extra||m.extra[k]!==r.extra[k]))changed=true;});}
     return {row:r,match:m,changed:changed};
@@ -1535,8 +1569,11 @@ function applyMerge(removeMissing){
   M.plan.forEach(function(x){
     if(!x.match){S.students.push(x.row);return;}
     const m=x.match,r=x.row;
+    if(alignedToExisting(m,r))swapParents(r);
+    const keepOk=!m.parentCheck;
     ['name','cls','father','fatherPhone','mother','motherPhone','notes'].forEach(f=>{if(r[f])m[f]=r[f];});
     if(r.extra&&Object.keys(r.extra).length){m.extra=Object.assign({},m.extra||{});Object.keys(r.extra).forEach(k=>{if(r.extra[k])m.extra[k]=r.extra[k];});}
+    if(keepOk)delete m.parentCheck;else if(r.parentCheck)m.parentCheck=true;
   });
   if(removeMissing){const gone={};M.missing.forEach(st=>gone[st.id]=1);S.students=S.students.filter(st=>!gone[st.id]);}
   return M;
@@ -1940,7 +1977,7 @@ function viewStudents(){
       '<label class="field"><span>טלפון האב</span><input id="f-fphone" dir="ltr" value="'+esc(e.fatherPhone)+'"></label>'+
       '<label class="field"><span>שם האם</span><input id="f-mother" value="'+esc(e.mother)+'"></label>'+
       '<label class="field"><span>טלפון האם</span><input id="f-mphone" dir="ltr" value="'+esc(e.motherPhone)+'"></label>'+
-      '</div><label class="field"><span>הערות</span><input id="f-notes" value="'+esc(e.notes)+'"></label>'+
+      '</div><div class="row" style="margin:-4px 0 12px"><button class="btn sm" data-act="form-swap-parents">⇅ החלפה בין האב לאם</button></div><label class="field"><span>הערות</span><input id="f-notes" value="'+esc(e.notes)+'"></label>'+
       (e.extra&&Object.keys(e.extra).length?'<div class="grid g2">'+Object.keys(e.extra).map(k=>'<label class="field"><span>'+esc(k)+'</span><input data-xkey="'+esc(k)+'" value="'+esc(e.extra[k])+'"></label>').join('')+'</div>':'')+
       '<div class="row"><button class="btn" data-v="primary" data-act="student-save">שמירה</button>'+
       '<button class="btn" data-v="ghost" data-act="student-cancel">ביטול</button>'+
@@ -1953,7 +1990,7 @@ function viewStudents(){
       (isAdmin()?'<select class="inp" data-ch="filter">'+opt('כל הכיתות','',S.filter)+S.config.classes.map(c=>opt(c,c,S.filter)).join('')+'</select>':'')+'</div>'+
       (list.length?table(['שם','כיתה','מצב','נוכחות','הורה','טלפון'],list.map(function(s){
         const r=lastReview(s.id),a=attStats(s.id,daysAgo(30),iso(new Date()));
-        return ['<button class="link" data-act="card" data-id="'+s.id+'">'+esc(s.name)+'</button>',esc(s.cls),
+        return ['<button class="link" data-act="card" data-id="'+s.id+'">'+esc(s.name)+'</button>'+(s.parentCheck&&isAdmin()?' <span class="tag" data-s="late" title="לא בטוח מי האב ומי האם">לבדוק הורים</span>':''),esc(s.cls),
           r?'<span class="tag" data-s="'+r.light+'">'+LIGHTNAME[r.light]+'</span>':'<span class="note">—</span>',
           a.pct!==null?a.pct+'%':'—',esc(contactName(s)),'<span class="ltr">'+esc(contactPhone(s))+'</span>'];
       })):'<div class="empty">אין תלמידים להצגה.</div>')+'</div>';
@@ -2377,6 +2414,12 @@ document.getElementById('main').addEventListener('click',async function(e){
   /* תמונת מצב */
   if(a==='rev-start'){startReview(myStudents().filter(s=>s.cls===S.revCls));return render();}
   if(a==='rev-one'){const s=studentById(id);S.revCls=s.cls;startReview([s]);return render();}
+  if(a==='form-swap-parents'){const q=i=>document.getElementById(i);[['f-father','f-mother'],['f-fphone','f-mphone']].forEach(p=>{if(q(p[0])&&q(p[1])){const t=q(p[0]).value;q(p[0]).value=q(p[1]).value;q(p[1]).value=t;}});return;}
+  if(a==='parents-ok'||a==='parents-swap'){
+    const st=studentById(id);if(!st||!isAdmin())return;
+    if(a==='parents-swap')swapParents(st);delete st.parentCheck;save(K.students,S.students);
+    logAct(a==='parents-swap'?'החלפת הורים':'אישור הורים',st.name);toast(a==='parents-swap'?'ההורים הוחלפו':'אושר');return render();
+  }
   if(a==='rev-light'){S.revDraft.light=S.revDraft.light===el.dataset.l?'':el.dataset.l;return render();}
   if(a==='rev-score'){const k=el.dataset.d,n=Number(el.dataset.n);if(S.revDraft.scores[k]===n)delete S.revDraft.scores[k];else S.revDraft.scores[k]=n;return render();}
   if(a==='rev-clear'){S.revDraft={light:'',scores:{},note:''};return render();}
@@ -2430,6 +2473,7 @@ document.getElementById('main').addEventListener('click',async function(e){
     const g=i=>document.getElementById(i).value;
     const o={id:S.editStudent.id||uid(),name:g('f-name').trim(),cls:g('f-cls'),father:g('f-father').trim(),
       fatherPhone:cleanPhone(g('f-fphone')),mother:g('f-mother').trim(),motherPhone:cleanPhone(g('f-mphone')),notes:g('f-notes').trim()};
+    o.parentCheck=undefined;delete o.parentCheck;
     const ex={};document.querySelectorAll('#main [data-xkey]').forEach(function(inp){const v=inp.value.trim();if(v)ex[inp.dataset.xkey]=v;});
     if(Object.keys(ex).length)o.extra=ex;
     if(!o.name)return toast('צריך למלא שם');
