@@ -398,6 +398,12 @@ th{font-weight:600}
 .hd{display:block;text-align:right;direction:rtl;font-size:12.5px;color:var(--accent);margin-top:4px;font-weight:500;min-height:1em}
 #netBanner{position:fixed;top:0;left:0;right:0;z-index:200;background:#DB4537;color:#fff;text-align:center;font-size:13.5px;padding:8px 14px calc(8px);padding-top:calc(8px + env(safe-area-inset-top,0px));line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.2)}
 #netBanner b{font-weight:700}
+.scan-wrap{display:flex;gap:14px;align-items:flex-start;margin-top:12px}
+.scan-th{width:220px;max-width:38%;border:1px solid var(--line);border-radius:8px}
+.scx{width:34px;height:30px;border-radius:8px;border:1px solid var(--line);background:#E2F5EC;color:#14794F;font-weight:700;cursor:pointer;font-size:15px}
+.scx[data-v="absent"]{background:#FCE6E3;color:#B4362A}
+.scx[data-u="1"]{outline:2px solid var(--late);outline-offset:1px}
+@media(max-width:820px){.scan-wrap{flex-direction:column}.scan-th{max-width:100%;width:100%}}
 </style>
 </head>
 <body>
@@ -1579,6 +1585,255 @@ function applyMerge(removeMissing){
   return M;
 }
 
+
+/* ================= טופס נוכחות מודפס + קליטה מסריקה ================= */
+const FM={fx:[15,195],fy:[15,282],fs:7,by:22,bx0:40,bdx:4.2,bs:3.5,ty:54,hh:11,bot:272,xr:192,xl:18,num:8,name:58,box:6,maxRows:24};
+function dayNum(date){const p=date.split('-').map(Number);return Math.round((Date.UTC(p[0],p[1]-1,p[2])-Date.UTC(2024,0,1))/864e5);}
+function dayFromNum(n){const d=new Date(Date.UTC(2024,0,1)+n*864e5);return d.toISOString().slice(0,10);}
+function fmBits(ci,dn,pg){const ck=(ci+dn+pg*7)%16,v=[];[[ci,8],[dn,16],[pg,4],[ck,4]].forEach(f=>{for(let i=0;i<f[1];i++)v.push((f[0]>>i)&1);});return v;}
+function fmDecode(b){const n=(o,l)=>{let x=0;for(let i=0;i<l;i++)x|=(b[o+i]?1:0)<<i;return x;};
+  const ci=n(0,8),dn=n(8,16),pg=n(24,4),ck=n(28,4);return ((ci+dn+pg*7)%16===ck&&dn>0)?{ci:ci,dn:dn,pg:pg}:null;}
+function fmLayout(cls,date){
+  const d=dow(date),P=periods(),stu=S.students.filter(s=>s.cls===cls).sort((a,b)=>a.name.localeCompare(b.name,'he'));
+  const pages=[];for(let i=0;i<Math.max(stu.length,1);i+=FM.maxRows)pages.push(stu.slice(i,i+FM.maxRows));
+  const cols=P.map(function(p){
+    const cl=S.timetable.filter(l=>l.day===d&&l.period===p.n&&l.type!=='private'&&(l.classes||[]).indexOf(cls)>-1);
+    return {n:p.n,label:cl.length?cl[0].subject||'':''};
+  });
+  const lessonOf=function(s,pn){
+    const here=S.timetable.filter(l=>l.day===d&&l.period===pn&&(l.type==='private'?(l.students||[]).indexOf(s.id)>-1:(l.classes||[]).indexOf(s.cls)>-1));
+    return here.find(l=>l.type==='private')||here[0]||null;
+  };
+  return {cls:cls,date:date,pages:pages,cols:cols,lessonOf:lessonOf};
+}
+function fmGeom(nRows,nCols){
+  const rh=Math.min(9,(FM.bot-FM.ty-FM.hh)/Math.max(nRows,1)),xp=FM.xr-FM.num-FM.name,W=(xp-FM.xl)/nCols;
+  return {rh:rh,W:W,xp:xp,
+    box:(r,c)=>({x:xp-(c+0.5)*W,y:FM.ty+FM.hh+(r+0.5)*rh}),
+    bit:i=>({x:FM.bx0+i*FM.bdx,y:FM.by})};
+}
+function fmPageHtml(L,pi){
+  const rows=L.pages[pi],G=fmGeom(rows.length,L.cols.length),ci=S.config.classes.indexOf(L.cls),bits=fmBits(ci,dayNum(L.date),pi);
+  const a=(x,y,w,h,st,inner)=>'<div style="position:absolute;left:'+x+'mm;top:'+y+'mm;width:'+w+'mm;height:'+h+'mm;'+(st||'')+'">'+(inner||'')+'</div>';
+  let h='';
+  FM.fx.forEach(x=>FM.fy.forEach(y=>{h+=a(x-FM.fs/2,y-FM.fs/2,FM.fs,FM.fs,'background:#000');}));
+  bits.forEach((b,i)=>{if(b){const p=G.bit(i);h+=a(p.x-FM.bs/2,p.y-FM.bs/2,FM.bs,FM.bs,'background:#000');}});
+  h+=a(18,27,174,9,'font-size:17pt;font-weight:700;text-align:right','רשימת נוכחות יומית · '+esc(L.cls));
+  h+=a(18,37,174,7,'font-size:11.5pt;text-align:right',esc(dual(L.date))+(L.pages.length>1?' · דף '+(pi+1)+' מתוך '+L.pages.length:''));
+  h+=a(18,45,174,6,'font-size:9pt;color:#444;text-align:right','סמנו <b>X</b> בריבוע של תלמיד שחסר באותו שיעור. ריבוע ריק = נוכח. נא לא לכתוב ליד הריבועים השחורים בפינות.');
+  const y0=FM.ty,y1=FM.ty+FM.hh+rows.length*G.rh,line='background:#777';
+  h+=a(FM.xl,y0,FM.xr-FM.xl,0.3,line)+a(FM.xl,y0+FM.hh,FM.xr-FM.xl,0.3,line);
+  rows.forEach((s,r)=>{h+=a(FM.xl,FM.ty+FM.hh+(r+1)*G.rh,FM.xr-FM.xl,0.2,line);});
+  [FM.xr,FM.xr-FM.num,G.xp].concat(L.cols.map((c,i)=>G.xp-(i+1)*G.W)).forEach(x=>{h+=a(x,y0,0.25,y1-y0,line);});
+  h+=a(FM.xr-FM.num,y0,FM.num,FM.hh,'font-size:9pt;font-weight:700;text-align:center;line-height:'+FM.hh+'mm','מס׳');
+  h+=a(G.xp,y0,FM.name,FM.hh,'font-size:10pt;font-weight:700;text-align:right;padding-right:2mm;box-sizing:border-box;line-height:'+FM.hh+'mm','שם התלמיד');
+  L.cols.forEach((c,i)=>{h+=a(G.xp-(i+1)*G.W,y0+0.6,G.W,FM.hh,'font-size:9pt;text-align:center;line-height:1.15','<b>'+c.n+'</b><br><span style="font-size:7.5pt">'+esc(c.label).slice(0,14)+'</span>');});
+  rows.forEach(function(s,r){
+    const yc=FM.ty+FM.hh+r*G.rh;
+    h+=a(FM.xr-FM.num,yc,FM.num,G.rh,'font-size:9pt;text-align:center;line-height:'+G.rh+'mm',String(pi*FM.maxRows+r+1));
+    h+=a(G.xp,yc,FM.name,G.rh,'font-size:'+(G.rh<7?9:10.5)+'pt;text-align:right;padding-right:2mm;box-sizing:border-box;white-space:nowrap;overflow:hidden;line-height:'+G.rh+'mm',esc(s.name));
+    L.cols.forEach(function(c,ci2){
+      const p=G.box(r,ci2);
+      if(L.lessonOf(s,c.n))h+=a(p.x-FM.box/2,p.y-FM.box/2,FM.box,FM.box,'border:0.45mm solid #000;box-sizing:border-box');
+      else h+=a(p.x-FM.box/2,p.y-FM.box/2,FM.box,FM.box,'text-align:center;color:#aaa;font-size:9pt;line-height:'+FM.box+'mm','–');
+    });
+  });
+  h+=a(18,284,174,5,'font-size:8pt;color:#888;text-align:center',esc(S.config.name||'')+' · ניהול המוסד');
+  return '<div class="pg">'+h+'</div>';
+}
+function printForms(classes,dates){
+  let body='';
+  dates.forEach(dt=>{if(dow(dt)>5)return;classes.forEach(c=>{const L=fmLayout(c,dt);L.pages.forEach((_,pi)=>{body+=fmPageHtml(L,pi);});});});
+  if(!body)return toast('אין ימי לימודים בטווח שנבחר');
+  const html='<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>טופסי נוכחות</title><style>@page{size:A4 portrait;margin:0}html,body{margin:0;padding:0}'+
+    'body{font-family:"Noto Sans Hebrew",Arial,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}.pg{position:relative;width:210mm;height:297mm;overflow:hidden;page-break-after:always;break-after:page}'+
+    '@media screen{body{background:#ccc}.pg{background:#fff;margin:10px auto;box-shadow:0 2px 10px rgba(0,0,0,.2)}.tip{font:14px Arial;text-align:center;padding:10px;background:#ffd;}}@media print{.tip{display:none}}<\/style></head><body>'+
+    '<div class="tip">בהדפסה: לבחור גודל A4, קנה מידה 100% (לא "התאמה לדף"), ובלי כותרות עליונות/תחתונות.</div>'+body+'<script>setTimeout(function(){window.print()},500)<\/script></body></html>';
+  const w=window.open('','_blank');
+  if(!w)return toast('הדפדפן חסם חלון חדש. אפשרו חלונות קופצים לאתר');
+  w.document.open();w.document.write(html);w.document.close();
+  logAct('הדפסת טופסי נוכחות',classes.join(', ')+' · '+dates.map(shortDate).join(', '));
+}
+
+/* ---- קריאת הסריקה ---- */
+function loadPdfJs(){
+  return new Promise(function(res,rej){
+    if(window.pdfjsLib)return res(window.pdfjsLib);
+    const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';res(window.pdfjsLib);};
+    sc.onerror=()=>rej(new Error('cdn'));document.head.appendChild(sc);
+  });
+}
+function toCanvas(src,w,h){const M=2000,k=Math.min(1,M/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c;}
+async function fileToCanvases(f){
+  if(/pdf$/i.test(f.type)||/\.pdf$/i.test(f.name)){
+    const pj=await loadPdfJs(),doc=await pj.getDocument({data:await f.arrayBuffer()}).promise,out=[];
+    for(let i=1;i<=doc.numPages;i++){const pg=await doc.getPage(i),vp0=pg.getViewport({scale:1}),sc=Math.min(3,2000/Math.max(vp0.width,vp0.height)),vp=pg.getViewport({scale:sc});
+      const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);const cx=c.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,c.width,c.height);
+      await pg.render({canvasContext:cx,viewport:vp}).promise;out.push(c);}
+    return out;
+  }
+  const url=URL.createObjectURL(f);
+  try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('img'));i.src=url;});return [toCanvas(img,img.naturalWidth,img.naturalHeight)];}
+  finally{URL.revokeObjectURL(url);}
+}
+function grayOf(c){const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data,g=new Uint8Array(c.width*c.height);
+  for(let i=0,j=0;j<g.length;i+=4,j++)g[j]=(d[i]*77+d[i+1]*150+d[i+2]*29)>>8;return g;}
+function otsu(g){const h=new Array(256).fill(0);for(let i=0;i<g.length;i+=3)h[g[i]]++;let tot=0,sum=0;h.forEach((v,i)=>{tot+=v;sum+=i*v;});
+  let sB=0,wB=0,best=0,t=128;for(let i=0;i<256;i++){wB+=h[i];if(!wB)continue;const wF=tot-wB;if(!wF)break;sB+=i*h[i];const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)*(mB-mF);if(v>best){best=v;t=i;}}return t;}
+function findSquares(g,W,H,T){
+  const seen=new Uint8Array(W*H),out=[],st=new Int32Array(W*H);
+  for(let s0=0;s0<W*H;s0++){
+    if(seen[s0]||g[s0]>=T)continue;
+    let sp=0,cnt=0,x0=W,x1=0,y0=H,y1=0;st[sp++]=s0;seen[s0]=1;
+    while(sp){const p=st[--sp],x=p%W,y=(p-x)/W;cnt++;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
+      if(x>0){const q=p-1;if(!seen[q]&&g[q]<T){seen[q]=1;st[sp++]=q;}}
+      if(x<W-1){const q=p+1;if(!seen[q]&&g[q]<T){seen[q]=1;st[sp++]=q;}}
+      if(y>0){const q=p-W;if(!seen[q]&&g[q]<T){seen[q]=1;st[sp++]=q;}}
+      if(y<H-1){const q=p+W;if(!seen[q]&&g[q]<T){seen[q]=1;st[sp++]=q;}}}
+    const w=x1-x0+1,h=y1-y0+1;
+    if(w>=8&&h>=8&&w/h>0.6&&w/h<1.67&&cnt/(w*h)>0.62)out.push({x:(x0+x1)/2,y:(y0+y1)/2,a:cnt,w:w,h:h});
+  }
+  if(!out.length)return out;
+  const mx=Math.max.apply(null,out.map(o=>o.a));return out.filter(o=>o.a>=mx*0.45);
+}
+function homography(src,dst){
+  const A=[],b=[];
+  for(let i=0;i<4;i++){const x=src[i][0],y=src[i][1],u=dst[i][0],v=dst[i][1];
+    A.push([x,y,1,0,0,0,-u*x,-u*y]);b.push(u);A.push([0,0,0,x,y,1,-v*x,-v*y]);b.push(v);}
+  for(let c=0;c<8;c++){let p=c;for(let r=c+1;r<8;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;
+    [A[c],A[p]]=[A[p],A[c]];[b[c],b[p]]=[b[p],b[c]];if(Math.abs(A[c][c])<1e-12)return null;
+    for(let r=0;r<8;r++){if(r===c)continue;const f=A[r][c]/A[c][c];for(let k=c;k<8;k++)A[r][k]-=f*A[c][k];b[r]-=f*b[c];}}
+  const h=b.map((v,i)=>v/A[i][i]);
+  return (x,y)=>{const z=h[6]*x+h[7]*y+1;return [(h[0]*x+h[1]*y+h[2])/z,(h[3]*x+h[4]*y+h[5])/z];};
+}
+function makeSampler(g,W,H,Hm){return (x,y)=>{const p=Hm(x,y),u=Math.round(p[0]),v=Math.round(p[1]);return (u<0||v<0||u>=W||v>=H)?255:g[v*W+u];};}
+function readPage(cv){
+  const W=cv.width,H=cv.height,g=grayOf(cv),T=Math.min(otsu(g),170);
+  const sq=findSquares(g,W,H,T);
+  if(sq.length<4)return {error:'לא נמצאו ארבעת הריבועים השחורים בפינות הדף'};
+  const corners=[[0,0],[W,0],[0,H],[W,H]],pick=[],used={};
+  corners.forEach(c=>{let best=-1,bd=1e18;sq.forEach((s,i)=>{if(used[i])return;const d=(s.x-c[0])**2+(s.y-c[1])**2;if(d<bd){bd=d;best=i;}});used[best]=1;pick.push(sq[best]);});
+  const F=[[FM.fx[0],FM.fy[0]],[FM.fx[1],FM.fy[0]],[FM.fx[0],FM.fy[1]],[FM.fx[1],FM.fy[1]]];
+  const img=pick.map(s=>[s.x,s.y]);
+  // ארבעה כיוונים אפשריים (דף הפוך/מסובב)
+  const orders=[[0,1,2,3],[3,2,1,0],[1,3,0,2],[2,0,3,1]];
+  for(const o of orders){
+    const Hm=homography(F,o.map(i=>img[i]));if(!Hm)continue;
+    const smp=makeSampler(g,W,H,Hm),G0=fmGeom(1,1),bits=[];
+    for(let i=0;i<32;i++){const p=G0.bit(i);let s=0;for(let dx=-0.8;dx<=0.81;dx+=0.8)for(let dy=-0.8;dy<=0.81;dy+=0.8)s+=smp(p.x+dx,p.y+dy);bits.push(s/9<T?1:0);}
+    const code=fmDecode(bits);
+    if(code)return {smp:smp,T:T,code:code,cv:cv};
+  }
+  return {smp:null,error:'הדף זוהה, אבל לא הצלחתי לקרוא את קוד הזיהוי שלו. בחרו כיתה ותאריך ידנית.',retry:{g:g,W:W,H:H,T:T,img:img,F:F,cv:cv}};
+}
+function readMarks(R,L,pi){
+  const rows=L.pages[pi],G=fmGeom(rows.length,L.cols.length),smp=R.smp,out=[];
+  rows.forEach(function(s,r){
+    const cells={};
+    L.cols.forEach(function(c,ci){
+      const l=L.lessonOf(s,c.n);if(!l)return;
+      const p=G.box(r,ci),bgs=[];
+      [-1,1].forEach(sx=>[-0.6,0,0.6].forEach(dy=>bgs.push(smp(p.x+sx*Math.min(4.5,G.W/2-0.6),p.y+dy))));
+      bgs.sort((a,b)=>a-b);const bg=Math.max(bgs[Math.floor(bgs.length/2)],R.T+20),thr=Math.min(bg*0.72,(bg+R.T)/2);
+      let dark=0,n=0;const inn=FM.box/2-1.3;
+      for(let dx=-inn;dx<=inn+1e-6;dx+=inn/4)for(let dy=-inn;dy<=inn+1e-6;dy+=inn/4){n++;if(smp(p.x+dx,p.y+dy)<thr)dark++;}
+      const f=dark/n;
+      cells[c.n]={lid:l.id,f:f,v:f>0.09?'absent':'present',unsure:f>0.035&&f<=0.09};
+    });
+    out.push({sid:s.id,name:s.name,cells:cells});
+  });
+  return out;
+}
+function scanBuild(R,cls,date,pg){
+  const L=fmLayout(cls,date);if(pg>=L.pages.length)pg=0;
+  const thumb=(()=>{const c=document.createElement('canvas'),k=520/R.cv.width;c.width=520;c.height=Math.round(R.cv.height*k);c.getContext('2d').drawImage(R.cv,0,0,c.width,c.height);return c.toDataURL('image/jpeg',0.7);})();
+  return {cls:cls,date:date,pg:pg,cols:L.cols,rows:readMarks(R,L,pg),thumb:thumb,R:R};
+}
+async function handleScanFiles(files){
+  const clsOpts=isAdmin()?S.config.classes:myClasses();
+  S.scan={loading:true,pages:[],errors:[]};render();
+  for(const f of files){
+    let cvs=[];try{cvs=await fileToCanvases(f);}catch(e){S.scan.errors.push(f.name+': '+(e&&e.message==='cdn'?'צריך חיבור לאינטרנט כדי לקרוא PDF':'לא הצלחתי לפתוח את הקובץ'));continue;}
+    cvs.forEach(function(cv,i){
+      const nm=f.name+(cvs.length>1?' · עמוד '+(i+1):'');
+      const R=readPage(cv);
+      if(!R.smp){
+        if(R.retry)S.scan.pages.push({need:true,name:nm,retry:R.retry,cls:S.markCls||clsOpts[0]||'',date:S.markDate,pg:0,msg:R.error});
+        else S.scan.errors.push(nm+': '+R.error);
+        return;
+      }
+      const cls=S.config.classes[R.code.ci],date=dayFromNum(R.code.dn);
+      if(!cls){S.scan.errors.push(nm+': הכיתה שבטופס כבר לא קיימת במערכת');return;}
+      if(clsOpts.indexOf(cls)<0){S.scan.errors.push(nm+': אין לך הרשאה לכיתה '+cls);return;}
+      const P=scanBuild(R,cls,date,R.code.pg);P.name=nm;S.scan.pages.push(P);
+    });
+  }
+  S.scan.loading=false;render();
+}
+function scanRetry(i){
+  const p=S.scan.pages[i],r=p.retry,Hm=homography(r.F,r.img);
+  if(!Hm)return toast('לא הצלחתי ליישר את הדף');
+  const R={smp:makeSampler(r.g,r.W,r.H,Hm),T:r.T,cv:r.cv};
+  const P=scanBuild(R,p.cls,p.date,p.pg);P.name=p.name;P.manual=true;S.scan.pages[i]=P;render();
+}
+function scanView(){
+  const sc=S.scan,clsOpts=isAdmin()?S.config.classes:myClasses();
+  if(sc.loading)return '<div class="card"><div class="empty">קורא את הדפים…</div></div>';
+  let h='<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">קליטת טופסי נוכחות</h3><button class="btn" data-v="ghost" data-act="scan-close">סגירה</button></div>'+
+    '<p class="note" style="margin-top:6px">בדקו את התוצאה מול הדף. לחיצה על משבצת מחליפה בין נוכח לחסר. משבצות <span style="color:var(--late);font-weight:700">כתומות</span> לא ברורות, כדאי לבדוק אותן.</p>'+
+    (sc.errors.length?'<div class="warn" style="margin-top:10px">'+sc.errors.map(esc).join('<br>')+'</div>':'')+'</div>';
+  sc.pages.forEach(function(p,i){
+    if(p.need){
+      h+='<div class="card"><h3>'+esc(p.name)+'</h3><p class="note" style="color:var(--late);margin-bottom:10px">'+esc(p.msg)+'</p><div class="grid g3">'+
+        '<label class="field"><span>כיתה</span><select data-scn="'+i+'" data-k="cls">'+clsOpts.map(c=>opt(c,c,p.cls)).join('')+'</select></label>'+
+        '<label class="field"><span>תאריך</span><input type="date" data-scn="'+i+'" data-k="date" value="'+p.date+'"></label>'+
+        '<label class="field"><span>דף מספר</span><input type="number" min="1" data-scn="'+i+'" data-k="pg" value="'+(p.pg+1)+'"></label></div>'+
+        '<button class="btn" data-v="primary" data-act="scan-retry" data-i="'+i+'">קריאת הדף</button> <button class="btn" data-v="ghost" data-act="scan-drop" data-i="'+i+'">הסרה</button></div>';
+      return;
+    }
+    const uns=p.rows.reduce((a,r)=>a+Object.values(r.cells).filter(c=>c.unsure).length,0),abs=p.rows.reduce((a,r)=>a+Object.values(r.cells).filter(c=>c.v==='absent').length,0);
+    h+='<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3 style="margin:0">'+esc(p.cls)+' · '+esc(dual(p.date))+'</h3>'+
+      '<div class="note">'+esc(p.name)+(p.manual?' · זוהה ידנית':'')+' · '+abs+' חיסורים'+(uns?' · <b style="color:var(--late)">'+uns+' לבדיקה</b>':'')+'</div></div>'+
+      '<button class="btn sm" data-v="ghost" data-act="scan-drop" data-i="'+i+'">הסרת הדף</button></div>'+
+      '<div class="scan-wrap"><div class="scroll" style="flex:1;min-width:0">'+table(['תלמיד'].concat(p.cols.map(c=>'<span style="white-space:nowrap">'+c.n+'</span>')),p.rows.map(function(r,ri){
+        return ['<b style="white-space:nowrap">'+esc(r.name)+'</b>'].concat(p.cols.map(function(c){
+          const x=r.cells[c.n];if(!x)return '<span class="note">–</span>';
+          return '<button class="scx" data-act="scan-tog" data-i="'+i+'" data-r="'+ri+'" data-p="'+c.n+'" data-v="'+x.v+'"'+(x.unsure?' data-u="1"':'')+'>'+(x.v==='absent'?'✗':'✓')+'</button>';
+        }));
+      }))+'</div><img class="scan-th" src="'+p.thumb+'" alt=""></div></div>';
+  });
+  const ready=sc.pages.filter(p=>!p.need);
+  if(ready.length)h+='<div class="savebar"><span class="note">'+ready.length+' דפים מוכנים לשמירה</span><button class="btn" data-v="primary" data-act="scan-save">שמירת הנוכחות</button></div>';
+  return h;
+}
+async function scanAction(a,el){
+  const sc=S.scan,i=+el.dataset.i;
+  if(a==='scan-print'||a==='scan-print-week'){
+    const clsOpts=isAdmin()?S.config.classes:myClasses(),classes=S.markCls&&clsOpts.indexOf(S.markCls)>-1?[S.markCls]:clsOpts;
+    if(!classes.length)return toast('אין כיתה להדפסה');
+    let dates=[S.markDate];
+    if(a==='scan-print-week'){const d0=new Date(S.markDate+'T12:00:00');d0.setDate(d0.getDate()-d0.getDay());dates=[];for(let k=0;k<6;k++){const d=new Date(d0);d.setDate(d0.getDate()+k);dates.push(iso(d));}}
+    return printForms(classes,dates);
+  }
+  if(a==='scan-pick')return document.getElementById('scanFile').click();
+  if(a==='scan-close'){if(sc&&sc.pages.some(p=>!p.need)&&!confirm('לסגור בלי לשמור?'))return;S.scan=null;return render();}
+  if(a==='scan-drop'){sc.pages.splice(i,1);return render();}
+  if(a==='scan-retry'){const p=sc.pages[i];document.querySelectorAll('#main [data-scn="'+i+'"]').forEach(inp=>{const k=inp.dataset.k;p[k]=k==='pg'?Math.max(0,(+inp.value||1)-1):inp.value;});return scanRetry(i);}
+  if(a==='scan-tog'){const x=sc.pages[i].rows[+el.dataset.r].cells[el.dataset.p];x.v=x.v==='absent'?'present':'absent';x.unsure=false;return render();}
+  if(a==='scan-save'){
+    let n=0,ab=0;const by={};
+    sc.pages.filter(p=>!p.need).forEach(function(p){
+      const day=Object.assign({},S.latt[p.date]||{});
+      p.rows.forEach(r=>Object.keys(r.cells).forEach(k=>{const x=r.cells[k];day[x.lid+':'+r.sid]=x.v;n++;if(x.v==='absent')ab++;}));
+      S.latt[p.date]=day;by[p.cls+' '+shortDate(p.date)]=1;
+    });
+    LIDX=null;save(K.latt,S.latt);
+    logAct('קליטת טופס סרוק',Object.keys(by).join(', ')+' · '+ab+' חיסורים מתוך '+n);
+    S.scan=null;toast('הנוכחות נשמרה ('+n+' סימונים)');return render();
+  }
+}
+
 /* ================= נוכחות לפי שיעור ================= */
 function dow(date){return new Date(date+'T12:00:00').getDay();}
 function lessonsOn(date){const d=dow(date);return d>5?[]:S.timetable.filter(l=>l.day===d);}
@@ -1615,7 +1870,10 @@ function viewMarkLessons(){
       '<label class="field"><span>תאריך</span><input type="date" data-ch="markDate" value="'+date+'"></label>'+
       (clsOpts.length?'<label class="field"><span>כיתה</span><select data-ch="markCls">'+opt(isAdmin()?'כל הכיתות':'השיעורים שלי','',S.markCls)+clsOpts.map(c=>opt(c,c,S.markCls)).join('')+'</select></label>':'')+'</div>'+
       (canDay?'<div class="seg" style="max-width:320px"><button data-act="mark-view" data-v="lessons" data-on="'+(S.markView!=='day'?1:0)+'">רשימת שיעורים</button>'+
-        '<button data-act="mark-view" data-v="day" data-on="'+(S.markView==='day'?1:0)+'">תמונת יום לכיתה</button></div>':'')+'</div>';
+        '<button data-act="mark-view" data-v="day" data-on="'+(S.markView==='day'?1:0)+'">תמונת יום לכיתה</button></div>':'')+
+      (canDay&&S.timetable.length?'<div class="row" style="margin-top:12px;gap:8px"><button class="btn" data-act="scan-print">הדפסת טופס נוכחות</button><button class="btn" data-act="scan-print-week">טפסים לכל השבוע</button>'+
+        '<button class="btn" data-v="primary" data-act="scan-pick">קליטת טופס סרוק</button><input type="file" id="scanFile" accept="image/*,application/pdf" multiple style="display:none"></div>':'')+'</div>';
+  if(S.scan)return top+scanView();
   if(dow(date)>5)return top+'<div class="card"><div class="empty">שבת קודש — אין שיעורים.</div></div>';
   if(canDay&&S.markView==='day')return top+dayGrid(date);
   if(!ls.length)return top+'<div class="card"><div class="empty">'+(S.me.teacher||isAdmin()?'אין שיעורים ביום הזה.':'החשבון שלך עוד לא קושר למורה במערכת השעות. בקשו מהמנהל לקשר אותו בהגדרות.')+'</div></div>';
@@ -2365,6 +2623,7 @@ function goTab(t){
   S.tab=t;S.editStudent=null;S.editStaff=null;S.editUser=null;S.importPreview=null;S.ttSlot=null;S.ttEdit=null;S.ttImport=null;
   if(S.tab!=='review'){S.revIdx=null;}
   if(S.tab==='mark'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;S.markLesson=null;S.ldirty=false;}
+  S.scan=null;
   render();
 }
 document.getElementById('nav').addEventListener('click',function(e){
@@ -2398,6 +2657,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   const a=el.dataset.act,id=el.dataset.id;
   if(a.indexOf('tt-')===0||a.indexOf('per-')===0)return ttAction(a,el);
   if(a.indexOf('lm-')===0||a==='mark-view')return markAction(a,el);
+  if(a.indexOf('scan-')===0)return scanAction(a,el);
   if(/^(bulk-|cred-|join-|jr-)/.test(a)||a==='user-pin')return userAction(a,el);
   if(a.indexOf('con-')===0)return consoleAction(a,el);
   if(a.indexOf('ac-')===0)return accountAction(a);
@@ -2649,6 +2909,8 @@ document.getElementById('main').addEventListener('click',async function(e){
 document.getElementById('main').addEventListener('change',function(e){
   const el=e.target;
   if(el.id==='importFile'&&el.files&&el.files[0])return handleImportFile(el.files[0]);
+  if(el.id==='scanFile'&&el.files&&el.files.length){const fs=Array.from(el.files);el.value='';return handleScanFiles(fs);}
+  if(el.dataset&&el.dataset.scn!==undefined)return;
   if(el.id==='ttFile'&&el.files&&el.files[0]){const f=el.files[0];el.value='';return handleTtFile(f);}
   if(el.dataset&&el.dataset.bk!==undefined&&S.bulk){document.querySelectorAll('#main [data-bku]').forEach(inp=>{S.bulk.list[+inp.dataset.bku].user=inp.value.trim();});S.bulk.list[+el.dataset.bk].on=el.checked;return render();}
   if(el.dataset&&el.dataset.bku!==undefined)return;
