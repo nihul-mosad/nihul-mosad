@@ -915,7 +915,16 @@ const myStudents=()=>{
   const mc=myClasses();return S.students.filter(s=>mc.indexOf(s.cls)>-1);
 };
 const canSeeStudent=id=>isAdmin()||myStudents().some(s=>s.id===id);
-const myTasks=()=>isAdmin()?S.tasks:S.tasks.filter(t=>t.by===S.me.user);
+const myTasks=()=>S.tasks.filter(t=>(t.uid||S.me.id)===S.me.id);
+function taskAuthor(uid){if(!uid||uid===S.me.id)return S.me.user;const u=S.config.users.find(x=>x.id===uid);if(u)return u.user;const t=S.tasks.find(x=>x.uid===uid&&x.by);return t?t.by:'משתמש לא מוכר';}
+function taskOwners(){const o={};o[S.me.id]=1;S.config.users.forEach(u=>o[u.id]=1);S.tasks.forEach(t=>{if(t.uid)o[t.uid]=1;});
+  return Object.keys(o).filter(id=>id!==S.me.id).map(id=>({id:id,name:taskAuthor(id)})).sort((a,b)=>a.name.localeCompare(b.name,'he'));}
+function tasksInView(){
+  if(!isAdmin())return myTasks();
+  const f=S.taskOwner||'all';
+  if(f==='all')return S.tasks;if(f==='me')return myTasks();
+  return S.tasks.filter(t=>t.uid===f);
+}
 function myLessonIds(){const o={};myLessonAll().forEach(l=>o[l.id]=1);return o;}
 function myLessonStudents(){const ok={};myLessonAll().forEach(l=>lessonStudents(l).list.forEach(s=>ok[s.id]=1));return S.students.filter(s=>ok[s.id]);}
 const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','students','mark','events','schedule','tasks','reports']:['mark','events','schedule','tasks','reports']).indexOf(t[0])>-1).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
@@ -1041,7 +1050,7 @@ function viewDash(){
      stat(c.present+c.late,'נוכחים מתוך '+list.length,'')+
      stat(c.absent,'חיסורים היום','var(--absent)')+
      stat(S.reviews.filter(r=>r.date>=daysAgo(7)).length,'תמונות מצב השבוע','')+
-     stat(S.tasks.filter(t=>t.status!=='done').length,'משימות פתוחות','')+'</div>'+
+     stat(myTasks().filter(t=>t.status!=='done').length,'המשימות הפתוחות שלי','')+'</div>'+
    '<div class="card"><h3>מה דורש התייחסות</h3>'+
      (alerts.length?alerts.slice(0,12).map(function(a){
        return '<div class="alert"><b class="note" style="min-width:82px">'+a.t+'</b><span style="flex:1">'+esc(a.x)+'</span>'+
@@ -2273,6 +2282,16 @@ function parseTimetable(m){
   }
   return {lessons:lessons,periods:Object.keys(per).map(k=>per[k]).sort((a,b)=>a.n-b.n),teachers:Object.keys(teachers),classes:Object.keys(classes),privNoStu:privNoStu};
 }
+/* התאמת שיעורים מיובאים לשיעורים הקיימים, כדי לשמור את המזהה (והנוכחות שנרשמה לפיו) */
+function ttMatch(lessons){
+  const k=(l,sub)=>[l.day,l.period,sub?l.subject:'',l.teacher,(l.classes||[]).slice().sort().join('+'),l.type||'class'].join('|');
+  const used={},out={};
+  [true,false].forEach(function(sub){
+    const pool={};S.timetable.forEach(o=>{if(!used[o.id])(pool[k(o,sub)]=pool[k(o,sub)]||[]).push(o);});
+    lessons.forEach(function(l,i){if(out[i])return;const c=pool[k(l,sub)];if(!c)return;const o=c.find(x=>!used[x.id]);if(o){used[o.id]=1;out[i]=o;}});
+  });
+  return out;
+}
 async function handleTtFile(file){
   try{
     const X=await loadSheetJS();
@@ -2290,13 +2309,16 @@ function ttImportView(){
   const staffN={};S.staff.forEach(x=>staffN[x.name]=1);
   const newT=r.teachers.filter(t=>!staffN[t]),newC=r.classes.filter(c=>S.config.classes.indexOf(c)<0);
   const byCls={};r.lessons.forEach(l=>l.classes.forEach(c=>byCls[c]=(byCls[c]||0)+1));
+  const mt=ttMatch(r.lessons),kept=Object.keys(mt).length;
+  const privNew=r.lessons.filter((l,i)=>l.type==='private'&&!(mt[i]&&(mt[i].students||[]).length)).length;
   return '<div class="head"><div><h2>ייבוא מערכת שעות</h2><div class="sub">בדקו את הסיכום לפני הטעינה. אחרי הטעינה אפשר לערוך כל שיעור.</div></div></div>'+
     '<div class="card"><div class="grid g3" style="margin-bottom:14px">'+stat(r.lessons.length,'שיעורים שבועיים','')+stat(r.teachers.length,'מורים','')+stat(r.periods.length,'שיעורים ביום','')+'</div>'+
     '<h3>כיתות</h3><p style="margin-bottom:10px">'+r.classes.map(c=>esc(c)+' <span class="note">('+(byCls[c]||0)+' שיעורים)</span>'+(newC.indexOf(c)>-1?' <span class="tag" data-s="late">כיתה חדשה</span>':'')).join(' · ')+'</p>'+
     '<h3>מבנה יום</h3><p style="margin-bottom:10px">'+r.periods.map(p=>p.n+': \u2066'+esc(p.start)+'–'+esc(p.end)+'\u2069').join(' · ')+'</p>'+
     '<h3>מורים</h3><p style="margin-bottom:10px">'+r.teachers.map(t=>esc(t)+(newT.indexOf(t)>-1?' <span class="note">(יתווסף לצוות)</span>':'')).join(' · ')+'</p>'+
-    (r.privNoStu?'<p class="note" style="margin-bottom:10px;color:var(--late)">נמצאו '+r.privNoStu+' שיעורים פרטניים. בקובץ לא מופיע אילו תלמידים משתתפים בהם, ולכן אחרי הטעינה צריך לבחור אותם בכל שיעור פרטני.</p>':'')+
-    (S.timetable.length?'<p class="note" style="margin-bottom:10px">הטעינה תחליף את מערכת השעות הקיימת ('+S.timetable.length+' שיעורים).</p>':'')+
+    (privNew?'<p class="note" style="margin-bottom:10px;color:var(--late)">נמצאו '+privNew+' שיעורים פרטניים חדשים. בקובץ לא מופיע אילו תלמידים משתתפים בהם, ולכן אחרי הטעינה צריך לבחור אותם בכל שיעור פרטני.</p>':'')+
+    (S.timetable.length?'<p class="note" style="margin-bottom:10px">הטעינה תחליף את מערכת השעות הקיימת ('+S.timetable.length+' שיעורים). '+
+      (kept?kept+' שיעורים זהים לקיימים יישמרו, וכך גם הנוכחות שנרשמה בהם ותלמידי הקבוצות הפרטניות.':'')+' הנוכחות שכבר נרשמה לא נמחקת בכל מקרה.</p>':'')+
     '<div class="row"><button class="btn" data-v="primary" data-act="tt-import-apply">טעינה למערכת</button><button class="btn" data-v="ghost" data-act="tt-import-cancel">ביטול</button></div></div>';
 }
 function ttEnsureStaff(name){if(name&&!S.staff.some(x=>x.name===name)){S.staff=S.staff.concat([{id:uid(),name:name,role:'מורה',cls:'',phone:'',hours:'',start:''}]);return true;}return false;}
@@ -2346,7 +2368,8 @@ async function ttAction(a,el){
     r.classes.forEach(c=>{if(S.config.classes.indexOf(c)<0)S.config.classes.push(c);});
     if(r.periods.length&&r.periods.every(p=>p.start))S.config.periods=r.periods;
     let st=false;r.teachers.forEach(t=>{if(ttEnsureStaff(t))st=true;});
-    S.timetable=r.lessons;
+    const mt=ttMatch(r.lessons);
+    S.timetable=r.lessons.map((l,i)=>{const o=mt[i];return o?Object.assign({},l,{id:o.id,students:l.type==='private'?(o.students||[]).slice():[]}):l;});
     save(K.config,S.config);save(K.timetable,S.timetable);if(st)save(K.staff,S.staff);
     logAct('ייבוא מערכת שעות',r.lessons.length+' שיעורים');S.ttImport=null;S.ttSlot=null;S.ttMode='class';toast(r.lessons.length+' שיעורים נטענו');return render();
   }
@@ -2360,20 +2383,25 @@ async function ttAction(a,el){
 /* ================= משימות ================= */
 function viewTasks(){
   const today=iso(new Date());
-  let list=myTasks().slice().sort(function(a,b){
+  const base=tasksInView(),adm=isAdmin();
+  let list=base.slice().sort(function(a,b){
     if(a.status==='done'!==(b.status==='done'))return a.status==='done'?1:-1;
     return (a.due||'9999')<(b.due||'9999')?-1:1;
   });
   if(S.taskFilter==='open')list=list.filter(t=>t.status!=='done');
   if(S.taskFilter==='today')list=list.filter(t=>t.status!=='done'&&t.due&&t.due<=today);
+  const of=S.taskOwner||'all';
   return '<div class="head"><div><h2>יומן משימות</h2><div class="sub">'+
-    S.tasks.filter(t=>t.status!=='done').length+' פתוחות · '+
-    S.tasks.filter(t=>t.status!=='done'&&t.due&&t.due<today).length+' באיחור</div></div></div>'+
+    base.filter(t=>t.status!=='done').length+' פתוחות · '+
+    base.filter(t=>t.status!=='done'&&t.due&&t.due<today).length+' באיחור'+
+    (adm?'':' · המשימות שלך גלויות רק לך ולהנהלה')+'</div></div></div>'+
    '<div class="card"><div class="row">'+
      '<input class="inp" id="taskText" data-in="taskText" style="flex:1;min-width:200px" placeholder="משימה חדשה…">'+
      '<input class="inp" type="date" id="taskDue" value="'+today+'">'+
      '<button class="btn" data-v="primary" data-act="task-add">הוספה</button></div></div>'+
    '<div class="card"><div class="row" style="margin-bottom:10px">'+
+     (adm?'<select class="inp" data-ch="taskOwner" style="width:auto">'+opt('המשימות של כולם','all',of)+opt('המשימות שלי','me',of)+
+       taskOwners().map(u=>opt('המשימות של '+u.name,u.id,of)).join('')+'</select>':'')+
      ['open','פתוחות','today','להיום','all','הכול'].reduce(function(acc,v,i,arr){
        if(i%2)return acc;
        return acc+'<button class="btn sm" data-act="task-filter" data-f="'+arr[i]+'"'+(S.taskFilter===arr[i]?' data-v="primary"':'')+'>'+arr[i+1]+'</button>';
@@ -2384,7 +2412,7 @@ function viewTasks(){
        '<button class="tick" data-act="task-toggle" data-id="'+t.id+'">✓</button>'+
        '<div class="task-body"><b>'+esc(t.text)+'</b>'+
        '<span class="note">'+(t.due?(late?'<span style="color:var(--absent)">באיחור · '+shortDate(t.due)+'</span>':shortDate(t.due)):'')+
-       (t.by?' · '+esc(t.by):'')+'</span></div>'+
+       (adm?(t.due?' · ':'')+'נכתבה ע"י <b>'+esc(t.uid===S.me.id?'אני':taskAuthor(t.uid))+'</b>':'')+'</span></div>'+
        '<button class="btn sm" data-v="ghost" data-act="task-del" data-id="'+t.id+'">מחיקה</button></div>';
      }).join(''):'<div class="empty">אין משימות להצגה.</div>')+'</div>';
 }
