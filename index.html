@@ -1201,8 +1201,11 @@ function viewCard(){
         if(t.now&&t.prev){const x=t.now-t.prev;d=x>0?'<span style="color:var(--green)">▲</span>':x<0?'<span style="color:var(--red)">▼</span>':'<span class="note">=</span>';}
         return '<div class="dom"><div class="dom-label">'+esc(t.name)+'</div><div>'+(t.now?'<b style="font-size:18px">'+t.now+'</b> '+d:'<span class="note">—</span>')+'</div></div>';
       }).join(''):'<p class="note">עוד לא נרשמה תמונת מצב.</p>')+'</div></div>'+
+    cardGroupsSection(s)+
+    cardAttSection(s)+
     evCardSection(s)+
-    '<div class="card"><h3>היסטוריית תמונות מצב</h3>'+
+    cardMentions(s)+
+    '<div class="card brk"><h3>היסטוריית תמונות מצב</h3>'+
       (revs.length?'<div class="tl">'+revs.map(function(r){
         return '<div class="tl-item" data-l="'+r.light+'"><div class="tl-date" style="display:flex;justify-content:space-between;gap:8px"><span>'+dual(r.date)+(r.ts&&iso(new Date(r.ts))===r.date?' · <b>'+hmOf(r.ts)+'</b>':'')+' · '+esc(r.by||'')+(r.ts&&iso(new Date(r.ts))!==r.date?' · נרשם '+esc(tsLine(r.ts)):'')+'</span><button class="link" style="color:var(--muted);font-weight:500;font-size:12.5px" data-act="rev-del-id" data-id="'+r.id+'">מחיקה</button></div>'+
         '<div class="row" style="gap:6px;margin:4px 0"><span class="tag" data-s="'+r.light+'">'+LIGHTNAME[r.light]+'</span>'+
@@ -1981,8 +1984,42 @@ function evCardSection(s){
   const pos=ev.filter(e=>e.kind==='pos').length;
   return '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3 style="margin:0">אירועים</h3>'+
     '<button class="btn sm" data-v="primary" data-act="ev-for" data-id="'+s.id+'">+ דיווח</button></div>'+
-    (ev.length?'<div class="row" style="gap:14px;margin-bottom:8px"><span style="color:var(--present);font-weight:700">'+pos+' לשבח</span><span style="color:var(--late);font-weight:700">'+(ev.length-pos)+' לשיפור</span></div>'+ev.slice(0,12).map(e=>evItem(e,false)).join('')+
-      (ev.length>12?'<p class="note">ועוד '+(ev.length-12)+' אירועים בלשונית "אירועים".</p>':''):'<p class="note">אין אירועים רשומים.</p>')+'</div>';
+    (ev.length?'<div class="row" style="gap:14px;margin-bottom:8px"><span style="color:var(--present);font-weight:700">'+pos+' לשבח</span><span style="color:var(--late);font-weight:700">'+(ev.length-pos)+' לשיפור</span></div>'+ev.map(e=>evItem(e,false)).join(''):'<p class="note">אין אירועים רשומים.</p>')+'</div>';
+}
+/* --- כרטיס תלמיד: נוכחות מפורטת, קבוצות, ואזכורים בפרוטוקולים ובמשימות --- */
+function cardAttSection(s){
+  const recs=attLogAll('2000-01-01','2100-01-01').filter(r=>r.sid===s.id).sort((a,b)=>b.d.localeCompare(a.d)||b.per-a.per);
+  if(!recs.length)return '<div class="card"><h3>נוכחות</h3><p class="note">אין רישומי נוכחות.</p></div>';
+  const tag=v=>'<span class="tag" data-s="'+esc(v)+'">'+esc(SNAME[v]||v)+'</span>';
+  const bySub={};recs.forEach(r=>{const k=r.sub;const o=bySub[k]=bySub[k]||{n:0,late:0,absent:0,excused:0};o.n++;if(o[r.v]!==undefined)o[r.v]++;});
+  const subs=Object.keys(bySub).sort((a,b)=>(bySub[b].absent+bySub[b].late)-(bySub[a].absent+bySub[a].late)||bySub[b].n-bySub[a].n);
+  const exc=recs.filter(r=>r.v!=='present'),showAll=S.cardAttAll===s.id,list=showAll?recs:exc;
+  const lessonCell=r=>r.per&&r.per<99?'שיעור '+r.per:'—';
+  return '<div class="card brk"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3 style="margin:0">נוכחות</h3>'+
+      '<button class="btn sm" data-act="card-att-all" data-id="'+s.id+'">'+(showAll?'רק חריגים':'כל הרישומים ('+recs.length+')')+'</button></div>'+
+    '<h3 style="font-size:15px">לפי מקצוע</h3>'+
+    table(['מקצוע','רישומים','איחורים','חיסורים','מאושרים'],subs.map(k=>{const o=bySub[k];return ['<b>'+esc(k)+'</b>',o.n,o.late||'—',o.absent?'<b style="color:var(--absent)">'+o.absent+'</b>':'—',o.excused||'—'];}))+
+    '<h3 style="font-size:15px;margin-top:14px">'+(showAll?'כל הרישומים':'איחורים וחיסורים')+'</h3>'+
+    (list.length?table(['תאריך','שיעור','מקצוע','מורה','סטטוס'],list.map(r=>[esc(dual(r.d)),lessonCell(r),esc(r.sub),esc(r.tch||'—'),tag(r.v)])):'<p class="note">אין איחורים או חיסורים. 👏</p>')+'</div>';
+}
+function cardGroupsSection(s){
+  const ls=S.timetable.filter(l=>l.type==='private'&&(l.students||[]).indexOf(s.id)>-1).sort((a,b)=>a.day-b.day||a.period-b.period);
+  if(!ls.length)return '';
+  return '<div class="card"><h3>שיעורים פרטניים</h3>'+table(['יום','שיעור','מקצוע','מורה'],ls.map(l=>['יום '+DAYS[l.day],l.period+' <span class="note">'+perLabel(l.period)+'</span>',esc(l.subject),esc(l.teacher)]))+'</div>';
+}
+function cardMentions(s){
+  const nm=String(s.name||'').trim();if(nm.length<3)return '';
+  const has=t=>String(t||'').indexOf(nm)>-1;
+  const snip=t=>{t=String(t||'');const i=t.indexOf(nm);if(i<0)return '';const a=Math.max(0,i-70),b=Math.min(t.length,i+nm.length+90);
+    return (a?'…':'')+esc(t.slice(a,i))+'<mark>'+esc(nm)+'</mark>'+esc(t.slice(i+nm.length,b))+(b<t.length?'…':'');};
+  const mts=(S.meetings||[]).filter(m=>[m.title,m.part,m.body,m.dec].some(has)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const tks=S.tasks.filter(t=>has(t.text));
+  if(!mts.length&&!tks.length)return '';
+  return '<div class="card brk"><h3>אזכורים</h3>'+
+    (mts.length?'<h3 style="font-size:15px">בפרוטוקולי ישיבות צוות</h3>'+mts.map(m=>'<div class="alert" style="display:block"><b>'+esc(m.title||'ישיבת צוות')+'</b> <span class="note">'+esc(dual(m.date))+'</span>'+
+      '<div style="margin-top:4px;white-space:pre-wrap">'+[m.body,m.dec,m.title,m.part].filter(has).map(snip)[0]+'</div></div>').join(''):'')+
+    (tks.length?'<h3 style="font-size:15px;margin-top:12px">במשימות</h3>'+tks.map(t=>'<div class="alert" style="display:block">'+(t.status==='done'?'✓ ':'')+snip(t.text)+
+      ' <span class="note">'+(t.due?shortDate(t.due)+' · ':'')+esc(taskAuthor(t.uid))+'</span></div>').join(''):'')+'</div>';
 }
 function evTypesCard(){
   return '<div class="card"><h3>סוגי אירועים</h3><p class="note" style="margin-bottom:12px">הסוגים שהצוות בוחר מהם בדיווח. אירוע "חמור" או "בינוני" לשיפור מסומן "לטיפול" עד שהמחנך או המנהל מסמנים שטופל. אירוע חמור מופיע גם בלוח הבקרה.</p>'+
@@ -2614,8 +2651,8 @@ function repSwitch(){
 }
 /* ---- יומן נוכחות: כל הרישומים לפי סינון, להדפסה ---- */
 function wdOf(d){return new Date(d+'T12:00:00').getDay();}
-function attLogAll(){
-  const from=S.repFrom,to=S.repTo,LM={},recs=[],ld={};S.timetable.forEach(l=>LM[l.id]=l);
+function attLogAll(from,to){
+  from=from||S.repFrom;to=to||S.repTo;const LM={},recs=[],ld={};S.timetable.forEach(l=>LM[l.id]=l);
   Object.keys(S.latt).forEach(function(d){if(d<from||d>to)return;const day=S.latt[d]||{};Object.keys(day).forEach(function(k){
     const v=day[k],i=k.indexOf(':');if(!v||i<0)return;const lid=k.slice(0,i),sid=k.slice(i+1),l=LM[lid],s=studentById(sid);ld[d+'|'+sid]=1;
     recs.push({d:d,sid:sid,name:s?s.name:'(תלמיד שהוסר)',cls:s?s.cls:'',g:lid,per:l?+l.period:99,sub:l?l.subject:'שיעור שהוסר מהמערכת',tch:l?l.teacher||'':'',v:v});});});
@@ -3141,6 +3178,7 @@ document.getElementById('main').addEventListener('click',async function(e){
     const all=[];recipients().forEach(s=>numbersFor(s).forEach(n=>all.push(n)));
     return copy(all.join(', '),all.length+' מספרים הועתקו');
   }
+  if(a==='card-att-all'){S.cardAttAll=S.cardAttAll===id?null:id;return render();}
   if(a==='rep-view'){S.repView=el.dataset.r;return render();}
   if(a==='lg-range'){
     const r=el.dataset.r,t=new Date(),today=iso(t);S.repTo=today;
