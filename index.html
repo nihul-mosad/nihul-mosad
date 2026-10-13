@@ -53,6 +53,18 @@ main{flex:1;min-width:0;padding:24px 28px 80px}
 .grid{display:grid;gap:14px}
 .g3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 .g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.dhero{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.dnow{display:inline-block;margin-top:8px;padding:4px 12px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:13.5px}
+.dquick .btn{white-space:nowrap}
+.dcls{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--surface2)}
+.dcls b{min-width:70px}
+.dtrend{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:4px}
+.dtrend div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.dtrend i{display:block;width:100%;max-width:34px;border-radius:6px 6px 2px 2px;background:var(--present)}
+.dtrend i[data-low="1"]{background:var(--late)}.dtrend i[data-low="2"]{background:var(--absent)}
+.dtrend em{font-style:normal;font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap}
+.dtrend .note{font-size:11px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
 .stat b{display:block;font-family:'Noto Sans Hebrew','Noto Sans',sans-serif;font-size:31px;line-height:1.1}
 .stat span{color:var(--muted);font-size:13px}
@@ -1017,66 +1029,127 @@ function contactPhone(s){return s.fatherPhone||s.motherPhone||'';}
 function contactName(s){return s.fatherPhone?(s.father||'האב'):(s.mother||'האם');}
 
 /* ================= לוח בקרה ================= */
+function dashNow(){
+  const hm=nowHM(),P=periods().filter(p=>p.start);if(!P.length)return '';
+  const cur=P.find(p=>p.start<=hm&&(!p.end||hm<p.end));
+  if(cur)return 'עכשיו: שיעור '+cur.n+' · עד '+cur.end;
+  const next=P.find(p=>p.start>hm);
+  if(next)return hm<P[0].start?'יום הלימודים מתחיל ב־'+P[0].start:'הפסקה · שיעור '+next.n+' מתחיל ב־'+next.start;
+  return 'יום הלימודים הסתיים';
+}
+/* תלמידים במעקב: נוכחות נמוכה, אדום בתמונת מצב, אירועים לשיפור */
+function dashWatch(list,today){
+  const from=daysAgo(30),out=[];
+  list.forEach(function(s){
+    const a=attStats(s.id,from,today),r=lastReview(s.id),why=[];let sc=0;
+    if(a.total>=6&&a.pct!==null&&a.pct<90){why.push(['absent',a.pct+'% נוכחות']);sc+=(90-a.pct)/5;}
+    if(r&&r.light==='red'){why.push(['red','אדום בתמונת מצב']);sc+=4;}
+    const ne=S.events.filter(e=>e.sid===s.id&&e.kind==='neg'&&e.date>=from);
+    if(ne.length){const w=ne.reduce((x,e)=>x+(e.sev||1),0);if(w>=2){why.push(['late',ne.length+' אירועים לשיפור']);sc+=w;}}
+    if(why.length)out.push({s:s,why:why,sc:sc});
+  });
+  return out.sort((a,b)=>b.sc-a.sc);
+}
+function dashTrend(list){
+  const ids={};list.forEach(s=>ids[s.id]=1);
+  const dates=Array.from(new Set(Object.keys(S.att).concat(Object.keys(S.latt)))).filter(d=>d<=iso(new Date())).sort().slice(-12);
+  return dates.map(function(d){let p=0,n=0;list.forEach(s=>{const v=dayStatus(s.id,d);if(!v)return;n++;if(v==='present'||v==='late')p++;});return {d:d,n:n,pct:n?Math.round(p/n*100):null};}).filter(x=>x.n);
+}
 function viewDash(){
-  const today=iso(new Date()),day=S.att[today]||{},list=myStudents();
+  const today=iso(new Date()),day=S.att[today]||{},list=myStudents(),adm=isAdmin();
   const c={present:0,late:0,absent:0,excused:0,none:0};
   list.forEach(s=>{c[dayStatus(s.id,today)||'none']++;});
-  const from=daysAgo(30);
-  const alerts=[];
-  if(S.timetable.length){
-    const now=new Date(),hm=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-    const um=markableLessons(today).filter(l=>{const p=periods().find(x=>x.n===l.period);return p&&p.end&&p.end<=hm&&!lessonMarked(today,l).done;});
-    if(um.length)alerts.push({t:'נוכחות',x:um.length+' שיעורים שהסתיימו היום ועוד לא סומנה בהם נוכחות',act:'goto-mark'});
-  }
+  const marked=list.length-c.none,pctToday=marked?Math.round((c.present+c.late)/marked*100):null;
+  const hm=nowHM(),alerts=[];
+  // שיעורי היום והסימון שלהם
+  const lessons=S.timetable.length?markableLessons(today).slice().sort((a,b)=>a.period-b.period):[];
+  const endOf=l=>{const p=periods().find(x=>x.n===l.period);return p&&p.end?p.end:'';};
+  const startOf=l=>{const p=periods().find(x=>x.n===l.period);return p&&p.start?p.start:'';};
+  const lst=lessons.map(l=>{const m=lessonMarked(today,l),e=endOf(l),st=startOf(l);
+    return {l:l,m:m,state:m.done?'done':m.m?'part':(e&&e<=hm)?'miss':(st&&st<=hm)?'now':'wait'};});
+  const missed=lst.filter(x=>x.state==='miss'||(x.state==='part'&&endOf(x.l)<=hm));
+  if(missed.length)alerts.push({t:'נוכחות',x:missed.length+' שיעורים שהסתיימו היום ועוד לא סומנה בהם נוכחות מלאה',act:'goto-mark'});
   if(!S.timetable.length)myClasses().forEach(function(cls){
     const inC=list.filter(s=>s.cls===cls),m=inC.filter(s=>day[s.id]).length;
     if(inC.length&&m<inC.length)alerts.push({t:'נוכחות',x:cls+' — טרם סומנה היום ('+m+'/'+inC.length+')',act:'goto-mark',cls:cls});
   });
-  list.forEach(function(s){
-    const a=attStats(s.id,from,today);
-    if(a.total>=8&&a.pct<85)alerts.push({t:'נוכחות',x:s.name+' — '+a.pct+'% בחודש האחרון',act:'card',id:s.id});
-  });
-  list.forEach(function(s){
-    const r=lastReview(s.id);
-    if(r&&r.light==='red')alerts.push({t:'תמונת מצב',x:s.name+' — אדום בתמונת המצב מ־'+shortDate(r.date),act:'card',id:s.id});
-  });
-  const cutoff=daysAgo(21);
-  const stale=list.filter(function(s){const r=lastReview(s.id);return !r||r.date<cutoff;});
-  if(stale.length)alerts.push({t:'תמונת מצב',x:stale.length+' תלמידים ללא תמונת מצב מעל שלושה שבועות',act:'goto-review'});
-  {const op=S.events.filter(e=>e.kind==='neg'&&e.sev>=2&&!e.handled&&canHandle(e));
-   op.filter(e=>e.sev>=3).slice(0,4).forEach(e=>alerts.unshift({t:'אירוע חמור',x:((studentById(e.sid)||{}).name||e.sname||'')+' — '+(e.typeName||'')+' ('+shortDate(e.date)+')',act:'card',id:e.sid}));
-   if(op.length)alerts.push({t:'אירועים',x:op.length+' אירועים ממתינים לטיפול',act:'goto-events'});}
+  const op=S.events.filter(e=>e.kind==='neg'&&e.sev>=2&&!e.handled&&canHandle(e));
+  op.filter(e=>e.sev>=3).slice(0,4).forEach(e=>alerts.unshift({t:'אירוע חמור',x:((studentById(e.sid)||{}).name||e.sname||'')+' — '+(e.typeName||'')+' ('+shortDate(e.date)+')',act:'card',id:e.sid}));
+  if(op.length)alerts.push({t:'אירועים',x:op.length+' אירועים ממתינים לטיפול',act:'goto-events'});
   const overdue=myTasks().filter(t=>t.status!=='done'&&t.due&&t.due<today);
   if(overdue.length)alerts.push({t:'משימות',x:overdue.length+' משימות באיחור',act:'goto-tasks'});
+  const stale=list.filter(function(s){const r=lastReview(s.id);return !r||r.date<daysAgo(21);});
+  if(stale.length&&list.length)alerts.push({t:'תמונת מצב',x:stale.length+' תלמידים ללא תמונת מצב מעל שלושה שבועות',act:'goto-review'});
 
-  const openTasks=myTasks().filter(t=>t.status!=='done').slice(0,5);
-  const recent=S.reviews.slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,6);
+  const watch=dashWatch(list,today);
+  const trend=dashTrend(list);
+  const wk=daysAgo(7),evW=S.events.filter(e=>e.date>=wk),posW=evW.filter(e=>e.kind==='pos'),negW=evW.length-posW.length;
+  const openTasks=myTasks().filter(t=>t.status!=='done').sort((a,b)=>(a.due||'9999')<(b.due||'9999')?-1:1);
+  const lastMt=(S.meetings||[]).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+  const recent=S.reviews.slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,5);
+  const h=new Date().getHours(),greet=h<12?'בוקר טוב':h<17?'צהריים טובים':'ערב טוב';
+  const nm=S.me.teacher||S.me.user||'';
+  const stuLink=(id,name)=>S.students.some(s=>s.id===id)?'<button class="link" data-act="card" data-id="'+id+'">'+esc(name)+'</button>':'<b>'+esc(name)+'</b>';
+  const card=(title,body,more)=>'<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">'+title+'</h3>'+(more||'')+'</div>'+body+'</div>';
+
+  // נוכחות לפי כיתה היום
+  const classes=myClasses().filter(cl=>list.some(s=>s.cls===cl));
+  const clsRows=classes.map(function(cl){const st=list.filter(s=>s.cls===cl);let p=0,m=0,ab=0;
+    st.forEach(s=>{const v=dayStatus(s.id,today);if(!v)return;m++;if(v==='present'||v==='late')p++;else if(v==='absent')ab++;});
+    const pct=m?Math.round(p/m*100):null;
+    return '<div class="dcls"><b>'+esc(cl)+'</b><div class="bar" style="flex:1"><i style="width:'+(pct||0)+'%" data-low="'+(pct===null?0:pct<80?2:pct<90?1:0)+'"></i></div>'+
+      '<span class="note" style="min-width:110px;text-align:left">'+(m?pct+'% · '+ab+' חסרים':'טרם סומן')+'</span></div>';}).join('');
+
+  const stIcon={done:['present','✓ סומן'],part:['late','חלקי'],miss:['absent','לא סומן'],now:['admin','מתקיים עכשיו'],wait:['excused','בהמשך']};
+  const lessonRows=lst.filter(x=>!adm||x.state!=='done'&&x.state!=='wait').map(x=>{const l=x.l,i=stIcon[x.state];
+    return '<div class="alert"><b style="min-width:20px">'+l.period+'</b><span style="flex:1">'+esc(l.subject)+' <span class="note">· '+esc((l.classes||[]).join(', '))+(l.teacher&&l.teacher!==S.me.teacher?' · '+esc(l.teacher):'')+'</span></span>'+
+      '<span class="tag" data-s="'+i[0]+'">'+i[1]+(x.state==='part'?' '+x.m.m+'/'+x.m.n:'')+'</span>'+
+      '<button class="btn sm" data-v="ghost" data-act="dash-lesson" data-id="'+l.id+'">סימון</button></div>';}).join('');
+  const missT={};if(adm)missed.forEach(x=>{if(x.l.teacher)missT[x.l.teacher]=(missT[x.l.teacher]||0)+1;});
+  const missTL=Object.keys(missT).sort((a,b)=>missT[b]-missT[a]);
+
+  const trendBox=trend.length>1?'<div class="dtrend">'+trend.map(t=>'<div title="'+esc(dual(t.d))+': '+t.pct+'%"><span class="note">'+t.pct+'</span><i style="height:'+Math.max(4,t.pct)+'%" data-low="'+(t.pct<80?2:t.pct<90?1:0)+'"></i><em>'+esc((hebShort(t.d)||'').split(' ')[0]||t.d.slice(8))+'</em></div>').join('')+'</div>':'<p class="note">יוצג אחרי שיירשמו כמה ימי נוכחות.</p>';
 
   return printHead()+
-   '<div class="head"><div><h2>'+gregLabel(today)+'</h2><div class="hebdate">'+hebLabel(today)+'</div></div>'+
-   '<div class="row"><button class="btn" data-act="goto-mark">נוכחות</button><button class="btn" data-v="primary" data-act="goto-review">תמונת מצב</button></div></div>'+
-   '<div class="grid g3" style="margin-bottom:14px">'+
-     stat(c.present+c.late,'נוכחים מתוך '+list.length,'')+
-     stat(c.absent,'חיסורים היום','var(--absent)')+
-     stat(S.reviews.filter(r=>r.date>=daysAgo(7)).length,'תמונות מצב השבוע','')+
-     stat(myTasks().filter(t=>t.status!=='done').length,'המשימות הפתוחות שלי','')+'</div>'+
-   '<div class="card"><h3>מה דורש התייחסות</h3>'+
-     (alerts.length?alerts.slice(0,12).map(function(a){
+   '<div class="dhero"><div><div class="note" style="font-size:15px">'+greet+(nm?', '+esc(nm):'')+'</div><h2 style="margin:2px 0">'+gregLabel(today)+'</h2><div class="hebdate">'+hebLabel(today)+'</div>'+
+     (S.timetable.length?'<div class="dnow">'+esc(dashNow())+'</div>':'')+'</div>'+
+     '<div class="row dquick"><button class="btn" data-v="primary" data-act="goto-mark">נוכחות</button><button class="btn" data-act="dash-ev">+ דיווח אירוע</button>'+
+     '<button class="btn" data-act="goto-review">תמונת מצב</button><button class="btn" data-act="goto-tasks">+ משימה</button></div></div>'+
+   '<div class="grid g4" style="margin-bottom:14px">'+
+     stat(pctToday===null?'—':pctToday+'%','נוכחות היום'+(marked?' ('+(c.present+c.late)+'/'+marked+')':''),pctToday!==null&&pctToday<85?'var(--late)':'var(--present)')+
+     stat(c.absent,'חיסורים היום'+(c.late?' · '+c.late+' איחורים':''),c.absent?'var(--absent)':'')+
+     stat('<span style="color:var(--present)">'+posW.length+'</span> / <span style="color:var(--late)">'+negW+'</span>','אירועים השבוע: לשבח / לשיפור','')+
+     stat(openTasks.length,'המשימות הפתוחות שלי'+(overdue.length?' · '+overdue.length+' באיחור':''),overdue.length?'var(--absent)':'')+'</div>'+
+   card('מה דורש התייחסות',alerts.length?alerts.slice(0,10).map(function(a){
        return '<div class="alert"><b class="note" style="min-width:82px">'+a.t+'</b><span style="flex:1">'+esc(a.x)+'</span>'+
        '<button class="btn sm" data-v="ghost" data-act="'+a.act+'"'+(a.id?' data-id="'+a.id+'"':'')+(a.cls?' data-cls="'+esc(a.cls)+'"':'')+'>פתיחה</button></div>';
-     }).join(''):'<div class="empty">הכול תקין. אין התראות פתוחות.</div>')+'</div>'+
+     }).join(''):'<div class="empty">הכול תקין. אין התראות פתוחות. 👍</div>')+
    '<div class="grid g2">'+
-   '<div class="card"><h3>משימות קרובות</h3>'+
-     (openTasks.length?openTasks.map(t=>'<div class="alert"><span style="flex:1">'+esc(t.text)+'</span><span class="note">'+(t.due?shortDate(t.due):'')+'</span></div>').join('')
-      :'<div class="empty">אין משימות פתוחות.</div>')+
-     '<div class="row" style="margin-top:12px"><button class="btn sm" data-act="goto-tasks">ליומן המשימות</button></div></div>'+
-   '<div class="card"><h3>תמונות מצב אחרונות</h3>'+
-     (recent.length?recent.map(function(r){
+     (lst.length?card(adm?'שיעורים שטרם סומנו היום':'השיעורים היום',(lessonRows||'<div class="empty">כל השיעורים שהתקיימו עד עכשיו סומנו. 👍</div>')+
+       (missTL.length?'<p class="note" style="margin-top:8px;color:var(--absent)">טרם סימנו: '+missTL.map(t=>esc(t)+' ('+missT[t]+')').join(' · ')+'</p>':''),
+       '<span class="note">'+lst.filter(x=>x.state==='done').length+'/'+lst.length+' סומנו</span>'):'')+
+     (classes.length?card('נוכחות לפי כיתה היום',clsRows):'')+
+     card('מגמת נוכחות','<p class="note" style="margin-bottom:6px">אחוז נוכחות בימים האחרונים שנרשמו</p>'+trendBox)+
+     card('תלמידים במעקב',watch.length?watch.slice(0,7).map(w=>'<div class="alert" style="flex-wrap:wrap">'+stuLink(w.s.id,w.s.name)+' <span class="note">'+esc(w.s.cls)+'</span><span style="flex:1"></span>'+
+       w.why.map(x=>'<span class="tag" data-s="'+x[0]+'">'+esc(x[1])+'</span>').join(' ')+'</div>').join('')+(watch.length>7?'<p class="note" style="margin-top:6px">ועוד '+(watch.length-7)+' תלמידים.</p>':'')
+       :'<div class="empty">אין תלמידים שדורשים מעקב כרגע.</div>')+
+     card('אירועים אחרונים',(evW.length?evW.slice().sort((a,b)=>(b.date+(b.time||''))>(a.date+(a.time||''))?1:-1).slice(0,6).map(e=>'<div class="alert"><span class="tag" data-s="'+(e.kind==='pos'?'present':e.sev>=3?'absent':'late')+'">'+esc(e.typeName||'')+'</span>'+
+         '<span style="flex:1">'+stuLink(e.sid,(studentById(e.sid)||{}).name||e.sname||'')+' <span class="note">'+esc(e.cls||'')+'</span></span><span class="note">'+shortDate(e.date)+'</span></div>').join('')
+       :'<div class="empty">לא דווחו אירועים השבוע.</div>')+
+       (posW.length?'<p style="margin-top:8px"><b style="color:var(--present)">לשבח השבוע:</b> '+Array.from(new Set(posW.map(e=>(studentById(e.sid)||{}).name||e.sname))).map(esc).join(', ')+'</p>':''),
+       '<button class="btn sm" data-v="ghost" data-act="goto-events-all">לכל האירועים</button>')+
+     card('משימות קרובות',(openTasks.length?openTasks.slice(0,5).map(t=>'<div class="alert"><span style="flex:1">'+esc(t.text)+'</span><span class="note"'+(t.due&&t.due<today?' style="color:var(--absent)"':'')+'>'+(t.due?shortDate(t.due):'')+'</span></div>').join('')
+       :'<div class="empty">אין משימות פתוחות.</div>'),'<button class="btn sm" data-v="ghost" data-act="goto-tasks">ליומן</button>')+
+     (lastMt?card('ישיבת הצוות האחרונה','<b>'+esc(lastMt.title||'ישיבת צוות')+'</b> <span class="note">'+esc(dual(lastMt.date))+'</span>'+
+       (lastMt.dec?'<div style="margin-top:6px"><span class="note">החלטות ומשימות:</span><div style="white-space:pre-wrap;max-height:9em;overflow:hidden">'+esc(lastMt.dec)+'</div></div>':''),
+       '<button class="btn sm" data-v="ghost" data-act="goto-meetings">לפרוטוקולים</button>'):'')+
+     card('תמונות מצב אחרונות',recent.length?recent.map(function(r){
        const s=studentById(r.studentId);
        return '<div class="alert"><span class="tag" data-s="'+r.light+'">'+LIGHTNAME[r.light]+'</span>'+
        '<button class="link" style="flex:1" data-act="card" data-id="'+r.studentId+'">'+esc(s?s.name:'—')+'</button>'+
        '<span class="note">'+shortDate(r.date)+'</span></div>';
-     }).join(''):'<div class="empty">עוד לא נרשמו תמונות מצב.</div>')+'</div></div>';
+     }).join(''):'<div class="empty">עוד לא נרשמו תמונות מצב.</div>')+
+   '</div>';
 }
 
 /* ================= תמונת מצב ================= */
@@ -1204,7 +1277,6 @@ function viewCard(){
     cardGroupsSection(s)+
     cardAttSection(s)+
     evCardSection(s)+
-    cardMentions(s)+
     '<div class="card brk"><h3>היסטוריית תמונות מצב</h3>'+
       (revs.length?'<div class="tl">'+revs.map(function(r){
         return '<div class="tl-item" data-l="'+r.light+'"><div class="tl-date" style="display:flex;justify-content:space-between;gap:8px"><span>'+dual(r.date)+(r.ts&&iso(new Date(r.ts))===r.date?' · <b>'+hmOf(r.ts)+'</b>':'')+' · '+esc(r.by||'')+(r.ts&&iso(new Date(r.ts))!==r.date?' · נרשם '+esc(tsLine(r.ts)):'')+'</span><button class="link" style="color:var(--muted);font-weight:500;font-size:12.5px" data-act="rev-del-id" data-id="'+r.id+'">מחיקה</button></div>'+
@@ -1986,7 +2058,7 @@ function evCardSection(s){
     '<button class="btn sm" data-v="primary" data-act="ev-for" data-id="'+s.id+'">+ דיווח</button></div>'+
     (ev.length?'<div class="row" style="gap:14px;margin-bottom:8px"><span style="color:var(--present);font-weight:700">'+pos+' לשבח</span><span style="color:var(--late);font-weight:700">'+(ev.length-pos)+' לשיפור</span></div>'+ev.map(e=>evItem(e,false)).join(''):'<p class="note">אין אירועים רשומים.</p>')+'</div>';
 }
-/* --- כרטיס תלמיד: נוכחות מפורטת, קבוצות, ואזכורים בפרוטוקולים ובמשימות --- */
+/* --- כרטיס תלמיד: נוכחות מפורטת וקבוצות --- */
 function cardAttSection(s){
   const recs=attLogAll('2000-01-01','2100-01-01').filter(r=>r.sid===s.id).sort((a,b)=>b.d.localeCompare(a.d)||b.per-a.per);
   if(!recs.length)return '<div class="card"><h3>נוכחות</h3><p class="note">אין רישומי נוכחות.</p></div>';
@@ -2006,20 +2078,6 @@ function cardGroupsSection(s){
   const ls=S.timetable.filter(l=>l.type==='private'&&(l.students||[]).indexOf(s.id)>-1).sort((a,b)=>a.day-b.day||a.period-b.period);
   if(!ls.length)return '';
   return '<div class="card"><h3>שיעורים פרטניים</h3>'+table(['יום','שיעור','מקצוע','מורה'],ls.map(l=>['יום '+DAYS[l.day],l.period+' <span class="note">'+perLabel(l.period)+'</span>',esc(l.subject),esc(l.teacher)]))+'</div>';
-}
-function cardMentions(s){
-  const nm=String(s.name||'').trim();if(nm.length<3)return '';
-  const has=t=>String(t||'').indexOf(nm)>-1;
-  const snip=t=>{t=String(t||'');const i=t.indexOf(nm);if(i<0)return '';const a=Math.max(0,i-70),b=Math.min(t.length,i+nm.length+90);
-    return (a?'…':'')+esc(t.slice(a,i))+'<mark>'+esc(nm)+'</mark>'+esc(t.slice(i+nm.length,b))+(b<t.length?'…':'');};
-  const mts=(S.meetings||[]).filter(m=>[m.title,m.part,m.body,m.dec].some(has)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-  const tks=S.tasks.filter(t=>has(t.text));
-  if(!mts.length&&!tks.length)return '';
-  return '<div class="card brk"><h3>אזכורים</h3>'+
-    (mts.length?'<h3 style="font-size:15px">בפרוטוקולי ישיבות צוות</h3>'+mts.map(m=>'<div class="alert" style="display:block"><b>'+esc(m.title||'ישיבת צוות')+'</b> <span class="note">'+esc(dual(m.date))+'</span>'+
-      '<div style="margin-top:4px;white-space:pre-wrap">'+[m.body,m.dec,m.title,m.part].filter(has).map(snip)[0]+'</div></div>').join(''):'')+
-    (tks.length?'<h3 style="font-size:15px;margin-top:12px">במשימות</h3>'+tks.map(t=>'<div class="alert" style="display:block">'+(t.status==='done'?'✓ ':'')+snip(t.text)+
-      ' <span class="note">'+(t.due?shortDate(t.due)+' · ':'')+esc(taskAuthor(t.uid))+'</span></div>').join(''):'')+'</div>';
 }
 function evTypesCard(){
   return '<div class="card"><h3>סוגי אירועים</h3><p class="note" style="margin-bottom:12px">הסוגים שהצוות בוחר מהם בדיווח. אירוע "חמור" או "בינוני" לשיפור מסומן "לטיפול" עד שהמחנך או המנהל מסמנים שטופל. אירוע חמור מופיע גם בלוח הבקרה.</p>'+
@@ -3177,6 +3235,14 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a==='copy-nums'){
     const all=[];recipients().forEach(s=>numbersFor(s).forEach(n=>all.push(n)));
     return copy(all.join(', '),all.length+' מספרים הועתקו');
+  }
+  if(a==='dash-ev'){goTab('events');S.evc=evDefaults();return render();}
+  if(a==='goto-events-all'){S.evf={kind:'',cls:'',days:'30',q:''};return goTab('events');}
+  if(a==='goto-meetings')return goTab('meetings');
+  if(a==='dash-lesson'){
+    goTab('mark');S.markDate=iso(new Date());S.markLesson=id;const day=S.latt[S.markDate]||{};S.ldraft={};
+    Object.keys(day).forEach(k=>{if(k.indexOf(id+':')===0)S.ldraft[k.slice(id.length+1)]=day[k];});
+    S.ldirty=false;window.scrollTo(0,0);return render();
   }
   if(a==='card-att-all'){S.cardAttAll=S.cardAttAll===id?null:id;return render();}
   if(a==='rep-view'){S.repView=el.dataset.r;return render();}
