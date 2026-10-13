@@ -1029,6 +1029,41 @@ function contactPhone(s){return s.fatherPhone||s.motherPhone||'';}
 function contactName(s){return s.fatherPhone?(s.father||'האב'):(s.mother||'האם');}
 
 /* ================= לוח בקרה ================= */
+/* ---- ימי הולדת עבריים: מתאריך הלידה שבכרטיס, רק יום וחודש עבריים ---- */
+const HMONTHS=[['תשרי'],['חשוון','חשון','מרחשוון','מרחשון'],['כסלו','כסליו'],['טבת'],['שבט'],['אדר א׳',"אדר א'",'אדר א','אדר ראשון'],['אדר ב׳',"אדר ב'",'אדר ב','אדר שני'],['אדר'],['ניסן'],['אייר'],['סיוון','סיון'],['תמוז'],['אב','מנחם אב'],['אלול']];
+function hmNorm(m){m=String(m||'').trim().replace(/^ב(?=[^ ]{2,})/,'');const f=HMONTHS.find(v=>v.some(x=>x===m));return f?f[0]:m;}
+function gemVal(t){const V={א:1,ב:2,ג:3,ד:4,ה:5,ו:6,ז:7,ח:8,ט:9,י:10,כ:20,ך:20,ל:30,מ:40,ם:40,נ:50,ן:50,ס:60,ע:70,פ:80,ף:80,צ:90,ץ:90,ק:100,ר:200,ש:300,ת:400};
+  return String(t).split('').reduce((a,c)=>a+(V[c]||0),0);}
+function birthRaw(s){const x=s.extra||{};const k=Object.keys(x).find(k=>/לידה/.test(k));return k?String(x[k]==null?'':x[k]).trim():'';}
+function birthIso(t){
+  const mk=(y,mo,d)=>{if(mo<1||mo>12||d<1||d>31||y<1900)return '';const o=new Date(y,mo-1,d,12);return o.getMonth()===mo-1?iso(o):'';};
+  let m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return mk(+m[1],+m[2],+m[3]);
+  m=t.match(/^(\d{1,2})\s*[\/.\-]\s*(\d{1,2})\s*[\/.\-]\s*(\d{2,4})$/);
+  if(m){let a=+m[1],b=+m[2],y=+m[3];if(y<100)y+=y>40?1900:2000;return a<=12&&b>12?mk(y,a,b):mk(y,b,a);}
+  if(/^\d{5}$/.test(t)){const o=new Date(Date.UTC(1899,11,30)+(+t)*864e5);return mk(o.getUTCFullYear(),o.getUTCMonth()+1,o.getUTCDate());}
+  return '';
+}
+const HBC={};
+function hebBirth(s){
+  const raw=birthRaw(s);if(!raw)return null;if(HBC[s.id]&&HBC[s.id].raw===raw)return HBC[s.id].v;
+  let v=null;const g=birthIso(raw);
+  if(g){const p=hebParts(g);if(p&&p.d)v={d:p.d,m:hmNorm(p.m),y:p.y};}
+  else if(/[א-ת]/.test(raw)){ // תאריך עברי שנכתב בכרטיס, למשל ב' חשוון תשע"ו
+    const w=raw.replace(/["'׳״]/g,'').split(/\s+/).filter(Boolean),d=gemVal(w[0]);
+    for(let i=w.length;i>1;i--){const mm=hmNorm(w.slice(1,i).join(' '));if(HMONTHS.some(x=>x[0]===mm)&&d>=1&&d<=30){v={d:d,m:mm,y:null};break;}}
+  }
+  HBC[s.id]={raw:raw,v:v};return v;
+}
+function hbMonthEq(bm,cm){if(bm===cm)return true;if(cm==='אדר')return bm==='אדר א׳'||bm==='אדר ב׳';if(cm==='אדר ב׳')return bm==='אדר';return false;}
+function birthdaysAhead(list,days){
+  const out=[],cand=[];
+  for(let i=0;i<=days;i++){const dt=new Date();dt.setDate(dt.getDate()+i);const d=iso(dt);const pv=new Date(dt);pv.setDate(pv.getDate()-1);
+    const p=hebParts(d),q=hebParts(iso(pv));if(p&&p.d)cand.push({i:i,d:d,p:{d:p.d,m:hmNorm(p.m),y:p.y},q:q&&q.d?{d:q.d,m:hmNorm(q.m)}:null});}
+  list.forEach(function(s){const b=hebBirth(s);if(!b)return;
+    const c=cand.find(c=>(c.p.d===b.d&&hbMonthEq(b.m,c.p.m))||(b.d===30&&c.p.d===1&&c.q&&c.q.d===29&&hbMonthEq(b.m,c.q.m)));
+    if(c)out.push({s:s,b:b,i:c.i,d:c.d,age:b.y?c.p.y-b.y:null});});
+  return out.sort((a,b)=>a.i-b.i||a.s.name.localeCompare(b.s.name,'he'));
+}
 function dashNow(){
   const hm=nowHM(),P=periods().filter(p=>p.start);if(!P.length)return '';
   const cur=P.find(p=>p.start<=hm&&(!p.end||hm<p.end));
@@ -1081,6 +1116,7 @@ function viewDash(){
   const stale=list.filter(function(s){const r=lastReview(s.id);return !r||r.date<daysAgo(21);});
   if(stale.length&&list.length)alerts.push({t:'תמונת מצב',x:stale.length+' תלמידים ללא תמונת מצב מעל שלושה שבועות',act:'goto-review'});
 
+  const hasBD=list.some(s=>birthRaw(s)),bds=hasBD?birthdaysAhead(list,7):[];
   const watch=dashWatch(list,today);
   const trend=dashTrend(list);
   const wk=daysAgo(7),evW=S.events.filter(e=>e.date>=wk),posW=evW.filter(e=>e.kind==='pos'),negW=evW.length-posW.length;
@@ -1125,6 +1161,11 @@ function viewDash(){
        '<button class="btn sm" data-v="ghost" data-act="'+a.act+'"'+(a.id?' data-id="'+a.id+'"':'')+(a.cls?' data-cls="'+esc(a.cls)+'"':'')+'>פתיחה</button></div>';
      }).join(''):'<div class="empty">הכול תקין. אין התראות פתוחות. 👍</div>')+
    '<div class="grid g2">'+
+     (hasBD?card('ימי הולדת השבוע 🎂',bds.length?bds.map(x=>'<div class="alert"'+(x.i===0?' style="background:var(--accent-soft);border-radius:10px;padding:8px 10px"':'')+'>'+
+         '<span style="flex:1">'+stuLink(x.s.id,x.s.name)+' <span class="note">'+esc(x.s.cls)+'</span></span>'+
+         '<span><b>'+gem(x.b.d)+' ב'+esc(x.b.m)+'</b>'+(x.age?' <span class="note">· '+(x.s.gender==='f'?'בת ':'בן ')+x.age+'</span>':'')+'</span>'+
+         '<span class="note" style="min-width:70px;text-align:left">'+(x.i===0?'<b style="color:var(--accent)">היום!</b>':x.i===1?'מחר':'יום '+(DAYS[dow(x.d)]||'שבת'))+'</span></div>').join('')
+       :'<div class="empty">אין ימי הולדת בשבוע הקרוב.</div>'):'')+
      (lst.length?card(adm?'שיעורים שטרם סומנו היום':'השיעורים היום',(lessonRows||'<div class="empty">כל השיעורים שהתקיימו עד עכשיו סומנו. 👍</div>')+
        (missTL.length?'<p class="note" style="margin-top:8px;color:var(--absent)">טרם סימנו: '+missTL.map(t=>esc(t)+' ('+missT[t]+')').join(' · ')+'</p>':''),
        '<span class="note">'+lst.filter(x=>x.state==='done').length+'/'+lst.length+' סומנו</span>'):'')+
@@ -1267,6 +1308,7 @@ function viewCard(){
         ['<span class="note">אב</span>',esc(s.father||'—'),s.fatherPhone?'<span class="ltr">'+esc(s.fatherPhone)+'</span>':'—'],
         ['<span class="note">אם</span>',esc(s.mother||'—'),s.motherPhone?'<span class="ltr">'+esc(s.motherPhone)+'</span>':'—']])+
       (s.notes?'<p class="note" style="margin-top:10px">'+esc(s.notes)+'</p>':'')+
+      (hebBirth(s)?'<p style="margin-top:10px">🎂 <b>יום הולדת עברי:</b> '+gem(hebBirth(s).d)+' ב'+esc(hebBirth(s).m)+'</p>':'')+
       (s.extra&&Object.keys(s.extra).length?'<h3 style="margin-top:16px">פרטים נוספים</h3>'+table(['',''],Object.keys(s.extra).map(k=>['<span class="note">'+esc(k)+'</span>',esc(s.extra[k])])):'')+'</div>'+
     '<div class="card"><h3>מגמה לפי תחום</h3>'+
       (last?trend.map(function(t){
