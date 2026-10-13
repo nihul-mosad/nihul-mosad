@@ -874,7 +874,7 @@ function gem(n){
 }
 function hebParts(s){
   try{
-    const p=new Intl.DateTimeFormat('he-IL-u-ca-hebrew-nu-latn',{day:'numeric',month:'long',year:'numeric'}).formatToParts(new Date(s+'T12:00:00'));
+    const p=(hebParts.f=hebParts.f||new Intl.DateTimeFormat('he-IL-u-ca-hebrew-nu-latn',{day:'numeric',month:'long',year:'numeric'})).formatToParts(new Date(s+'T12:00:00'));
     const g=t=>(p.find(x=>x.type===t)||{}).value||'';
     return {d:parseInt(g('day'),10),m:g('month').replace(/^ב/,''),y:parseInt(g('year'),10)};
   }catch(e){return null;}
@@ -1064,6 +1064,25 @@ function birthdaysAhead(list,days){
     if(c)out.push({s:s,b:b,i:c.i,d:c.d,age:b.y?c.p.y-b.y:null});});
   return out.sort((a,b)=>a.i-b.i||a.s.name.localeCompare(b.s.name,'he'));
 }
+/* כל ימי ההולדת של הכיתה במקום אחד, לפי סדר הופעתם מהיום והלאה */
+function viewBirthdays(){
+  const base=myStudents(),cls=myClasses().filter(c=>base.some(s=>s.cls===c));
+  if(S.bdCls&&cls.indexOf(S.bdCls)<0)S.bdCls='';
+  const list=base.filter(s=>!S.bdCls||s.cls===S.bdCls);
+  const up=birthdaysAhead(list,384),has={};up.forEach(x=>has[x.s.id]=1);
+  const none=list.filter(s=>!has[s.id]).sort((a,b)=>a.name.localeCompare(b.name,'he'));
+  const groups=[];up.forEach(function(x){const m=(hebParts(x.d)||{}).m||'';const g=groups[groups.length-1];if(g&&g.m===m)g.rows.push(x);else groups.push({m:m,rows:[x]});});
+  const when=x=>x.i===0?'<b style="color:var(--accent)">היום!</b>':x.i===1?'מחר':x.i<7?'בעוד '+x.i+' ימים':shortDate(x.d).split(' · ')[0];
+  return printHead()+'<div class="head"><div><h2>ימי הולדת 🎂</h2><div class="sub">'+(S.bdCls||(cls.length===1?cls[0]:'כל הכיתות'))+' · '+up.length+' תלמידים, לפי הסדר מהיום והלאה</div></div>'+
+    '<div class="row noprint"><button class="btn" data-v="ghost" data-act="goto-students">חזרה</button><button class="btn" data-act="print">הדפסה</button></div></div>'+
+    (cls.length>1?'<div class="card noprint"><label class="field" style="max-width:260px"><span>כיתה</span><select data-ch="bdCls">'+opt('כל הכיתות','',S.bdCls||'')+cls.map(c=>opt(c,c,S.bdCls||'')).join('')+'</select></label></div>':'')+
+    '<div class="card brk">'+(groups.length?groups.map(g=>'<h3 class="lgday">'+esc(g.m)+'</h3>'+
+      table(['תאריך עברי','תלמיד'].concat(S.bdCls||cls.length<2?[]:['כיתה'],['גיל','מתי']),g.rows.map(x=>['<b>'+gem(x.b.d)+' ב'+esc(x.b.m)+'</b>',
+        (S.students.some(s=>s.id===x.s.id)?'<button class="link" data-act="card" data-id="'+x.s.id+'">'+esc(x.s.name)+'</button>':esc(x.s.name))]
+        .concat(S.bdCls||cls.length<2?[]:[esc(x.s.cls)],[x.age?(x.s.gender==='f'?'בת ':'בן ')+x.age:'—',when(x)])))).join('')
+      :'<div class="empty">לא נמצאו תאריכי לידה בכרטיסי התלמידים.</div>')+'</div>'+
+    (none.length?'<div class="card"><h3>ללא תאריך לידה בכרטיס ('+none.length+')</h3><p>'+none.map(s=>esc(s.name)).join(' · ')+'</p></div>':'');
+}
 function dashNow(){
   const hm=nowHM(),P=periods().filter(p=>p.start);if(!P.length)return '';
   const cur=P.find(p=>p.start<=hm&&(!p.end||hm<p.end));
@@ -1165,7 +1184,7 @@ function viewDash(){
          '<span style="flex:1">'+stuLink(x.s.id,x.s.name)+' <span class="note">'+esc(x.s.cls)+'</span></span>'+
          '<span><b>'+gem(x.b.d)+' ב'+esc(x.b.m)+'</b>'+(x.age?' <span class="note">· '+(x.s.gender==='f'?'בת ':'בן ')+x.age+'</span>':'')+'</span>'+
          '<span class="note" style="min-width:70px;text-align:left">'+(x.i===0?'<b style="color:var(--accent)">היום!</b>':x.i===1?'מחר':'יום '+(DAYS[dow(x.d)]||'שבת'))+'</span></div>').join('')
-       :'<div class="empty">אין ימי הולדת בשבוע הקרוב.</div>'):'')+
+       :'<div class="empty">אין ימי הולדת בשבוע הקרוב.</div>','<button class="btn sm" data-v="ghost" data-act="goto-bdays">לכל ימי ההולדת</button>'):'')+
      (lst.length?card(adm?'שיעורים שטרם סומנו היום':'השיעורים היום',(lessonRows||'<div class="empty">כל השיעורים שהתקיימו עד עכשיו סומנו. 👍</div>')+
        (missTL.length?'<p class="note" style="margin-top:8px;color:var(--absent)">טרם סימנו: '+missTL.map(t=>esc(t)+' ('+missT[t]+')').join(' · ')+'</p>':''),
        '<span class="note">'+lst.filter(x=>x.state==='done').length+'/'+lst.length+' סומנו</span>'):'')+
@@ -2657,7 +2676,8 @@ function viewStudents(){
       (e.id?'<button class="btn" data-v="danger" style="margin-right:auto" data-act="student-del" data-id="'+e.id+'">הסרת התלמיד</button>':'')+'</div></div>';
   }
   return printHead()+'<div class="head"><div><h2>תלמידים</h2><div class="sub">'+base.length+' רשומים'+(isAdmin()?'':' · '+esc(myClasses().join(', ')||'התלמידים בשיעורים שלך'))+'</div></div>'+
-    (isAdmin()?'<div class="row"><button class="btn" data-act="goto-import">ייבוא מאקסל</button><button class="btn" data-v="primary" data-act="student-new">הוספת תלמיד</button></div>':'')+'</div>'+form+
+    '<div class="row"><button class="btn" data-act="goto-bdays">🎂 ימי הולדת</button>'+
+    (isAdmin()?'<button class="btn" data-act="goto-import">ייבוא מאקסל</button><button class="btn" data-v="primary" data-act="student-new">הוספת תלמיד</button>':'')+'</div></div>'+form+
     '<div class="card"><div class="row" style="margin-bottom:12px">'+
       '<input class="inp" style="flex:1;min-width:160px" id="q" placeholder="חיפוש לפי שם או טלפון" value="'+esc(S.q)+'" data-in="q">'+
       (isAdmin()?'<select class="inp" data-ch="filter">'+opt('כל הכיתות','',S.filter)+S.config.classes.map(c=>opt(c,c,S.filter)).join('')+'</select>':'')+'</div>'+
@@ -3093,8 +3113,8 @@ function render(){
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
     '<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
-    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,account:viewAccount,import:viewImport,card:viewCard};
-  if(S.inst&&!isAdmin()&&['card','account'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
+    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,bdays:viewBirthdays,account:viewAccount,import:viewImport,card:viewCard};
+  if(S.inst&&!isAdmin()&&['card','account','bdays'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
   const v=map[S.tab]||viewDash;
   let warn='';
   if(S.legacy&&isAdmin())warn+='<div class="warn">צריך לעדכן את חוקי האבטחה ב-Firebase כדי להפעיל את ההפרדה המלאה בין המורים. עד אז המערכת עובדת במצב הקודם.</div>';
@@ -3278,6 +3298,7 @@ document.getElementById('main').addEventListener('click',async function(e){
     const all=[];recipients().forEach(s=>numbersFor(s).forEach(n=>all.push(n)));
     return copy(all.join(', '),all.length+' מספרים הועתקו');
   }
+  if(a==='goto-bdays')return goTab('bdays');
   if(a==='dash-ev'){goTab('events');S.evc=evDefaults();return render();}
   if(a==='goto-events-all'){S.evf={kind:'',cls:'',days:'30',q:''};return goTab('events');}
   if(a==='goto-meetings')return goTab('meetings');
