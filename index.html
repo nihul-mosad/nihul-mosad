@@ -54,6 +54,16 @@ main{flex:1;min-width:0;padding:24px 28px 80px}
 .g3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 .g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 .g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+#remBox{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;width:min(440px,calc(100vw - 32px));display:flex;flex-direction:column;gap:10px}
+.remp{background:var(--surface);border:2px solid var(--gold);border-radius:16px;padding:14px 16px;box-shadow:0 12px 40px rgba(20,27,52,.28);animation:remIn .35s ease;transition:opacity .3s,transform .3s}
+.remp.out{opacity:0;transform:translateY(-12px)}
+.remh{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--accent);font-size:15px}
+.remx{background:none;border:0;font-size:16px;cursor:pointer;color:var(--muted);padding:2px 6px}
+.remt{font-size:16px;margin:8px 0 4px;white-space:pre-wrap}
+.remb{height:4px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-top:8px}
+.remb i{display:block;height:100%;background:var(--gold);animation:remBar 120s linear forwards}
+@keyframes remIn{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:none}}
+@keyframes remBar{from{width:100%}to{width:0}}
 .dhero{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:16px}
 .dnow{display:inline-block;margin-top:8px;padding:4px 12px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:13.5px}
 .dquick .btn{white-space:nowrap}
@@ -575,6 +585,7 @@ async function enterInst(inst,user,typed){
   await reloadMembers();
   S.timetable=await load(K.timetable,[]);
   const sec=await loadSec();
+  if(sec)remListen();
   if(!sec){
     S.students=await load(K.students,[]);S.att=await load(K.att,{});S.reviews=await load(K.reviews,[]);S.tasks=await load(K.tasks,[]);S.latt=await load(K.latt,{});S.events=await load(K.events,[]);LIDX=null;
   }
@@ -1009,6 +1020,7 @@ async function doLogin(){
   }finally{btn.disabled=false;btn.textContent='כניסה';}
 }
 async function logout(){
+  remStop();{const b=document.getElementById('remBox');if(b)b.remove();}
   S.me=null;DB=null;closeDrawer(true);clearInterval(NET_TIMER);{const b=document.getElementById('netBanner');if(b)b.remove();}NET_OK=true;
   try{if(AUTH)await AUTH.signOut();}catch(e){}
   document.getElementById('shell').classList.remove('on');
@@ -1063,6 +1075,55 @@ function birthdaysAhead(list,days){
     const c=cand.find(c=>(c.p.d===b.d&&hbMonthEq(b.m,c.p.m))||(b.d===30&&c.p.d===1&&c.q&&c.q.d===29&&hbMonthEq(b.m,c.q.m)));
     if(c)out.push({s:s,b:b,i:c.i,d:c.d,age:b.y?c.p.y-b.y:null});});
   return out.sort((a,b)=>a.i-b.i||a.s.name.localeCompare(b.s.name,'he'));
+}
+/* ---- תזכורות מההנהלה למורה: חלונית צפה ל-2 דקות, רק אצל המורה שנבחר ----
+   נשמר במסמך המשימות של המורה (tasks/{uid}) בשדה n — שם רק הוא וההנהלה יכולים לקרוא */
+function userOfTeacher(t){return t?S.config.users.find(u=>u.teacher===t&&u.id!==S.me.id):null;}
+function lessonTxt(l){return l.period+' ('+l.subject+', '+(l.classes||[]).join(', ')+')';}
+function missedLessonsOf(t){
+  const today=iso(new Date()),hm=nowHM();
+  return lessonsOn(today).filter(l=>l.teacher===t&&!lessonMarked(today,l).done&&(periods().find(p=>p.n===l.period)||{}).end<=hm).sort((a,b)=>a.period-b.period);
+}
+function remComposer(){
+  const c=S.remc,us=S.config.users.filter(u=>u.id!==S.me.id).sort((a,b)=>String(a.teacher||a.user).localeCompare(String(b.teacher||b.user),'he'));
+  return '<div class="card evc"><div class="row" style="justify-content:space-between"><h3 style="margin:0">🔔 תזכורת למורה</h3><button class="btn sm" data-v="ghost" data-act="rem-cancel">ביטול</button></div>'+
+    (c.warn?'<div class="warn" style="margin:8px 0">'+esc(c.warn)+'</div>':'')+
+    '<label class="field"><span>למי</span><select id="rem-to">'+opt('— בחרו מורה —','',c.to)+us.map(u=>opt((u.teacher||u.user)+(u.teacher&&u.teacher!==u.user?' ('+u.user+')':''),u.id,c.to)).join('')+'</select></label>'+
+    '<label class="field"><span>התזכורת</span><textarea id="rem-text" style="min-height:90px">'+esc(c.text)+'</textarea></label>'+
+    '<p class="note" style="margin-bottom:10px">התזכורת תקפוץ אצל המורה בחלונית צפה למשך 2 דקות. רק הוא יראה אותה. אם הוא לא מחובר עכשיו, היא תופיע כשייכנס (עד 24 שעות).</p>'+
+    '<div class="row"><button class="btn" data-v="primary" data-act="rem-send">שליחה</button></div></div>';
+}
+async function remSend(){
+  const c=S.remc,to=document.getElementById('rem-to').value,text=document.getElementById('rem-text').value.trim();
+  c.to=to;c.text=text;if(!to)return toast('בחרו למי לשלוח');if(!text)return toast('כתבו את התזכורת');
+  const u=S.config.users.find(x=>x.id===to)||{},id=uid(),o={};o[id]={id:id,text:text,from:S.me.user,ts:Date.now()};
+  try{await FS.doc(IB()+'tasks/'+to).set({n:o},{merge:true});}catch(e){return saveFailed(e);}
+  logAct('תזכורת למורה',(u.teacher||u.user||'')+': '+text.slice(0,80));
+  toast('התזכורת נשלחה ל'+(u.teacher||u.user||''));S.remc=null;render();
+}
+let REM_UNSUB=null;const REM_SHOWN={};
+function remStop(){if(REM_UNSUB){try{REM_UNSUB();}catch(e){}REM_UNSUB=null;}}
+function remListen(){
+  remStop();if(!FS||!S.inst||!S.me)return;
+  try{REM_UNSUB=FS.doc(IB()+'tasks/'+S.me.id).onSnapshot(function(sn){
+    const n=((sn.exists&&sn.data())||{}).n||{},now=Date.now(),upd=[];
+    Object.keys(n).forEach(function(id){const r=n[id];if(!r)return;
+      if(!r.ts||r.ts<now-7*864e5){upd.push(new firebase.firestore.FieldPath('n',id),firebase.firestore.FieldValue.delete());return;}
+      if(!r.seen&&r.ts>now-864e5&&!REM_SHOWN[id]){REM_SHOWN[id]=1;remPopup(r);upd.push(new firebase.firestore.FieldPath('n',id,'seen'),now);}
+    });
+    if(upd.length)sn.ref.update(...upd).catch(()=>{});
+  },function(){});}catch(e){}
+}
+function remPopup(r){
+  let box=document.getElementById('remBox');if(!box){box=document.createElement('div');box.id='remBox';document.body.appendChild(box);}
+  const el=document.createElement('div');el.className='remp';el.setAttribute('role','alert');
+  el.innerHTML='<div class="remh"><b>🔔 תזכורת'+(r.from?' מ'+esc(r.from):'')+'</b><button class="remx" aria-label="סגירה">✕</button></div>'+
+    '<div class="remt">'+esc(r.text)+'</div><div class="note">'+esc(tsLine(r.ts))+'</div><div class="remb"><i></i></div>'+
+    '<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn sm remok" data-v="primary">הבנתי</button></div>';
+  let gone=false;const close=()=>{if(gone)return;gone=true;el.classList.add('out');setTimeout(()=>el.remove(),300);};
+  el.querySelector('.remx').onclick=close;el.querySelector('.remok').onclick=close;
+  box.appendChild(el);setTimeout(close,120000);
+  try{if(navigator.vibrate)navigator.vibrate([150,80,150]);}catch(e){}
 }
 /* כל ימי ההולדת של הכיתה במקום אחד, לפי סדר הופעתם מהיום והלאה */
 function viewBirthdays(){
@@ -1159,6 +1220,7 @@ function viewDash(){
   const lessonRows=lst.filter(x=>!adm||x.state!=='done'&&x.state!=='wait').map(x=>{const l=x.l,i=stIcon[x.state];
     return '<div class="alert"><b style="min-width:20px">'+l.period+'</b><span style="flex:1">'+esc(l.subject)+' <span class="note">· '+esc((l.classes||[]).join(', '))+(l.teacher&&l.teacher!==S.me.teacher?' · '+esc(l.teacher):'')+'</span></span>'+
       '<span class="tag" data-s="'+i[0]+'">'+i[1]+(x.state==='part'?' '+x.m.m+'/'+x.m.n:'')+'</span>'+
+      (adm&&l.teacher&&x.state!=='now'?'<button class="btn sm" data-v="ghost" data-act="rem-lesson" data-id="'+l.id+'" title="תזכורת למורה">🔔</button>':'')+
       '<button class="btn sm" data-v="ghost" data-act="dash-lesson" data-id="'+l.id+'">סימון</button></div>';}).join('');
   const missT={};if(adm)missed.forEach(x=>{if(x.l.teacher)missT[x.l.teacher]=(missT[x.l.teacher]||0)+1;});
   const missTL=Object.keys(missT).sort((a,b)=>missT[b]-missT[a]);
@@ -1169,7 +1231,9 @@ function viewDash(){
    '<div class="dhero"><div><div class="note" style="font-size:15px">'+greet+(nm?', '+esc(nm):'')+'</div><h2 style="margin:2px 0">'+gregLabel(today)+'</h2><div class="hebdate">'+hebLabel(today)+'</div>'+
      (S.timetable.length?'<div class="dnow">'+esc(dashNow())+'</div>':'')+'</div>'+
      '<div class="row dquick"><button class="btn" data-v="primary" data-act="goto-mark">נוכחות</button><button class="btn" data-act="dash-ev">+ דיווח אירוע</button>'+
-     '<button class="btn" data-act="goto-review">תמונת מצב</button><button class="btn" data-act="goto-tasks">+ משימה</button></div></div>'+
+     '<button class="btn" data-act="goto-review">תמונת מצב</button><button class="btn" data-act="goto-tasks">+ משימה</button>'+
+     (adm?'<button class="btn" data-act="rem-new">🔔 תזכורת למורה</button>':'')+'</div></div>'+
+   (S.remc&&adm?remComposer():'')+
    '<div class="grid g4" style="margin-bottom:14px">'+
      stat(pctToday===null?'—':pctToday+'%','נוכחות היום'+(marked?' ('+(c.present+c.late)+'/'+marked+')':''),pctToday!==null&&pctToday<85?'var(--late)':'var(--present)')+
      stat(c.absent,'חיסורים היום'+(c.late?' · '+c.late+' איחורים':''),c.absent?'var(--absent)':'')+
@@ -1186,7 +1250,8 @@ function viewDash(){
          '<span class="note" style="min-width:70px;text-align:left">'+(x.i===0?'<b style="color:var(--accent)">היום!</b>':x.i===1?'מחר':'יום '+(DAYS[dow(x.d)]||'שבת'))+'</span></div>').join('')
        :'<div class="empty">אין ימי הולדת בשבוע הקרוב.</div>','<button class="btn sm" data-v="ghost" data-act="goto-bdays">לכל ימי ההולדת</button>'):'')+
      (lst.length?card(adm?'שיעורים שטרם סומנו היום':'השיעורים היום',(lessonRows||'<div class="empty">כל השיעורים שהתקיימו עד עכשיו סומנו. 👍</div>')+
-       (missTL.length?'<p class="note" style="margin-top:8px;color:var(--absent)">טרם סימנו: '+missTL.map(t=>esc(t)+' ('+missT[t]+')').join(' · ')+'</p>':''),
+       (missTL.length?'<div style="margin-top:10px"><span class="note" style="color:var(--absent)">טרם סימנו (לחיצה שולחת תזכורת):</span><div class="row" style="gap:6px;margin-top:6px">'+
+         missTL.map(t=>'<button class="chip" data-act="rem-teacher" data-t="'+esc(t)+'">🔔 '+esc(t)+' ('+missT[t]+')</button>').join('')+'</div></div>':''),
        '<span class="note">'+lst.filter(x=>x.state==='done').length+'/'+lst.length+' סומנו</span>'):'')+
      (classes.length?card('נוכחות לפי כיתה היום',clsRows):'')+
      card('מגמת נוכחות','<p class="note" style="margin-bottom:6px">אחוז נוכחות בימים האחרונים שנרשמו</p>'+trendBox)+
@@ -3130,7 +3195,7 @@ function goTab(t){
   S.tab=t;S.editStudent=null;S.editStaff=null;S.editUser=null;S.importPreview=null;S.ttSlot=null;S.ttEdit=null;S.ttImport=null;
   if(S.tab!=='review'){S.revIdx=null;}
   if(S.tab==='mark'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;S.markLesson=null;S.ldirty=false;}
-  S.scan=null;S.evc=null;S.evBack=null;S.mtEdit=null;
+  S.scan=null;S.evc=null;S.evBack=null;S.mtEdit=null;S.remc=null;
   render();
 }
 document.getElementById('nav').addEventListener('click',function(e){
@@ -3299,6 +3364,16 @@ document.getElementById('main').addEventListener('click',async function(e){
     return copy(all.join(', '),all.length+' מספרים הועתקו');
   }
   if(a==='goto-bdays')return goTab('bdays');
+  if(a==='rem-new'){S.remc={to:'',text:'',warn:''};window.scrollTo(0,0);return render();}
+  if(a==='rem-cancel'){S.remc=null;return render();}
+  if(a==='rem-send')return remSend();
+  if(a==='rem-lesson'||a==='rem-teacher'){
+    const l=a==='rem-lesson'?S.timetable.find(x=>x.id===id):null,t=l?l.teacher:el.dataset.t,u=userOfTeacher(t);
+    const ls=l?[l]:missedLessonsOf(t);
+    S.remc={to:u?u.id:'',warn:u?'':'למורה "'+t+'" אין משתמש מקושר במערכת, ולכן אי אפשר לשלוח לו תזכורת. אפשר לקשר אותו בהגדרות ← משתמשים.',
+      text:'שלום '+t+', לא סומנה היום נוכחות '+(ls.length>1?'בשיעורים: ':'בשיעור ')+ls.map(lessonTxt).join(', ')+'. נא לסמן בהקדם. תודה!'};
+    window.scrollTo(0,0);return render();
+  }
   if(a==='dash-ev'){goTab('events');S.evc=evDefaults();return render();}
   if(a==='goto-events-all'){S.evf={kind:'',cls:'',days:'30',q:''};return goTab('events');}
   if(a==='goto-meetings')return goTab('meetings');
