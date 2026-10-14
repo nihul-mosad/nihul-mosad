@@ -467,6 +467,7 @@ th{font-weight:600}
     <button class="btn full" data-v="primary" id="loginBtn">כניסה</button>
     <p class="note" id="loginErr" style="color:var(--absent);min-height:20px;margin:10px 0 0"></p>
     <p class="note" id="loginHint" style="margin-top:6px"></p>
+    <p class="note appver" style="margin-top:10px;text-align:center;opacity:.6"></p>
   </div>
 </div>
 
@@ -477,6 +478,7 @@ th{font-weight:600}
     <div class="brand"><img id="brandLogo" style="display:none" alt=""><h1 id="brandName">המוסד</h1><span id="brandSub"></span></div>
     <nav class="nav" id="nav"></nav>
     <div class="who" id="who"></div>
+    <div class="note appver" style="padding:4px 16px 12px;opacity:.6;font-size:12px"></div>
   </aside>
   <main id="main"><div class="empty">טוען…</div></main>
   <nav class="bnav" id="bnav"></nav>
@@ -1043,6 +1045,9 @@ function paintLogin(){
   document.getElementById('loginLogo').style.display='none';
   document.getElementById('loginHint').textContent='';
 }
+/* מספר הגרסה (זהה למספר ב-sw.js) */
+const APP_VER=29;
+document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
 let IDLE_AT=Date.now();
