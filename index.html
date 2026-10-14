@@ -54,6 +54,9 @@ main{flex:1;min-width:0;padding:24px 28px 80px}
 .g3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 .g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 .g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.hmt td.hm{text-align:center;font-weight:600;min-width:58px;border-radius:6px;font-variant-numeric:tabular-nums}
+.hmt th{white-space:nowrap}
+.ains{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 7%,var(--surface))}
 #remBox{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;width:min(440px,calc(100vw - 32px));display:flex;flex-direction:column;gap:10px}
 .remp{background:var(--surface);border:2px solid var(--gold);border-radius:16px;padding:14px 16px;box-shadow:0 12px 40px rgba(20,27,52,.28);animation:remIn .35s ease;transition:opacity .3s,transform .3s}
 .remp.out{opacity:0;transform:translateY(-12px)}
@@ -937,7 +940,7 @@ const S={tab:'dash',me:null,config:{name:'המוסד',classes:[],logo:'',users:[
   msgGroup:'all',msgText:'',msgTo:'both',importPreview:null,focus:null,
   repFrom:daysAgo(30),repTo:iso(new Date()),repCls:''};
 
-const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['mark','נוכחות'],['events','אירועים'],['schedule','מערכת שעות'],['tasks','משימות'],['meetings','ישיבות צוות'],['reports','דוחות'],['staff','צוות'],['settings','הגדרות']];
+const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['mark','נוכחות'],['events','אירועים'],['schedule','מערכת שעות'],['tasks','משימות'],['meetings','ישיבות צוות'],['reports','דוחות'],['analytics','ניתוחים'],['staff','צוות'],['settings','הגדרות']];
 const isAdmin=()=>S.me&&S.me.role==='admin';
 function homeroomOf(t){const h=S.config.homeroom||{};return S.config.classes.filter(c=>t&&h[c]===t);}
 const myClasses=()=>isAdmin()?S.config.classes:Array.from(new Set((S.me.cls?[S.me.cls]:[]).concat(homeroomOf(S.me.teacher))));
@@ -963,7 +966,7 @@ const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS
 const domains=()=>S.config.domains&&S.config.domains.length?S.config.domains:SEED_DOMAINS;
 
 /* ---- שליפות ---- */
-function reviewsOf(sid){return S.reviews.filter(r=>r.studentId===sid).sort((a,b)=>b.date<a.date?-1:1);}
+function reviewsOf(sid){return S.reviews.filter(r=>r.studentId===sid).sort((a,b)=>String(a.date).localeCompare(String(b.date))||(a.ts||0)-(b.ts||0));}
 function lastReview(sid){const r=reviewsOf(sid);return r.length?r[r.length-1]:null;}
 let LIDX=null;
 function lidx(){
@@ -2648,6 +2651,148 @@ function viewTasks(){
      }).join(''):'<div class="empty">אין משימות להצגה.</div>')+'</div>';
 }
 
+/* ================= ניתוחים (BI להנהלה) ================= */
+function anMonths(from,to){const out=[];let y=+from.slice(0,4),m=+from.slice(5,7);const ty=+to.slice(0,4),tm=+to.slice(5,7);
+  while(y<ty||(y===ty&&m<=tm)){out.push(y+'-'+String(m).padStart(2,'0'));m++;if(m>12){m=1;y++;}}return out;}
+function anMonthLabel(mo){
+  const a=mo+'-01',d=new Date(+mo.slice(0,4),+mo.slice(5,7),0),b=iso(d);
+  let g=mo;try{g=new Intl.DateTimeFormat('he-IL',{month:'long'}).format(new Date(a+'T12:00:00'));}catch(e){}
+  const h1=(hebParts(a)||{}).m,h2=(hebParts(b)||{}).m;return g+'<br><span class="note">'+esc(h1===h2?h1:h1+'–'+h2)+'</span>';
+}
+/* תא במפת חום: עוצמת הצבע לפי היחס לערך הגבוה בטבלה */
+function anCell(v,max,txt,tip,color){
+  if(v===null||v===undefined)return '<td class="hm" title="אין נתונים">—</td>';
+  const k=max>0?Math.round(Math.min(1,v/max)*70):0;
+  return '<td class="hm" title="'+esc(tip||'')+'" style="background:color-mix(in srgb,'+(color||'var(--absent)')+' '+k+'%,transparent)">'+txt+'</td>';
+}
+function anTable(head,rows){return '<div class="scroll"><table class="hmt"><thead><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.join('')+'</tr>').join('')+'</tbody></table></div>';}
+function anSlots(){
+  const P=periods().filter(p=>p.start&&p.end).sort((a,b)=>a.start.localeCompare(b.start)),out=[];
+  P.forEach(function(p,i){out.push({k:'p'+p.n,l:'שיעור '+p.n,s:p.start,e:p.end});const nx=P[i+1];if(nx&&nx.start>p.end)out.push({k:'b'+p.n,l:'הפסקה',s:p.end,e:nx.start,br:1});});
+  return out;
+}
+function anSlotOf(e,slots){
+  if(e.period)return 'p'+e.period;
+  const t=e.time||'';if(!t)return '';
+  const s=slots.find(x=>x.s<=t&&t<x.e);if(s)return s.k;
+  if(slots.length&&t<slots[0].s)return 'pre';if(slots.length)return 'post';return '';
+}
+function viewAnalytics(){
+  if(!isAdmin())return '<div class="empty">הניתוחים זמינים להנהלה בלבד.</div>';
+  const today=iso(new Date()),from=S.anFrom||(mtYear(today)+'-08-01'),to=S.anTo||today,cf=S.anCls||'';
+  const recs=attLogAll(from,to).filter(r=>!cf||r.cls===cf);
+  const evs=S.events.filter(e=>e.date>=from&&e.date<=to&&(!cf||e.cls===cf));
+  const negs=evs.filter(e=>e.kind==='neg'),poss=evs.filter(e=>e.kind==='pos');
+  const pct=(a,b)=>b?Math.round(a/b*100):null;
+  const ins=[];// תובנות אוטומטיות
+
+  // --- סיכום כללי ---
+  const cnt={present:0,late:0,absent:0,excused:0};recs.forEach(r=>{if(cnt[r.v]!==undefined)cnt[r.v]++;});
+  const attPct=pct(cnt.present+cnt.late,recs.length);
+
+  // --- סימון נוכחות לפי מורה ---
+  const lmap={};S.timetable.forEach(l=>lmap[l.id]=l);
+  const comp={};let cTot=0,cDone=0;
+  Object.keys(S.latt).filter(d=>d>=from&&d<=to).forEach(function(d){
+    const day=S.latt[d]||{},done={};Object.keys(day).forEach(k=>{const i=k.indexOf(':');if(i>0)done[k.slice(0,i)]=1;});
+    if(!Object.keys(done).length)return;
+    lessonsOn(d).forEach(function(l){
+      if(cf&&(l.classes||[]).indexOf(cf)<0)return;if(l.type==='private'&&!(l.students||[]).length)return;
+      const t=l.teacher||'ללא מורה',o=comp[t]=comp[t]||{n:0,m:0};o.n++;cTot++;if(done[l.id]){o.m++;cDone++;}
+    });
+  });
+  const compPct=pct(cDone,cTot);
+
+  // 1. מפת חום: חיסורים ואיחורים לפי יום ושיעור
+  const PN=periods().map(p=>p.n),H={};
+  recs.forEach(r=>{if(!(r.per>0&&r.per<99))return;const k=wdOf(r.d)+'|'+r.per,o=H[k]=H[k]||{n:0,a:0,l:0};o.n++;if(r.v==='absent')o.a++;else if(r.v==='late')o.l++;});
+  let hMax=0;const hv={};Object.keys(H).forEach(k=>{const o=H[k];if(o.n>=5){hv[k]=(o.a+o.l)/o.n;hMax=Math.max(hMax,hv[k]);}});
+  const attHeat=anTable([''].concat(PN.map(n=>'שיעור '+n)),DAYS.map((dn,di)=>['<th>'+dn+'</th>'].concat(PN.map(function(n){
+    const k=di+'|'+n,o=H[k];if(!o||o.n<5)return anCell(null);
+    return anCell(hv[k],hMax,Math.round(hv[k]*100)+'%',dn+' שיעור '+n+': '+o.a+' חיסורים, '+o.l+' איחורים מתוך '+o.n+' רישומים');}))));
+  const topH=Object.keys(hv).sort((a,b)=>hv[b]-hv[a]).slice(0,2);
+  if(topH.length&&hv[topH[0]]>0){const t=topH.map(k=>'יום '+DAYS[+k.split('|')[0]]+' בשיעור '+k.split('|')[1]+' ('+Math.round(hv[k]*100)+'%)');
+    ins.push('הכי הרבה חיסורים ואיחורים: '+t.join(' ו'));}
+  // איחורים בשיעור ראשון לעומת השאר
+  {let f={n:0,l:0},o={n:0,l:0};recs.forEach(r=>{if(!(r.per>0&&r.per<99))return;const x=r.per===PN[0]?f:o;x.n++;if(r.v==='late')x.l++;});
+   if(f.n>=20&&o.n>=20&&f.l/f.n>2*(o.l/o.n)&&f.l>=5)ins.push('האיחורים בשיעור הראשון גבוהים פי '+(o.l?Math.round((f.l/f.n)/(o.l/o.n)):'הרבה')+' מבשאר השיעורים');}
+
+  // 2. מפת חום: אירועים לשיפור לפי יום ושעה (כולל הפסקות)
+  const slots=anSlots(),allS=[{k:'pre',l:'לפני הלימודים'}].concat(slots,[{k:'post',l:'אחרי הלימודים'}]),EH={};let eMax=0,noTime=0;
+  negs.forEach(e=>{const s=anSlotOf(e,slots);if(!s){noTime++;return;}const k=dow(e.date)+'|'+s;EH[k]=(EH[k]||0)+1;eMax=Math.max(eMax,EH[k]);});
+  const usedS=allS.filter(s=>DAYS.some((x,di)=>EH[di+'|'+s.k]));
+  const evHeat=usedS.length?anTable([''].concat(usedS.map(s=>s.br?'<span style="color:var(--late)">'+s.l+'</span><br><span class="note">'+s.s+'</span>':s.l)),
+    DAYS.map((dn,di)=>['<th>'+dn+'</th>'].concat(usedS.map(s=>{const v=EH[di+'|'+s.k]||0;return anCell(v,eMax,v||'',dn+' · '+s.l+': '+v+' אירועים לשיפור','var(--late)');})))):'';
+  {let br=0,ls=0;Object.keys(EH).forEach(k=>{const s=k.split('|')[1];if(s.charAt(0)==='b')br+=EH[k];else ls+=EH[k];});
+   if(br+ls>=5&&br>ls*0.4)ins.push(Math.round(br/(br+ls)*100)+'% מהאירועים לשיפור קורים בהפסקות');}
+  const byType={};negs.forEach(e=>{const n=e.typeName||'אחר';byType[n]=(byType[n]||0)+1;});
+  const types=Object.keys(byType).sort((a,b)=>byType[b]-byType[a]).slice(0,8),tMax=types.length?byType[types[0]]:0;
+  const rep={};negs.forEach(e=>{(rep[e.sid]=rep[e.sid]||{n:0,w:0,cls:e.cls,name:(studentById(e.sid)||{}).name||e.sname});rep[e.sid].n++;rep[e.sid].w+=e.sev||1;});
+  const repL=Object.keys(rep).filter(k=>rep[k].n>=3).sort((a,b)=>rep[b].w-rep[a].w).slice(0,10);
+  if(repL.length)ins.push(repL.length+' תלמידים עם 3 אירועים לשיפור ומעלה בתקופה');
+
+  // 3. התרעה מוקדמת: ירידה לעומת 30 הימים שלפני
+  const d30=daysAgo(30),d60=daysAgo(60),warn=[];
+  myStudents().filter(s=>!cf||s.cls===cf).forEach(function(s){
+    const a1=attStats(s.id,d30,today),a0=attStats(s.id,d60,daysAgo(31));
+    const n1=S.events.filter(e=>e.sid===s.id&&e.kind==='neg'&&e.date>=d30).length,n0=S.events.filter(e=>e.sid===s.id&&e.kind==='neg'&&e.date>=d60&&e.date<d30).length;
+    const why=[];let sc=0;
+    if(a1.total>=5&&a0.total>=5&&a0.pct-a1.pct>=8){why.push(['absent','נוכחות ירדה '+a0.pct+'% ← '+a1.pct+'%']);sc+=a0.pct-a1.pct;}
+    if(n1>=2&&n1>=n0+2){why.push(['late','אירועים לשיפור: '+n0+' ← '+n1]);sc+=(n1-n0)*4;}
+    const rv=reviewsOf(s.id);if(rv.length>=2){const L={green:3,yellow:2,red:1},a=rv[rv.length-1],b=rv[rv.length-2];if(a.date>=d30&&L[a.light]<L[b.light]){why.push(['red','תמונת מצב: '+LIGHTNAME[b.light]+' ← '+LIGHTNAME[a.light]]);sc+=6;}}
+    if(why.length)warn.push({s:s,why:why,sc:sc});
+  });
+  warn.sort((a,b)=>b.sc-a.sc);
+  if(warn.length)ins.push(warn.length+' תלמידים במגמת הידרדרות בחודש האחרון');
+
+  // 4. השוואת כיתות לפי חודש
+  const months=anMonths(from,to).slice(-10),clsL=(cf?[cf]:S.config.classes).filter(c=>recs.some(r=>r.cls===c)||evs.some(e=>e.cls===c));
+  const CM={};recs.forEach(r=>{const k=r.cls+'|'+r.d.slice(0,7),o=CM[k]=CM[k]||{n:0,p:0};o.n++;if(r.v==='present'||r.v==='late')o.p++;});
+  const EM={};negs.forEach(e=>{const k=e.cls+'|'+e.date.slice(0,7);EM[k]=(EM[k]||0)+1;});
+  const clsCmp=clsL.length&&months.length?anTable(['כיתה'].concat(months.map(anMonthLabel)),clsL.map(c=>['<th>'+esc(c)+'</th>'].concat(months.map(function(mo){
+    const o=CM[c+'|'+mo],e=EM[c+'|'+mo]||0;if(!o||!o.n)return anCell(null);const p=Math.round(o.p/o.n*100);
+    return anCell(Math.max(0,100-p),20,'<b>'+p+'%</b>'+(e?'<br><span class="note">'+e+' אירועים</span>':''),c+' · '+mo+': '+p+'% נוכחות, '+e+' אירועים לשיפור');})))):'';
+  {const cp=clsL.map(c=>{let n=0,p=0;recs.forEach(r=>{if(r.cls===c){n++;if(r.v==='present'||r.v==='late')p++;}});return {c:c,p:n?p/n:null};}).filter(x=>x.p!==null).sort((a,b)=>a.p-b.p);
+   if(cp.length>1&&cp[cp.length-1].p-cp[0].p>=0.04)ins.push('הנוכחות הנמוכה ביותר: '+cp[0].c+' ('+Math.round(cp[0].p*100)+'%), הגבוהה ביותר: '+cp[cp.length-1].c+' ('+Math.round(cp[cp.length-1].p*100)+'%)');}
+
+  // 5. סימון לפי מורה
+  const compL=Object.keys(comp).sort((a,b)=>comp[a].m/comp[a].n-comp[b].m/comp[b].n);
+  const compT=compL.length?table(['מורה','שיעורים במערכת','סומנו','אחוז'],compL.map(t=>{const o=comp[t],p=Math.round(o.m/o.n*100);
+    return ['<b>'+esc(t)+'</b>',o.n,o.m,'<div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar" style="flex:1"><i style="width:'+p+'%" data-low="'+(p<70?2:p<90?1:0)+'"></i></div><b>'+p+'%</b></div>'];})):'';
+  if(compL.length&&comp[compL[0]].n>=5&&comp[compL[0]].m/comp[compL[0]].n<0.7)ins.push('המורה שמסמן הכי מעט: '+compL[0]+' ('+Math.round(comp[compL[0]].m/comp[compL[0]].n*100)+'% מהשיעורים)');
+
+  // 6. לפי מקצוע
+  const SB={};recs.forEach(r=>{if(r.per===0)return;const o=SB[r.sub]=SB[r.sub]||{n:0,a:0,l:0,t:{}};o.n++;if(r.v==='absent')o.a++;else if(r.v==='late')o.l++;if(r.tch)o.t[r.tch]=1;});
+  const subL=Object.keys(SB).filter(k=>SB[k].n>=10).sort((a,b)=>(SB[b].a+SB[b].l)/SB[b].n-(SB[a].a+SB[a].l)/SB[a].n);
+  const subT=subL.length?table(['מקצוע','מורים','רישומים','חיסורים','איחורים'],subL.map(k=>{const o=SB[k];
+    return ['<b>'+esc(k)+'</b>','<span class="note">'+esc(Object.keys(o.t).join(', '))+'</span>',o.n,'<b style="color:var(--absent)">'+pct(o.a,o.n)+'%</b>','<span style="color:var(--late)">'+pct(o.l,o.n)+'%</span>'];})):'';
+
+  const card=(t,sub,b)=>'<div class="card brk"><h3 style="margin-bottom:2px">'+t+'</h3>'+(sub?'<p class="note" style="margin-bottom:10px">'+sub+'</p>':'')+b+'</div>';
+  const empty='<div class="empty">אין מספיק נתונים בטווח הזה.</div>';
+  const clsO=S.config.classes;
+  return printHead()+'<div class="head"><div><h2>ניתוחים</h2><div class="sub">'+esc(dual(from))+' עד '+esc(dual(to))+(cf?' · '+esc(cf):'')+'</div></div>'+
+    '<div class="row noprint"><button class="btn" data-act="print">הדפסה</button></div></div>'+
+    '<div class="card noprint"><div class="row" style="gap:6px;margin-bottom:10px">'+
+      [['month','החודש'],['30','30 יום'],['90','3 חודשים'],['year','שנת הלימודים']].map(x=>'<button class="btn sm" data-act="an-range" data-r="'+x[0]+'">'+x[1]+'</button>').join('')+'</div>'+
+      '<div class="grid g3"><label class="field"><span>מתאריך</span><input type="date" data-ch="anFrom" value="'+from+'"></label>'+
+      '<label class="field"><span>עד תאריך</span><input type="date" data-ch="anTo" value="'+to+'"></label>'+
+      '<label class="field"><span>כיתה</span><select data-ch="anCls">'+opt('כל הכיתות','',cf)+clsO.map(c=>opt(c,c,cf)).join('')+'</select></label></div></div>'+
+    '<div class="grid g4" style="margin-bottom:14px">'+
+      stat(attPct===null?'—':attPct+'%','נוכחות ממוצעת',attPct!==null&&attPct<90?'var(--late)':'var(--present)')+
+      stat(cnt.absent+cnt.excused,'חיסורים'+(cnt.late?' · '+cnt.late+' איחורים':''),'var(--absent)')+
+      stat('<span style="color:var(--present)">'+poss.length+'</span> / <span style="color:var(--late)">'+negs.length+'</span>','אירועים: לשבח / לשיפור','')+
+      stat(compPct===null?'—':compPct+'%','שיעורים שסומנה בהם נוכחות',compPct!==null&&compPct<85?'var(--late)':'')+'</div>'+
+    (ins.length?'<div class="card ains"><h3>💡 תובנות</h3>'+ins.map(t=>'<div class="alert">'+esc(t)+'</div>').join('')+'</div>':'')+
+    card('מתי חסרים ומאחרים','אחוז החיסורים והאיחורים בכל משבצת במערכת. ככל שהצבע חזק יותר, הבעיה גדולה יותר.',Object.keys(hv).length?attHeat:empty)+
+    card('מתי קורים אירועים לשיפור','לפי יום ושעה, כולל הפסקות'+(noTime?' · '+noTime+' אירועים בלי שעה לא נכללו':''),(evHeat||empty)+
+      (types.length?'<div class="grid g2" style="margin-top:14px"><div><h3 style="font-size:15px">סוגי האירועים</h3>'+types.map(t=>'<div class="dcls"><span style="min-width:120px">'+esc(t)+'</span><div class="bar" style="flex:1"><i style="width:'+Math.round(byType[t]/tMax*100)+'%" data-low="1"></i></div><b>'+byType[t]+'</b></div>').join('')+'</div>'+
+        '<div><h3 style="font-size:15px">תלמידים חוזרים (3 ומעלה)</h3>'+(repL.length?repL.map(k=>'<div class="alert"><button class="link" style="flex:1" data-act="card" data-id="'+k+'">'+esc(rep[k].name||'')+'</button><span class="note">'+esc(rep[k].cls||'')+'</span><b>'+rep[k].n+'</b></div>').join(''):'<p class="note">אין.</p>')+'</div></div>':''))+
+    card('התרעה מוקדמת','תלמידים שהמצב שלהם הידרדר ב-30 הימים האחרונים לעומת 30 הימים שלפניהם',warn.length?warn.slice(0,15).map(w=>'<div class="alert" style="flex-wrap:wrap"><button class="link" data-act="card" data-id="'+w.s.id+'">'+esc(w.s.name)+'</button> <span class="note">'+esc(w.s.cls)+'</span><span style="flex:1"></span>'+w.why.map(x=>'<span class="tag" data-s="'+x[0]+'">'+esc(x[1])+'</span>').join(' ')+'</div>').join(''):'<div class="empty">לא זוהתה הידרדרות. 👍</div>')+
+    card('השוואת כיתות לפי חודש','אחוז נוכחות ומספר אירועים לשיפור',clsCmp||empty)+
+    '<div class="grid g2">'+card('סימון נוכחות לפי מורה','כמה מהשיעורים במערכת סומנו, בימים שבהם נרשמה נוכחות',compT||empty)+
+    card('חיסורים ואיחורים לפי מקצוע','מהבעייתי ביותר',subT||empty)+'</div>';
+}
+
 /* ================= ישיבות צוות ================= */
 // נשמר ב-store/meetings_{שנת לימודים}: כל הצוות קורא, רק ההנהלה כותבת
 const mtYear=d=>{const y=+String(d).slice(0,4),m=+String(d).slice(5,7);return m>=8?y:y-1;};
@@ -3178,7 +3323,7 @@ function render(){
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
     '<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
-    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,bdays:viewBirthdays,account:viewAccount,import:viewImport,card:viewCard};
+    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,bdays:viewBirthdays,analytics:viewAnalytics,account:viewAccount,import:viewImport,card:viewCard};
   if(S.inst&&!isAdmin()&&['card','account','bdays'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
   const v=map[S.tab]||viewDash;
   let warn='';
@@ -3364,6 +3509,7 @@ document.getElementById('main').addEventListener('click',async function(e){
     return copy(all.join(', '),all.length+' מספרים הועתקו');
   }
   if(a==='goto-bdays')return goTab('bdays');
+  if(a==='an-range'){const r=el.dataset.r,t=iso(new Date());S.anTo=t;S.anFrom=r==='month'?t.slice(0,8)+'01':r==='30'?daysAgo(30):r==='90'?daysAgo(90):mtYear(t)+'-08-01';return render();}
   if(a==='rem-new'){S.remc={to:'',text:'',warn:''};window.scrollTo(0,0);return render();}
   if(a==='rem-cancel'){S.remc=null;return render();}
   if(a==='rem-send')return remSend();
