@@ -532,7 +532,7 @@ async function reloadMembers(){
   if(!isAdmin()){S.config.users=[];return;}
   const q=await FS.collection('insts/'+S.inst+'/members').get();
   S.config.users=q.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.active!==false)
-    .map(m=>({id:m.id,user:m.user,role:m.role==='admin'?'admin':'teacher',cls:m.cls||'',teacher:m.teacher||'',_sync:JSON.stringify([(m.classes||[]).slice().sort(),(m.tclasses||[]).slice().sort(),m.tk||''])}));
+    .map(m=>({id:m.id,user:m.user,role:m.role==='admin'?'admin':'teacher',cls:m.cls||'',teacher:m.teacher||'',_sync:JSON.stringify([(m.classes||[]).slice().sort(),(m.tclasses||[]).slice().sort(),(m.lclasses||[]).slice().sort(),m.tk||''])}));
 }
 async function createInst(code,name,adminUid,adminUser,adminEmail,classes){
   const b=FS.batch();
@@ -776,9 +776,9 @@ async function syncMembers(){
     const b=FS.batch();let n=0;
     S.config.users.forEach(function(u){
       // tclasses = כל הכיתות: כל איש צוות יכול לדווח אירועים בכל כיתה (רואה רק שמות, וכותב רק למסמך שלו)
-      const t=u.teacher||'',cls=homeroomOf(t).map(ckOf).sort(),tc=S.config.classes.map(ckOf).sort(),tk=t?tkOf(t):'u'+u.id,want=JSON.stringify([cls,tc,tk]);
+      const t=u.teacher||'',cls=homeroomOf(t).map(ckOf).sort(),tc=S.config.classes.map(ckOf).sort(),lc=teachClasses(t).map(ckOf).sort(),tk=t?tkOf(t):'u'+u.id,want=JSON.stringify([cls,tc,lc,tk]);
       if(u._sync===want)return;
-      b.set(FS.doc(IB()+'members/'+u.id),{classes:cls,tclasses:tc,tk:tk},{merge:true});n++;u._sync=want;
+      b.set(FS.doc(IB()+'members/'+u.id),{classes:cls,tclasses:tc,lclasses:lc,tk:tk},{merge:true});n++;u._sync=want;
     });
     if(n)await b.commit();
   }catch(e){}finally{SYNCING=false;}
@@ -1008,7 +1008,9 @@ async function doLogin(){
   if(!FS){err.textContent='אין חיבור לשרת. בדקו את האינטרנט (או חסימה בנטפרי)';return;}
   err.textContent='';btn.disabled=true;btn.textContent='מתחבר…';
   try{
-    try{await AUTH.setPersistence(document.getElementById('lr').checked?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION);}catch(e){}
+    const remember=document.getElementById('lr').checked;
+    try{await AUTH.setPersistence(remember?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION);}catch(e){}
+    try{if(remember)localStorage.setItem('tt:remember','1');else localStorage.removeItem('tt:remember');}catch(e){}
     let email=null;
     try{const l=await FS.doc('logins/'+inst+'_'+ukey(u)).get();if(l.exists)email=l.data().email;}catch(e){}
     if(!email&&ukey(u)==='admin')email=OWNER_EMAIL;
@@ -1026,6 +1028,10 @@ async function logout(){
   remStop();{const b=document.getElementById('remBox');if(b)b.remove();}
   S.me=null;DB=null;closeDrawer(true);clearInterval(NET_TIMER);{const b=document.getElementById('netBanner');if(b)b.remove();}NET_OK=true;
   try{if(AUTH)await AUTH.signOut();}catch(e){}
+  try{localStorage.removeItem('tt:remember');}catch(e){}
+  // מחיקת עותק הנתונים מהמכשיר, וטעינה מחדש של הדף
+  try{if(FS){await FS.terminate();await FS.clearPersistence();}}catch(e){}
+  try{location.replace(location.pathname);}catch(e){}
   document.getElementById('shell').classList.remove('on');
   document.getElementById('login').style.display='flex';
   document.getElementById('lp').value='';document.getElementById('lu').value='';
@@ -1038,6 +1044,13 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 document.getElementById('loginBtn').addEventListener('click',doLogin);
+/* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
+let IDLE_AT=Date.now();
+['pointerdown','keydown','scroll','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{IDLE_AT=Date.now();},{passive:true,capture:true}));
+setInterval(function(){
+  let rem=false;try{rem=localStorage.getItem('tt:remember')==='1';}catch(e){}
+  if(S.me&&!rem&&Date.now()-IDLE_AT>30*60000)logout();
+},60000);
 ['li','lu','lp'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();}));
 
 function contactPhone(s){return s.fatherPhone||s.motherPhone||'';}
@@ -3760,7 +3773,9 @@ document.getElementById('main').addEventListener('input',function(e){
   firebase.initializeApp(FB_CONFIG);
   FS=firebase.firestore();AUTH=firebase.auth();
   try{FS.settings({experimentalForceLongPolling:true,merge:true});}catch(e){}
-  try{await FS.enablePersistence({synchronizeTabs:true});}catch(e){}
+  // שמירת נתונים במכשיר רק כשבחרו "להישאר מחובר" (מכשיר אישי). במחשב משותף שום נתון לא נשאר על הדיסק
+  let rem=false;try{rem=localStorage.getItem('tt:remember')==='1';}catch(e){}
+  if(rem){try{await FS.enablePersistence({synchronizeTabs:true});}catch(e){}}
   const jt=new URLSearchParams(location.search).get('join');
   if(jt){try{await AUTH.signOut();}catch(e){}return showJoin(jt);}
   const user=await new Promise(r=>{const un=AUTH.onAuthStateChanged(x=>{un();r(x);});});
