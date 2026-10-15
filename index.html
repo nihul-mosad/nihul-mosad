@@ -1063,7 +1063,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=33;
+const APP_VER=34;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -3040,7 +3040,7 @@ function viewDaylog(){
     '<div class="card brk"><h3>סיכום אוטומטי</h3>'+
       (clsRows.length?'<h3 style="font-size:15px">נוכחות לפי כיתה</h3>'+table(['כיתה','נוכחות','חסרים','איחורים'],clsRows):'')+
       '<h3 style="font-size:15px;margin-top:12px">אירועים ('+evs.length+')</h3>'+(evs.length?evs.map(e=>'<div class="alert"><span class="tag" data-s="'+(e.kind==='pos'?'present':e.sev>=3?'absent':'late')+'">'+esc(e.typeName||'')+'</span><span style="flex:1"><b>'+esc((studentById(e.sid)||{}).name||e.sname||'')+'</b> <span class="note">'+esc(e.cls||'')+(e.time?' · '+esc(e.time):'')+' · דיווח: '+esc(e.by||'')+'</span>'+(e.note?'<br>'+esc(e.note):'')+'</span></div>').join(''):'<p class="note">לא דווחו אירועים.</p>')+
-      (ls.length?'<h3 style="font-size:15px;margin-top:12px">שיעורים שלא סומנה בהם נוכחות</h3>'+(Object.keys(missT).length?Object.keys(missT).map(t=>'<div class="alert"><b style="flex:1">'+esc(t)+'</b><span class="note">שיעורים '+missT[t].join(', ')+'</span></div>').join(''):'<p class="note">כל השיעורים סומנו. 👍</p>'):'')+
+      (ls.length?'<h3 style="font-size:15px;margin-top:12px">שיעורים שלא סומנה בהם נוכחות</h3>'+(Object.keys(missT).length?Object.keys(missT).map(t=>'<div class="alert"><b style="flex:1">'+esc(t)+'</b><span class="note">שיעורים '+missT[t].sort((a,b)=>a-b).join(', ')+'</span></div>').join(''):'<p class="note">כל השיעורים סומנו. 👍</p>'):'')+
       (exs.length?'<h3 style="font-size:15px;margin-top:12px">מבחנים</h3>'+exs.map(e=>{const st=exStats(e);return '<div class="alert"><span style="flex:1"><b>'+esc(e.subject)+'</b> · '+esc(e.cls)+(e.title?' · '+esc(e.title):'')+' <span class="note">('+esc(e.by||'')+')</span></span><span>'+st.n+' נבחנו · ממוצע <b>'+(st.avg===null?'—':st.avg)+'</b></span></div>';}).join(''):'')+
     '</div>'+
     '<div class="card brk"><h3>הסיכום שלי <span class="note">(גלוי רק לך)</span></h3>'+
@@ -3057,7 +3057,7 @@ async function dlSend(t){
   dlCapture();const d=S.dlDate,x=dlDay(d),note=(x.t||{})[t]||'',u=userOfTeacher(t);
   if(!u)return toast('למורה הזה אין משתמש במערכת');if(!note)return toast('כתבו קודם את הסיכום למורה');
   const facts=dlTeacherFacts(t,d);
-  const text='סיכום יום '+dual(d)+'\n\n'+note+(facts.length?'\n\nנתוני היום:\n• '+facts.join('\n• '):'');
+  const text='סיכום היום · '+dual(d)+'\n\n'+note+(facts.length?'\n\nנתוני היום:\n• '+facts.join('\n• '):'');
   if(!confirm('לשלוח ל'+t+' את הסיכום?\n\n'+text))return;
   const id=uid(),now=Date.now(),o={n:{},dm:{}};o.n[id]={id:id,text:text,from:S.me.user,ts:now};o.dm[id]={id:id,text:text,date:d,from:S.me.user,ts:now};
   try{await FS.doc(IB()+'tasks/'+u.id).set(o,{merge:true});}catch(e){return saveFailed(e);}
