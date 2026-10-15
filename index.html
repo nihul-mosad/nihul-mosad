@@ -54,6 +54,15 @@ main{flex:1;min-width:0;padding:24px 28px 80px}
 .g3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 .g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 .g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.exgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:2px 18px}
+.exrow{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--surface2);padding:5px 0}
+.exrow input{width:84px;text-align:center}
+.rchead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid var(--line);padding-bottom:10px}
+.rcgrp{margin:12px 0 4px}
+.rcsign{display:flex;gap:24px;margin-top:40px}
+.rcsign div{flex:1;border-top:1px solid var(--ink);padding-top:4px;text-align:center;font-size:13px;color:var(--muted)}
+.rcpage{margin-bottom:34px}
+@media print{.rcpage{break-after:page;margin:0}.rcpage:last-child{break-after:auto}}
 .hmt td.hm{text-align:center;font-weight:600;min-width:58px;border-radius:6px;font-variant-numeric:tabular-nums}
 .hmt th{white-space:nowrap}
 .ains{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 7%,var(--surface))}
@@ -551,7 +560,7 @@ function logAct(act,info){
 function enterSystem(user){
   S.inst=null;S.owner=true;S.instList=null;DB=null;
   S.config={name:'מסוף המערכת',classes:[],logo:'',users:[],domains:SEED_DOMAINS};
-  S.students=[];S.staff=[];S.att={};S.latt={};S.reviews=[];S.tasks=[];S.timetable=[];S.events=[];S.evRoster=[];S.meetings=[];S.mtEdit=null;LIDX=null;
+  S.students=[];S.staff=[];S.att={};S.latt={};S.reviews=[];S.tasks=[];S.timetable=[];S.events=[];S.evRoster=[];S.meetings=[];S.mtEdit=null;S.exams=[];S.exEdit=null;S.rc=null;LIDX=null;
   S.me={id:user.uid,user:'בעל המערכת',role:'admin',cls:'',teacher:'',mustChange:false};
   S.tab='console';S.console=null;
   try{localStorage.setItem('tt:inst','system');localStorage.setItem('tt:instName','מסוף המערכת');}catch(e){}
@@ -769,6 +778,7 @@ async function loadSec(){
   }
   revs=S.reviews.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   await loadMeetings();
+  await loadGrades();
   LIDX=null;return true;
 }
 let SYNCING=false;
@@ -933,7 +943,7 @@ const SEED_CLASSES=['כיתה א'+GER,'כיתה ב'+GER,'כיתה ג'+GER,'כי�
 const SEED_DOMAINS=[{id:'d1',name:'לימודים'},{id:'d2',name:'ריכוז והתמדה'},{id:'d3',name:'התנהגות'},{id:'d4',name:'חברתי'},{id:'d5',name:'תפילה וסדרים'}];
 
 const S={tab:'dash',me:null,config:{name:'המוסד',classes:[],logo:'',users:[],domains:[]},
-  students:[],staff:[],att:{},latt:{},reviews:[],tasks:[],timetable:[],events:[],evRoster:[],meetings:[],mtEdit:null,mtQ:'',evc:null,evf:null,evBack:null,markLesson:null,ldraft:{},ldirty:false,markView:'lessons',
+  students:[],staff:[],att:{},latt:{},reviews:[],tasks:[],timetable:[],events:[],evRoster:[],meetings:[],mtEdit:null,mtQ:'',exams:[],exEdit:null,rc:null,evc:null,evf:null,evBack:null,markLesson:null,ldraft:{},ldirty:false,markView:'lessons',
   ttMode:'class',ttCls:'',ttTeacher:'',ttDay:null,ttSlot:null,ttEdit:null,ttImport:null,ttPeriods:false,
   markDate:iso(new Date()),markCls:'',draft:{},dirty:false,
   revCls:'',revDate:iso(new Date()),revList:[],revIdx:null,revDraft:null,revDone:0,
@@ -942,7 +952,7 @@ const S={tab:'dash',me:null,config:{name:'המוסד',classes:[],logo:'',users:[
   msgGroup:'all',msgText:'',msgTo:'both',importPreview:null,focus:null,
   repFrom:daysAgo(30),repTo:iso(new Date()),repCls:''};
 
-const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['mark','נוכחות'],['events','אירועים'],['schedule','מערכת שעות'],['tasks','משימות'],['meetings','ישיבות צוות'],['reports','דוחות'],['analytics','ניתוחים'],['staff','צוות'],['settings','הגדרות']];
+const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['mark','נוכחות'],['events','אירועים'],['grades','ציונים'],['schedule','מערכת שעות'],['tasks','משימות'],['meetings','ישיבות צוות'],['reports','דוחות'],['analytics','ניתוחים'],['staff','צוות'],['settings','הגדרות']];
 const isAdmin=()=>S.me&&S.me.role==='admin';
 function homeroomOf(t){const h=S.config.homeroom||{};return S.config.classes.filter(c=>t&&h[c]===t);}
 const myClasses=()=>isAdmin()?S.config.classes:Array.from(new Set((S.me.cls?[S.me.cls]:[]).concat(homeroomOf(S.me.teacher))));
@@ -964,7 +974,7 @@ function tasksInView(){
 }
 function myLessonIds(){const o={};myLessonAll().forEach(l=>o[l.id]=1);return o;}
 function myLessonStudents(){const ok={};myLessonAll().forEach(l=>lessonStudents(l).list.forEach(s=>ok[s.id]=1));return S.students.filter(s=>ok[s.id]);}
-const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','students','mark','events','schedule','tasks','meetings','reports']:['mark','events','schedule','tasks','meetings','reports']).indexOf(t[0])>-1).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
+const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','students','mark','events','grades','schedule','tasks','meetings','reports']:['mark','events','grades','schedule','tasks','meetings','reports']).indexOf(t[0])>-1).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
 const domains=()=>S.config.domains&&S.config.domains.length?S.config.domains:SEED_DOMAINS;
 
 /* ---- שליפות ---- */
@@ -1046,7 +1056,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=29;
+const APP_VER=30;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -1423,6 +1433,7 @@ function viewCard(){
       }).join(''):'<p class="note">עוד לא נרשמה תמונת מצב.</p>')+'</div></div>'+
     cardGroupsSection(s)+
     cardAttSection(s)+
+    cardGradesSection(s)+
     evCardSection(s)+
     '<div class="card brk"><h3>היסטוריית תמונות מצב</h3>'+
       (revs.length?'<div class="tl">'+revs.map(function(r){
@@ -2811,6 +2822,132 @@ function viewAnalytics(){
     card('חיסורים ואיחורים לפי מקצוע','מהבעייתי ביותר',subT||empty)+'</div>';
 }
 
+/* ================= ציונים ================= */
+// נשמר ב-gr/{שנת לימודים}_{כיתה}_{מורה}: כל מורה במסמך משלו, המחנך רואה את כל הכיתה, ההנהלה הכול
+const PARASHOT=['בראשית','נח','לך לך','וירא','חיי שרה','תולדות','ויצא','וישלח','וישב','מקץ','ויגש','ויחי','שמות','וארא','בא','בשלח','יתרו','משפטים','תרומה','תצוה','כי תשא','ויקהל','פקודי','ויקהל-פקודי','ויקרא','צו','שמיני','תזריע','מצורע','תזריע-מצורע','אחרי מות','קדושים','אחרי מות-קדושים','אמור','בהר','בחוקותי','בהר-בחוקותי','במדבר','נשא','בהעלותך','שלח','קרח','חוקת','בלק','חוקת-בלק','פנחס','מטות','מסעי','מטות-מסעי','דברים','ואתחנן','עקב','ראה','שופטים','כי תצא','כי תבוא','נצבים','וילך','נצבים-וילך','האזינו','וזאת הברכה'];
+function grYears(){return mtYears().slice(-2);}
+async function loadGrades(){
+  let out=[];S.grErr=false;
+  try{
+    if(isAdmin()){
+      (await fsList('gr')).forEach(x=>{const m=nn(x.data.x);LD['gr/'+x.id]=clone(m);out=out.concat(Object.values(m));});
+    }else{
+      const mc=myClasses(),tc=teachClasses().filter(c=>mc.indexOf(c)<0),me=evTk(),ids={};
+      grYears().forEach(function(y){
+        mc.forEach(c=>{const tks={'':1};tks[me]=1;S.timetable.forEach(l=>{if((l.classes||[]).indexOf(c)>-1&&l.teacher)tks[tkOf(l.teacher)]=1;});
+          Object.keys(tks).forEach(t=>ids[y+'_'+ckOf(c)+'_'+t]=1);});
+        tc.forEach(c=>ids[y+'_'+ckOf(c)+'_'+me]=1);
+      });
+      await inChunks(Object.keys(ids),async function(id){try{const d=await fsGet('gr/'+id);if(d){const m=nn(d.x);LD['gr/'+id]=clone(m);out=out.concat(Object.values(m));}}catch(e){S.grErr=true;}},20);
+    }
+  }catch(e){S.grErr=true;}
+  S.exams=out;
+}
+function exPath(x){return 'gr/'+mtYear(x.date)+'_'+ckOf(x.cls)+'_'+(x.tk||'');}
+async function saveGrades(){
+  const by={};knownPaths('gr/').forEach(p=>by[p]={});
+  S.exams.forEach(x=>{(by[exPath(x)]=by[exPath(x)]||{})[x.id]=x;});
+  try{for(const p of Object.keys(by))await writeDoc(p,'x',1,clone(by[p]));return true;}catch(e){saveFailed(e);return false;}
+}
+function exClasses(){return isAdmin()?S.config.classes:S.config.classes.filter(c=>myClasses().indexOf(c)>-1||teachClasses().indexOf(c)>-1);}
+function canEditExam(x){return isAdmin()||x.byUid===S.me.id||myClasses().indexOf(x.cls)>-1;}
+/* ציון: מספר, או "חסר" / "פטור" שלא נכנסים לממוצע */
+function grVal(v){if(v===''||v==null)return null;const n=Number(v);return isNaN(n)?null:n;}
+function grPct(x,v){const n=grVal(v);if(n===null)return null;const mx=+x.max||100;return Math.round(n/mx*1000)/10;}
+function avg(a){a=a.filter(v=>v!==null&&v!==undefined);return a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length*10)/10:null;}
+function grColor(p){return p===null?'':p<55?'var(--absent)':p<70?'var(--late)':'var(--present)';}
+function exStats(x){const ps=Object.keys(x.g||{}).map(k=>grPct(x,x.g[k])).filter(v=>v!==null);return {n:ps.length,avg:avg(ps)};}
+function exForm(){
+  const e=S.exEdit,cls=exClasses(),stu=S.students.filter(s=>s.cls===e.cls).sort((a,b)=>a.name.localeCompare(b.name,'he'));
+  const subs=Array.from(new Set(S.timetable.filter(l=>(l.classes||[]).indexOf(e.cls)>-1&&(isAdmin()||myClasses().indexOf(e.cls)>-1||l.teacher===S.me.teacher)).map(l=>l.subject))).sort((a,b)=>a.localeCompare(b,'he'));
+  return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">'+(e.id?'עריכת מבחן':'מבחן חדש')+'</h3><button class="btn sm" data-v="ghost" data-act="ex-cancel">ביטול</button></div>'+
+    '<datalist id="exSubs">'+subs.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist><datalist id="exPar">'+PARASHOT.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>'+
+    '<div class="grid g3" style="margin-top:10px"><label class="field"><span>כיתה</span><select id="ex-cls">'+opt('— בחרו —','',e.cls)+cls.map(c=>opt(c,c,e.cls)).join('')+'</select></label>'+
+      '<label class="field"><span>מקצוע</span><input id="ex-sub" list="exSubs" value="'+esc(e.subject)+'"></label>'+
+      '<label class="field"><span>תאריך</span><input type="date" id="ex-date" value="'+esc(e.date)+'"></label>'+
+      '<label class="field"><span>נושא המבחן</span><input id="ex-title" value="'+esc(e.title)+'" placeholder="למשל: מבחן על פרק ב׳"></label>'+
+      '<label class="field"><span>פרשה <span class="note">(לא חובה)</span></span><input id="ex-par" list="exPar" value="'+esc(e.parasha)+'"></label>'+
+      '<label class="field"><span>ציון מקסימלי</span><input id="ex-max" type="number" min="1" value="'+esc(e.max)+'"></label></div>'+
+    (e.cls?(stu.length?'<h3 style="margin-top:12px">ציונים <span class="note">(להשאיר ריק אם לא נבחן, או לכתוב "פטור")</span></h3><div class="exgrid">'+
+      stu.map(s=>'<label class="exrow"><span>'+esc(s.name)+'</span><input class="inp" data-exg="'+s.id+'" inputmode="decimal" value="'+esc(e.g[s.id]==null?'':e.g[s.id])+'"></label>').join('')+'</div>'
+      :'<p class="note">אין תלמידים בכיתה הזו.</p>'):'<p class="note" style="margin-top:10px">בחרו כיתה כדי להזין ציונים.</p>')+
+    '<div class="row" style="margin-top:12px"><button class="btn" data-v="primary" data-act="ex-save">שמירה</button></div></div>';
+}
+function exCapture(){
+  const e=S.exEdit;if(!e)return;const q=id=>document.getElementById(id);
+  [['ex-cls','cls'],['ex-sub','subject'],['ex-date','date'],['ex-title','title'],['ex-par','parasha'],['ex-max','max']].forEach(p=>{if(q(p[0]))e[p[1]]=q(p[0]).value.trim();});
+  document.querySelectorAll('#main [data-exg]').forEach(i=>{const v=i.value.trim();if(v==='')delete e.g[i.dataset.exg];else e.g[i.dataset.exg]=isNaN(Number(v))?v:Number(v);});
+}
+function viewGrades(){
+  if(S.exEdit)return '<div class="head"><div><h2>ציונים</h2></div></div>'+exForm();
+  const cls=Array.from(new Set(S.exams.map(x=>x.cls).concat(exClasses()))).filter(Boolean).sort((a,b)=>S.config.classes.indexOf(a)-S.config.classes.indexOf(b));
+  const fc=S.exCls||'',fs=S.exSub||'';
+  const subs=Array.from(new Set(S.exams.filter(x=>!fc||x.cls===fc).map(x=>x.subject))).filter(Boolean).sort((a,b)=>a.localeCompare(b,'he'));
+  const list=S.exams.filter(x=>(!fc||x.cls===fc)&&(!fs||x.subject===fs)).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const rcCls=isAdmin()?S.config.classes:myClasses();
+  return '<div class="head"><div><h2>ציונים</h2><div class="sub">'+list.length+' מבחנים</div></div><div class="row">'+
+      (rcCls.length?'<button class="btn" data-act="rc-class">גליונות ציונים לכיתה</button>':'')+
+      (exClasses().length?'<button class="btn big" data-v="primary" data-act="ex-new">+ מבחן חדש</button>':'')+'</div></div>'+
+    (S.grErr?'<div class="warn">חלק מהציונים לא נטענו. ייתכן שצריך לעדכן את חוקי האבטחה ב-Firebase.</div>':'')+
+    '<div class="card"><div class="row" style="gap:8px;margin-bottom:10px">'+
+      '<select class="inp" data-ch="exCls">'+opt('כל הכיתות','',fc)+cls.map(c=>opt(c,c,fc)).join('')+'</select>'+
+      '<select class="inp" data-ch="exSub">'+opt('כל המקצועות','',fs)+subs.map(c=>opt(c,c,fs)).join('')+'</select></div>'+
+    (list.length?table(['תאריך','כיתה','מקצוע','נושא','פרשה','מורה','נבחנו','ממוצע',''],list.map(function(x){const st=exStats(x);
+      return [esc(shortDate(x.date)),esc(x.cls),'<b>'+esc(x.subject)+'</b>',esc(x.title||''),esc(x.parasha||''),'<span class="note">'+esc(x.by||'')+'</span>',st.n,
+        st.avg===null?'—':'<b style="color:'+grColor(st.avg)+'">'+st.avg+'</b>',
+        canEditExam(x)?'<div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn sm" data-act="ex-edit" data-id="'+x.id+'">עריכה</button><button class="btn sm" data-v="ghost" data-act="ex-del" data-id="'+x.id+'">מחיקה</button></div>':''];}))
+      :'<div class="empty">עדיין אין מבחנים.</div>')+'</div>';
+}
+/* ---- גליון ציונים ---- */
+function rcTerms(){
+  const y=mtYear(iso(new Date()));
+  return [['h1','מחצית א׳',y+'-08-01',(y+1)+'-01-31'],['h2','מחצית ב׳',(y+1)+'-02-01',(y+1)+'-07-31'],['year','שנת הלימודים',y+'-08-01',(y+1)+'-07-31']];
+}
+function rcRange(){const r=S.rc;if(r.term==='custom')return [r.from||rcTerms()[2][2],r.to||iso(new Date())];const t=rcTerms().find(x=>x[0]===r.term)||rcTerms()[2];return [t[2],t[3]];}
+function rcStudent(s,from,to,group){
+  const ex=S.exams.filter(x=>x.cls===s.cls&&x.date>=from&&x.date<=to&&x.g&&x.g[s.id]!=null&&x.g[s.id]!=='').sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const a=attStats(s.id,from,to<iso(new Date())?to:iso(new Date()));
+  const key=group==='parasha'?(x=>x.parasha||'ללא פרשה'):(x=>x.subject||'ללא מקצוע');
+  const G={},order=[];ex.forEach(x=>{const k=key(x);if(!G[k]){G[k]=[];order.push(k);}G[k].push(x);});
+  const subAvg={};ex.forEach(x=>{const p=grPct(x,x.g[s.id]);if(p!==null)(subAvg[x.subject]=subAvg[x.subject]||[]).push(p);});
+  const subs=Object.keys(subAvg).sort((a,b)=>a.localeCompare(b,'he')),total=avg(subs.map(k=>avg(subAvg[k])));
+  const hr=Object.keys(S.config.homeroom||{}).filter(c=>c===s.cls).map(c=>S.config.homeroom[c])[0]||'';
+  const cell=(x)=>{const v=x.g[s.id],p=grPct(x,v);return p===null?'<span class="note">'+esc(v)+'</span>':'<b style="color:'+grColor(p)+'">'+esc(v)+'</b>'+((+x.max||100)!==100?' <span class="note">/'+x.max+'</span>':'');};
+  return '<div class="rcpage">'+printHead()+
+    '<div class="rchead"><div><h2 style="margin:0">גליון ציונים</h2><div style="font-size:18px;margin-top:4px"><b>'+esc(s.name)+'</b> · '+esc(s.cls)+(hr?' · מחנך: '+esc(hr):'')+'</div></div>'+
+    '<div class="note" style="text-align:left">'+esc(dual(from))+'<br>עד '+esc(dual(to))+'</div></div>'+
+    '<div class="grid g4" style="margin:12px 0">'+stat(total===null?'—':total,'ממוצע כללי',grColor(total))+stat(ex.length,'מבחנים','')+
+      stat(a.pct===null?'—':a.pct+'%','נוכחות',a.pct!==null&&a.pct<90?'var(--late)':'var(--present)')+stat(a.absent+' / '+a.late,'שיעורים שהוחסרו / איחורים','')+'</div>'+
+    (subs.length?'<h3>ממוצע לפי מקצוע</h3>'+table(['מקצוע','מבחנים','ממוצע'],subs.map(k=>{const v=avg(subAvg[k]);return ['<b>'+esc(k)+'</b>',subAvg[k].length,'<b style="color:'+grColor(v)+'">'+v+'</b>'];})):'')+
+    (ex.length?'<h3 style="margin-top:14px">פירוט המבחנים'+(group==='parasha'?' לפי פרשה':' לפי מקצוע')+'</h3>'+order.map(k=>'<div class="rcgrp"><b>'+esc(k)+'</b>'+(G[k].length>1?' <span class="note">· ממוצע '+avg(G[k].map(x=>grPct(x,x.g[s.id])))+'</span>':'')+'</div>'+
+      table(['תאריך',group==='parasha'?'מקצוע':'פרשה','נושא','ציון'],G[k].map(x=>[esc(dual(x.date)),esc((group==='parasha'?x.subject:x.parasha)||'—'),esc(x.title||''),cell(x)]))).join('')
+      :'<div class="empty">לא נרשמו מבחנים בתקופה הזו.</div>')+
+    '<div class="rcsign"><div>חתימת המחנך</div><div>חתימת המנהל</div><div>חתימת ההורים</div></div></div>';
+}
+function viewReportCard(){
+  const r=S.rc;if(!r)return viewGrades();
+  const [from,to]=rcRange();
+  const list=r.sid?[studentById(r.sid)].filter(Boolean):S.students.filter(s=>s.cls===r.cls).sort((a,b)=>a.name.localeCompare(b.name,'he'));
+  const okList=list.filter(s=>canSeeStudent(s.id));
+  const clsO=isAdmin()?S.config.classes:myClasses();
+  return '<div class="noprint"><div class="head"><div><h2>גליון ציונים</h2><div class="sub">'+(r.sid?esc((list[0]||{}).name||''):esc(r.cls)+' · '+okList.length+' תלמידים')+'</div></div>'+
+      '<div class="row"><button class="btn" data-v="ghost" data-act="rc-back">חזרה</button><button class="btn" data-v="primary" data-act="print">הדפסה</button></div></div>'+
+    '<div class="card"><div class="grid g3">'+
+      (r.sid?'':'<label class="field"><span>כיתה</span><select data-rc="cls">'+clsO.map(c=>opt(c,c,r.cls)).join('')+'</select></label>')+
+      '<label class="field"><span>תקופה</span><select data-rc="term">'+rcTerms().map(t=>opt(t[1],t[0],r.term)).join('')+opt('טווח תאריכים','custom',r.term)+'</select></label>'+
+      (r.term==='custom'?'<label class="field"><span>מתאריך</span><input type="date" data-rc="from" value="'+from+'"></label><label class="field"><span>עד תאריך</span><input type="date" data-rc="to" value="'+to+'"></label>':'')+
+      '<label class="field"><span>פירוט המבחנים</span><select data-rc="group">'+opt('לפי מקצוע','subject',r.group)+opt('לפי פרשה','parasha',r.group)+'</select></label></div></div></div>'+
+    (okList.length?okList.map(s=>rcStudent(s,from,to,r.group)).join(''):'<div class="empty">אין תלמידים להצגה.</div>');
+}
+function cardGradesSection(s){
+  const ex=S.exams.filter(x=>x.cls===s.cls&&x.g&&x.g[s.id]!=null&&x.g[s.id]!=='');
+  const sub={};ex.forEach(x=>{const p=grPct(x,x.g[s.id]);if(p!==null)(sub[x.subject]=sub[x.subject]||[]).push(p);});
+  const ks=Object.keys(sub).sort((a,b)=>a.localeCompare(b,'he')),tot=avg(ks.map(k=>avg(sub[k])));
+  return '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3 style="margin:0">ציונים'+(tot!==null?' <span class="note">· ממוצע כללי </span><b style="color:'+grColor(tot)+'">'+tot+'</b>':'')+'</h3>'+
+    '<button class="btn sm" data-v="primary" data-act="rc-open" data-id="'+s.id+'">גליון ציונים</button></div>'+
+    (ks.length?table(['מקצוע','מבחנים','ממוצע'],ks.map(k=>{const v=avg(sub[k]);return ['<b>'+esc(k)+'</b>',sub[k].length,'<b style="color:'+grColor(v)+'">'+v+'</b>'];})):'<p class="note">עדיין לא נרשמו ציונים.</p>')+'</div>';
+}
+
 /* ================= ישיבות צוות ================= */
 // נשמר ב-store/meetings_{שנת לימודים}: כל הצוות קורא, רק ההנהלה כותבת
 const mtYear=d=>{const y=+String(d).slice(0,4),m=+String(d).slice(5,7);return m>=8?y:y-1;};
@@ -3341,8 +3478,8 @@ function render(){
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
     '<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
-    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,bdays:viewBirthdays,analytics:viewAnalytics,account:viewAccount,import:viewImport,card:viewCard};
-  if(S.inst&&!isAdmin()&&['card','account','bdays'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
+    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,bdays:viewBirthdays,analytics:viewAnalytics,grades:viewGrades,rcard:viewReportCard,account:viewAccount,import:viewImport,card:viewCard};
+  if(S.inst&&!isAdmin()&&['card','account','bdays','rcard'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
   const v=map[S.tab]||viewDash;
   let warn='';
   if(S.legacy&&isAdmin())warn+='<div class="warn">צריך לעדכן את חוקי האבטחה ב-Firebase כדי להפעיל את ההפרדה המלאה בין המורים. עד אז המערכת עובדת במצב הקודם.</div>';
@@ -3358,7 +3495,7 @@ function goTab(t){
   S.tab=t;S.editStudent=null;S.editStaff=null;S.editUser=null;S.importPreview=null;S.ttSlot=null;S.ttEdit=null;S.ttImport=null;
   if(S.tab!=='review'){S.revIdx=null;}
   if(S.tab==='mark'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;S.markLesson=null;S.ldirty=false;}
-  S.scan=null;S.evc=null;S.evBack=null;S.mtEdit=null;S.remc=null;
+  S.scan=null;S.evc=null;S.evBack=null;S.mtEdit=null;S.remc=null;S.exEdit=null;
   render();
 }
 document.getElementById('nav').addEventListener('click',function(e){
@@ -3527,6 +3664,26 @@ document.getElementById('main').addEventListener('click',async function(e){
     return copy(all.join(', '),all.length+' מספרים הועתקו');
   }
   if(a==='goto-bdays')return goTab('bdays');
+  if(a==='ex-new'){const c=exClasses();S.exEdit={id:'',cls:S.exCls&&c.indexOf(S.exCls)>-1?S.exCls:(c.length===1?c[0]:''),subject:S.exSub||'',date:iso(new Date()),title:'',parasha:'',max:100,g:{}};window.scrollTo(0,0);return render();}
+  if(a==='ex-edit'){const x=S.exams.find(e=>e.id===id);if(!x||!canEditExam(x))return;S.exEdit=Object.assign({},clone(x),{g:clone(x.g||{})});window.scrollTo(0,0);return render();}
+  if(a==='ex-cancel'){S.exEdit=null;return render();}
+  if(a==='ex-save'){
+    exCapture();const e=S.exEdit,mx=+e.max||100;
+    {const ok={};S.students.filter(x=>x.cls===e.cls).forEach(x=>ok[x.id]=1);Object.keys(e.g).forEach(k=>{if(!ok[k])delete e.g[k];});}
+    if(!e.cls)return toast('בחרו כיתה');if(!e.subject)return toast('כתבו מקצוע');if(!e.date)return toast('בחרו תאריך');
+    const bad=Object.keys(e.g).filter(k=>{const v=e.g[k];return typeof v==='number'?(v<0||v>mx):['חסר','פטור'].indexOf(String(v))<0;});
+    if(bad.length)return toast('יש ציון לא תקין ('+bad.map(k=>(studentById(k)||{}).name).join(', ')+'). מספר בין 0 ל-'+mx+', או "חסר" / "פטור"');
+    const rec={cls:e.cls,subject:e.subject,date:e.date,title:e.title,parasha:e.parasha,max:mx,g:e.g};
+    if(e.id)S.exams=S.exams.map(x=>x.id===e.id?Object.assign({},x,rec,{ets:Date.now()}):x);
+    else S.exams.push(Object.assign({id:uid()},rec,{tk:evTk(),by:S.me.teacher||S.me.user,byUid:S.me.id,ts:Date.now()}));
+    if(!(await saveGrades()))return;
+    logAct(e.id?'עדכון ציונים':'מבחן חדש',e.cls+' · '+e.subject+(e.title?' · '+e.title:''));S.exCls=e.cls;S.exEdit=null;toast('הציונים נשמרו');return render();
+  }
+  if(a==='ex-del'){const x=S.exams.find(e=>e.id===id);if(!x||!canEditExam(x)||!confirm('למחוק את המבחן "'+(x.title||x.subject)+'" עם כל הציונים שלו?'))return;
+    S.exams=S.exams.filter(e=>e.id!==id);if(await saveGrades()){logAct('מחיקת מבחן',x.cls+' · '+x.subject);toast('המבחן נמחק');}return render();}
+  if(a==='rc-open'){S.rc={sid:id,cls:'',term:(S.rc&&S.rc.term)||'year',group:(S.rc&&S.rc.group)||'subject'};S.rcBack=S.tab;S.tab='rcard';window.scrollTo(0,0);return render();}
+  if(a==='rc-class'){const c=isAdmin()?S.config.classes:myClasses();S.rc={sid:'',cls:S.exCls&&c.indexOf(S.exCls)>-1?S.exCls:c[0],term:(S.rc&&S.rc.term)||'year',group:(S.rc&&S.rc.group)||'subject'};S.rcBack='grades';S.tab='rcard';return render();}
+  if(a==='rc-back'){S.tab=S.rcBack||'grades';return render();}
   if(a==='an-range'){const r=el.dataset.r,t=iso(new Date());S.anTo=t;S.anFrom=r==='month'?t.slice(0,8)+'01':r==='30'?daysAgo(30):r==='90'?daysAgo(90):mtYear(t)+'-08-01';return render();}
   if(a==='rem-new'){S.remc={to:'',text:'',warn:''};window.scrollTo(0,0);return render();}
   if(a==='rem-cancel'){S.remc=null;return render();}
@@ -3685,7 +3842,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   }
   if(a==='del-cls'){S.config.classes=S.config.classes.filter(c=>c!==el.dataset.cls);save(K.config,S.config);return render();}
   if(a==='backup'){
-    download('גיבוי '+iso(new Date())+'.json',JSON.stringify({config:S.config,students:S.students,staff:S.staff,att:S.att,reviews:S.reviews,tasks:S.tasks,timetable:S.timetable,latt:S.latt,events:S.events,meetings:S.meetings},null,2),'application/json');
+    download('גיבוי '+iso(new Date())+'.json',JSON.stringify({config:S.config,students:S.students,staff:S.staff,att:S.att,reviews:S.reviews,tasks:S.tasks,timetable:S.timetable,latt:S.latt,events:S.events,meetings:S.meetings,exams:S.exams},null,2),'application/json');
     return toast('הגיבוי ירד');
   }
   if(a==='restore')return document.getElementById('restoreFile').click();
@@ -3705,6 +3862,8 @@ document.getElementById('main').addEventListener('change',function(e){
   if(el.dataset&&el.dataset.evf!==undefined){if(el.dataset.evf==='q')return;S.evf[el.dataset.evf]=el.value;return render();}
   if(el.id==='ev-time'&&S.evc){evCapture();const pn=perOfTime(S.evc.time);if(pn!==''){S.evc.period=pn;const sp=document.getElementById('ev-per');if(sp)sp.value=pn;}return;}
   if(el.id==='ev-date'||el.id==='ev-per'){evCapture();return;}
+  if(el.id==='ex-cls'&&S.exEdit){exCapture();return render();}
+  if(el.dataset&&el.dataset.rc&&S.rc){S.rc[el.dataset.rc]=el.value;return render();}
   if(el.id==='ttFile'&&el.files&&el.files[0]){const f=el.files[0];el.value='';return handleTtFile(f);}
   if(el.dataset&&el.dataset.bk!==undefined&&S.bulk){document.querySelectorAll('#main [data-bku]').forEach(inp=>{S.bulk.list[+inp.dataset.bku].user=inp.value.trim();});S.bulk.list[+el.dataset.bk].on=el.checked;return render();}
   if(el.dataset&&el.dataset.bku!==undefined)return;
