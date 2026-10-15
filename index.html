@@ -59,6 +59,10 @@ main{flex:1;min-width:0;padding:24px 28px 80px}
 .exrow input{width:84px;text-align:center}
 .rchead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid var(--line);padding-bottom:10px}
 .rcgrp{margin:12px 0 4px}
+.rct tr.rcw td{background:var(--surface2);padding-top:9px}
+.rct tr.rcwa td{font-size:13px;color:var(--muted)}
+.rct tr.rcm td{background:color-mix(in srgb,var(--accent) 12%,var(--surface));font-weight:700;border-top:2px solid var(--accent)}
+@media print{.rct tr.rcw td,.rct tr.rcm td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 .rcsign{display:flex;gap:24px;margin-top:40px}
 .rcsign div{flex:1;border-top:1px solid var(--ink);padding-top:4px;text-align:center;font-size:13px;color:var(--muted)}
 .rcpage{margin-bottom:34px}
@@ -1056,7 +1060,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=30;
+const APP_VER=31;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -2919,10 +2923,45 @@ function rcStudent(s,from,to,group){
     '<div class="grid g4" style="margin:12px 0">'+stat(total===null?'—':total,'ממוצע כללי',grColor(total))+stat(ex.length,'מבחנים','')+
       stat(a.pct===null?'—':a.pct+'%','נוכחות',a.pct!==null&&a.pct<90?'var(--late)':'var(--present)')+stat(a.absent+' / '+a.late,'שיעורים שהוחסרו / איחורים','')+'</div>'+
     (subs.length?'<h3>ממוצע לפי מקצוע</h3>'+table(['מקצוע','מבחנים','ממוצע'],subs.map(k=>{const v=avg(subAvg[k]);return ['<b>'+esc(k)+'</b>',subAvg[k].length,'<b style="color:'+grColor(v)+'">'+v+'</b>'];})):'')+
-    (ex.length?'<h3 style="margin-top:14px">פירוט המבחנים'+(group==='parasha'?' לפי פרשה':' לפי מקצוע')+'</h3>'+order.map(k=>'<div class="rcgrp"><b>'+esc(k)+'</b>'+(G[k].length>1?' <span class="note">· ממוצע '+avg(G[k].map(x=>grPct(x,x.g[s.id])))+'</span>':'')+'</div>'+
+    (group==='weeks'?'<h3 style="margin-top:14px">פירוט לפי שבועות וחודשים</h3>'+rcWeeks(s,ex,from,to):ex.length?'<h3 style="margin-top:14px">פירוט המבחנים'+(group==='parasha'?' לפי פרשה':' לפי מקצוע')+'</h3>'+order.map(k=>'<div class="rcgrp"><b>'+esc(k)+'</b>'+(G[k].length>1?' <span class="note">· ממוצע '+avg(G[k].map(x=>grPct(x,x.g[s.id])))+'</span>':'')+'</div>'+
       table(['תאריך',group==='parasha'?'מקצוע':'פרשה','נושא','ציון'],G[k].map(x=>[esc(dual(x.date)),esc((group==='parasha'?x.subject:x.parasha)||'—'),esc(x.title||''),cell(x)]))).join('')
       :'<div class="empty">לא נרשמו מבחנים בתקופה הזו.</div>')+
     '<div class="rcsign"><div>חתימת המחנך</div><div>חתימת המנהל</div><div>חתימת ההורים</div></div></div>';
+}
+/* פירוט לפי שבועות: כל מבחן בשורה, ממוצע שבועי, נוכחות השבוע, וסיכום לכל חודש עברי */
+function rcWeeks(s,ex,from,to){
+  const today=iso(new Date()),end=to<today?to:today,W={},wk=[];
+  const wsOf=d=>{const o=new Date(d+'T12:00:00');o.setDate(o.getDate()-o.getDay());return iso(o);};
+  const addW=ws=>{if(!W[ws]){W[ws]={ws:ws,ex:[]};wk.push(ws);}return W[ws];};
+  ex.forEach(x=>addW(wsOf(x.date)).ex.push(x));
+  // שבועות שנרשמה בהם נוכחות
+  const ids={};Object.keys(S.latt).concat(Object.keys(S.att)).forEach(d=>{if(d<from||d>end)return;const L=S.latt[d]||{},D=S.att[d]||{};
+    if(D[s.id]||Object.keys(L).some(k=>k.slice(k.indexOf(':')+1)===s.id))ids[wsOf(d)]=1;});
+  Object.keys(ids).forEach(addW);
+  wk.sort();if(!wk.length)return '<div class="empty">אין רישומים בתקופה הזו.</div>';
+  const mOf=ws=>{const p=hebParts(ws);return p?p.m+' '+gem(p.y%1000):ws.slice(0,7);};
+  const M={},mo=[];wk.forEach(ws=>{const m=mOf(ws);if(!M[m]){M[m]=[];mo.push(m);}M[m].push(ws);});
+  const pct=x=>grPct(x,x.g[s.id]);
+  const sc=x=>{const v=x.g[s.id],p=pct(x);return p===null?'<span class="note">'+esc(v)+'</span>':'<b style="color:'+grColor(p)+'">'+esc(v)+'</b>'+((+x.max||100)!==100?' <span class="note">/'+x.max+'</span>':'');};
+  const attTxt=a=>a.total?(a.pct+'% נוכחות'+(a.absent?' · '+a.absent+' חיסורים':'')+(a.late?' · '+a.late+' איחורים':'')):'לא נרשמה נוכחות';
+  let rows='';
+  mo.forEach(function(m){
+    const mex=[];
+    M[m].forEach(function(ws){
+      const w=W[ws],we=(()=>{const o=new Date(ws+'T12:00:00');o.setDate(o.getDate()+5);return iso(o);})();
+      const a=attStats(s.id,ws<from?from:ws,we>end?end:we),par=Array.from(new Set(w.ex.map(x=>x.parasha).filter(Boolean)));
+      const xs=w.ex.slice().sort((p,q)=>String(p.date).localeCompare(String(q.date)));mex.push(...xs);
+      rows+='<tr class="rcw"><td colspan="4"><b>שבוע '+esc(hebShort(ws))+' – '+esc(hebShort(we))+'</b> <span class="note">('+esc(ws.slice(8,10)+'.'+ws.slice(5,7))+'–'+esc(we.slice(8,10)+'.'+we.slice(5,7))+')</span>'+
+        (par.length?' · פרשת '+esc(par.join(', ')):'')+'</td><td class="note">'+esc(attTxt(a))+'</td></tr>';
+      rows+=xs.length?xs.map(x=>'<tr><td>'+esc(shortDate(x.date))+'</td><td><b>'+esc(x.subject)+'</b></td><td>'+esc(x.title||'')+(x.parasha&&par.length>1?' <span class="note">('+esc(x.parasha)+')</span>':'')+'</td><td>'+sc(x)+'</td><td></td></tr>').join('')+
+          (xs.length>1?'<tr class="rcwa"><td colspan="3">ממוצע שבועי</td><td><b style="color:'+grColor(avg(xs.map(pct)))+'">'+(avg(xs.map(pct))===null?'—':avg(xs.map(pct)))+'</b></td><td></td></tr>':'')
+        :'<tr><td colspan="5" class="note">לא היו מבחנים השבוע</td></tr>';
+    });
+    const mf=M[m][0]<from?from:M[m][0],ml=(()=>{const o=new Date(M[m][M[m].length-1]+'T12:00:00');o.setDate(o.getDate()+5);const x=iso(o);return x>end?end:x;})();
+    const ma=attStats(s.id,mf,ml),mv=avg(mex.map(pct));
+    rows+='<tr class="rcm"><td colspan="3">סיכום חודש '+esc(m)+' · '+mex.length+' מבחנים</td><td>'+(mv===null?'—':'<b>'+mv+'</b>')+'</td><td>'+esc(attTxt(ma))+'</td></tr>';
+  });
+  return '<div class="scroll"><table class="rct"><thead><tr><th>תאריך</th><th>מקצוע</th><th>נושא</th><th>ציון</th><th>נוכחות</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 function viewReportCard(){
   const r=S.rc;if(!r)return viewGrades();
@@ -2936,7 +2975,7 @@ function viewReportCard(){
       (r.sid?'':'<label class="field"><span>כיתה</span><select data-rc="cls">'+clsO.map(c=>opt(c,c,r.cls)).join('')+'</select></label>')+
       '<label class="field"><span>תקופה</span><select data-rc="term">'+rcTerms().map(t=>opt(t[1],t[0],r.term)).join('')+opt('טווח תאריכים','custom',r.term)+'</select></label>'+
       (r.term==='custom'?'<label class="field"><span>מתאריך</span><input type="date" data-rc="from" value="'+from+'"></label><label class="field"><span>עד תאריך</span><input type="date" data-rc="to" value="'+to+'"></label>':'')+
-      '<label class="field"><span>פירוט המבחנים</span><select data-rc="group">'+opt('לפי מקצוע','subject',r.group)+opt('לפי פרשה','parasha',r.group)+'</select></label></div></div></div>'+
+      '<label class="field"><span>פירוט המבחנים</span><select data-rc="group">'+opt('לפי שבועות וחודשים','weeks',r.group)+opt('לפי מקצוע','subject',r.group)+opt('לפי פרשה','parasha',r.group)+'</select></label></div></div></div>'+
     (okList.length?okList.map(s=>rcStudent(s,from,to,r.group)).join(''):'<div class="empty">אין תלמידים להצגה.</div>');
 }
 function cardGradesSection(s){
@@ -3681,8 +3720,8 @@ document.getElementById('main').addEventListener('click',async function(e){
   }
   if(a==='ex-del'){const x=S.exams.find(e=>e.id===id);if(!x||!canEditExam(x)||!confirm('למחוק את המבחן "'+(x.title||x.subject)+'" עם כל הציונים שלו?'))return;
     S.exams=S.exams.filter(e=>e.id!==id);if(await saveGrades()){logAct('מחיקת מבחן',x.cls+' · '+x.subject);toast('המבחן נמחק');}return render();}
-  if(a==='rc-open'){S.rc={sid:id,cls:'',term:(S.rc&&S.rc.term)||'year',group:(S.rc&&S.rc.group)||'subject'};S.rcBack=S.tab;S.tab='rcard';window.scrollTo(0,0);return render();}
-  if(a==='rc-class'){const c=isAdmin()?S.config.classes:myClasses();S.rc={sid:'',cls:S.exCls&&c.indexOf(S.exCls)>-1?S.exCls:c[0],term:(S.rc&&S.rc.term)||'year',group:(S.rc&&S.rc.group)||'subject'};S.rcBack='grades';S.tab='rcard';return render();}
+  if(a==='rc-open'){S.rc={sid:id,cls:'',term:(S.rc&&S.rc.term)||'year',group:(S.rc&&S.rc.group)||'weeks'};S.rcBack=S.tab;S.tab='rcard';window.scrollTo(0,0);return render();}
+  if(a==='rc-class'){const c=isAdmin()?S.config.classes:myClasses();S.rc={sid:'',cls:S.exCls&&c.indexOf(S.exCls)>-1?S.exCls:c[0],term:(S.rc&&S.rc.term)||'year',group:(S.rc&&S.rc.group)||'weeks'};S.rcBack='grades';S.tab='rcard';return render();}
   if(a==='rc-back'){S.tab=S.rcBack||'grades';return render();}
   if(a==='an-range'){const r=el.dataset.r,t=iso(new Date());S.anTo=t;S.anFrom=r==='month'?t.slice(0,8)+'01':r==='30'?daysAgo(30):r==='90'?daysAgo(90):mtYear(t)+'-08-01';return render();}
   if(a==='rem-new'){S.remc={to:'',text:'',warn:''};window.scrollTo(0,0);return render();}
