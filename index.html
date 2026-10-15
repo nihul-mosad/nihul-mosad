@@ -60,6 +60,9 @@ main{flex:1;min-width:0;padding:24px 28px 80px}
 .rchead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid var(--line);padding-bottom:10px}
 .rcgrp{margin:12px 0 4px}
 .dmi{border-bottom:1px solid var(--surface2);padding:10px 0}
+.nbadge{display:inline-block;min-width:18px;padding:0 5px;margin-inline-start:6px;border-radius:99px;background:var(--absent);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+#dmPill{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);z-index:9000;background:var(--accent);color:#fff;border:0;border-radius:99px;padding:11px 20px;font:inherit;font-weight:700;box-shadow:0 8px 24px rgba(20,27,52,.3);cursor:pointer;animation:remIn .35s ease;white-space:nowrap}
+@media print{#dmPill{display:none}}
 .rct tr.rcw td{background:var(--surface2);padding-top:9px}
 .rct tr.rcwa td{font-size:13px;color:var(--muted)}
 .rct tr.rcm td{background:color-mix(in srgb,var(--accent) 12%,var(--surface));font-weight:700;border-top:2px solid var(--accent)}
@@ -1044,7 +1047,7 @@ async function doLogin(){
   }finally{btn.disabled=false;btn.textContent='כניסה';}
 }
 async function logout(){
-  remStop();{const b=document.getElementById('remBox');if(b)b.remove();}
+  remStop();{const b=document.getElementById('remBox');if(b)b.remove();}{const b=document.getElementById('dmPill');if(b)b.remove();}
   S.me=null;DB=null;closeDrawer(true);clearInterval(NET_TIMER);{const b=document.getElementById('netBanner');if(b)b.remove();}NET_OK=true;
   try{if(AUTH)await AUTH.signOut();}catch(e){}
   try{localStorage.removeItem('tt:remember');}catch(e){}
@@ -1063,7 +1066,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=34;
+const APP_VER=35;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -1150,6 +1153,10 @@ function remListen(){
       if(!r.seen&&r.ts>now-864e5&&!REM_SHOWN[id]){REM_SHOWN[id]=1;remPopup(r);upd.push(new firebase.firestore.FieldPath('n',id,'seen'),now);}
     });
     if(upd.length)sn.ref.update(...upd).catch(()=>{});
+    const dm=((sn.exists&&sn.data())||{}).dm||{};let ch=false;S.dm=S.dm||{};
+    Object.keys(dm).forEach(k=>{if(dm[k]&&!S.dm[k]){S.dm[k]=dm[k];ch=true;}});
+    Object.keys(S.dm).forEach(k=>{if(!dm[k]){delete S.dm[k];ch=true;}});
+    if(ch){if(S.tab==='tasks')render();else dmPaint();}
   },function(){});}catch(e){}
 }
 function remPopup(r){
@@ -1162,6 +1169,22 @@ function remPopup(r){
   el.querySelector('.remx').onclick=close;el.querySelector('.remok').onclick=close;
   box.appendChild(el);setTimeout(close,120000);
   try{if(navigator.vibrate)navigator.vibrate([150,80,150]);}catch(e){}
+}
+/* סיכומים מההנהלה שלא נקראו: מספר על לשונית המשימות + כפתור צף בכל מסך עד שקוראים */
+function dmUnread(){return Object.values(S.dm||{}).filter(m=>m&&!m.read).length;}
+function dmPaint(){
+  const n=S.me&&S.inst?dmUnread():0;
+  document.querySelectorAll('#nav [data-tab="tasks"],#bnav [data-tab="tasks"]').forEach(function(b){let x=b.querySelector('.nbadge');
+    if(n){if(!x){x=document.createElement('span');x.className='nbadge';b.appendChild(x);}x.textContent=n;}else if(x)x.remove();});
+  let p=document.getElementById('dmPill');
+  if(n&&S.tab!=='tasks'){if(!p){p=document.createElement('button');p.id='dmPill';p.onclick=()=>goTab('tasks');document.body.appendChild(p);}
+    p.textContent='📨 קיבלת '+(n>1?n+' סיכומים':'סיכום')+' מההנהלה · לקריאה';}
+  else if(p)p.remove();
+}
+function dmMarkRead(){
+  const ids=Object.keys(S.dm||{}).filter(k=>S.dm[k]&&!S.dm[k].read);if(!ids.length||!FS||!S.me)return;
+  const now=Date.now(),args=[];ids.forEach(k=>{S.dm[k].read=now;S.dm[k]._new=1;args.push(new firebase.firestore.FieldPath('dm',k,'read'),now);});
+  FS.doc(IB()+'tasks/'+S.me.id).update(...args).catch(()=>{});
 }
 /* כל ימי ההולדת של הכיתה במקום אחד, לפי סדר הופעתם מהיום והלאה */
 function viewBirthdays(){
@@ -3066,7 +3089,7 @@ async function dlSend(t){
 /* אצל המורה: סיכומים שקיבל מההנהלה (בלשונית משימות) */
 function dmCard(){
   const L=Object.values(S.dm||{}).sort((a,b)=>b.ts-a.ts);if(!L.length)return '';
-  return '<div class="card"><h3>📨 סיכומים מההנהלה</h3>'+L.map(m=>'<div class="dmi"><div class="row" style="justify-content:space-between"><span class="note">'+esc(m.date?dual(m.date):tsLine(m.ts))+(m.from?' · מאת '+esc(m.from):'')+'</span>'+
+  return '<div class="card"><h3>📨 סיכומים מההנהלה</h3>'+L.map(m=>'<div class="dmi"><div class="row" style="justify-content:space-between"><span class="note">'+(m._new?'<span class="tag" data-s="admin">חדש</span> ':'')+esc(m.date?dual(m.date):tsLine(m.ts))+(m.from?' · מאת '+esc(m.from):'')+'</span>'+
     '<button class="btn sm" data-v="ghost" data-act="dm-del" data-id="'+m.id+'">מחיקה</button></div><div style="white-space:pre-wrap;margin-top:4px">'+esc(m.text)+'</div></div>').join('')+'</div>';
 }
 
@@ -3602,13 +3625,14 @@ function render(){
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
     reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,bdays:viewBirthdays,analytics:viewAnalytics,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,account:viewAccount,import:viewImport,card:viewCard};
   if(S.inst&&!isAdmin()&&['card','account','bdays','rcard'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
+  if(S.tab==='tasks')dmMarkRead();
   const v=map[S.tab]||viewDash;
   let warn='';
   if(S.legacy&&isAdmin())warn+='<div class="warn">צריך לעדכן את חוקי האבטחה ב-Firebase כדי להפעיל את ההפרדה המלאה בין המורים. עד אז המערכת עובדת במצב הקודם.</div>';
   if(window.claude&&!DB)warn+='<div class="warn">אין חיבור למאגר הנתונים המשותף, ולכן שינויים יישמרו רק במכשיר הזה. נסו לרענן את הדף.</div>';
   if(S.me.mustChange)warn+='<div class="warn">הסיסמה שלך היא עדיין ברירת המחדל. '+(isAdmin()?'החליפו אותה בהגדרות ← משתמשים.':'בקשו מהמנהל להחליף אותה.')+'</div>';
   document.getElementById('main').innerHTML=warn+v();
-  paintMobile();syncHistory();decorateDates();
+  paintMobile();syncHistory();decorateDates();dmPaint();
   if(S.inst&&isAdmin())syncMembers();
   if(S.focus){const el=document.getElementById(S.focus);if(el){el.focus();const n=el.value.length;try{el.setSelectionRange(n,n);}catch(e){}}S.focus=null;}
 }
