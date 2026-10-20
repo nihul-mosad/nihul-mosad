@@ -1082,7 +1082,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=39;
+const APP_VER=40;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -3488,6 +3488,8 @@ function acSim(a,b){const A=acWords(a),B=acWords(b);if(!A.size||!B.size)return 0
 /* צמצום מידע מזהה: טלפונים, מיילים, מספרי זהות ומספרים ארוכים, ושמות המשתתפים מוחלפים בכינוי */
 function acMask(text,al){
   let t=String(text||'');
+  t=t.replace(/\[איש קשר:[\s\S]*?END:VCARD\]?/g,'[איש קשר]').replace(/BEGIN:VCARD[\s\S]*?END:VCARD/g,'[איש קשר]');
+  t=t.replace(/https?:\/\/(?:docs|drive|forms)\.google\.com\/\S+|https?:\/\/forms\.gle\/\S+/g,'[קישור למסמך]');
   t=t.replace(/[\w.+-]+@[\w-]+\.[\w.]+/g,'[מייל]');
   t=t.replace(/(?:\+?972[-\s]?|\b0)(?:[2-9]\d?)[-\s]?\d{3}[-\s]?\d{4}\b/g,'[טלפון]');
   t=t.replace(/\b\d{9}\b/g,'[מספר מזהה]').replace(/\b\d{8,}\b/g,'[מספר]');
@@ -3508,7 +3510,7 @@ function acOutPack(cid){return (S.as.packs||[]).find(p=>p.conv===cid&&p.status==
 
 /* ---------- כינויים למשתתפים (נשמרים קבועים לכל שיחה) ---------- */
 async function acAliases(cid,msgs){
-  const c=acConv(cid),al=Object.assign({},c.al||{}),me=c.me||[];let n=Object.values(al).filter(a=>/^\[משתתף \d+\]$/.test(a)).length,ch=false;
+  const c=acConv(cid),al=Object.assign({},c.al||{}),me=(c.me&&c.me.length?c.me:Array.from(new Set(msgs.map(m=>m.n))).filter(n=>/^(את\/ה|אתה|You)$/.test(n)));let n=Object.values(al).filter(a=>/^\[משתתף \d+\]$/.test(a)).length,ch=false;
   me.forEach(x=>{if(al[x]!=='[אני]'){al[x]='[אני]';ch=true;}});
   msgs.forEach(m=>{if(!al[m.n]){n++;al[m.n]='[משתתף '+n+']';ch=true;}});
   if(ch){await asRetry(()=>FS.doc(asBase()+'convs/'+cid).set({al:al},{merge:true}));c.al=al;}
