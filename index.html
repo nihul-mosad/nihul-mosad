@@ -76,6 +76,10 @@ main{flex:1;min-width:0;padding:24px 28px 80px}
 .acin{min-width:0;width:min(520px,100%)}
 .acitem{padding:8px 0;border-bottom:1px solid var(--surface2)}
 .actopic{margin-top:14px}
+.acsel{width:auto;padding:3px 6px;font-size:13px}
+.acks{font-weight:700;color:var(--accent)}
+.acurg{font-size:13px}
+.acurg:has(input:checked){color:var(--absent);font-weight:700}
 .nbadge{display:inline-block;min-width:18px;padding:0 5px;margin-inline-start:6px;border-radius:99px;background:var(--absent);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
 #dmPill{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);z-index:9000;background:var(--accent);color:#fff;border:0;border-radius:99px;padding:11px 20px;font:inherit;font-weight:700;box-shadow:0 8px 24px rgba(20,27,52,.3);cursor:pointer;animation:remIn .35s ease;white-space:nowrap}
 @media print{#dmPill{display:none}}
@@ -1082,7 +1086,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=40;
+const APP_VER=41;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -3659,7 +3663,7 @@ async function acApprove(pid,opt){
     created='I'+asId().slice(0,9);
     const it={kind:d.kind,title:d.title,details:d.details||'',owner:d.owner||'',due:d.due||null,urgent:!!d.urgent,status:d.status||'open',topic:topic,conv:p.conv,sources:p.sources,
       created:now,updated:now,pack:p.pack,log:[{at:now,what:'נוצר מהניתוח ואושר'+(opt.edit?' (עם עריכה)':'')}]};
-    if(opt.task&&AC_TASKY[d.kind]&&d.status!=='done'){
+    if(opt.task&&d.status!=='done'){
       const tk={id:uid(),text:d.title+(d.owner&&d.owner!=='[אני]'?' ('+d.owner+')':''),due:d.due||'',status:'open',by:S.me.user,uid:S.me.id,src:'wa',item:created};
       S.tasks.push(tk);await save(K.tasks,S.tasks);it.taskId=tk.id;it.log.push({at:now,what:'נוספה משימה ביומן המשימות'});
     }
@@ -3684,6 +3688,17 @@ async function acReject(pid){
 /* ---------- מסכים ---------- */
 function acSrcHtml(s,cid){return '<div class="acsrc"><span class="note">'+esc(shortDate(s.t.slice(0,10)))+' '+esc(s.t.slice(11,16))+' · <b>'+esc(s.n)+'</b></span> <button class="link" data-act="as-goto-msg" data-c="'+cid+'" data-d="'+s.t.slice(0,10)+'">להודעה</button><div class="acq">״'+esc(s.q)+'״</div></div>';}
 function acKindTag(k,urgent){return '<span class="tag" data-s="'+(k==='done'?'present':k==='waiting'||k==='question'?'excused':k==='reminder'?'admin':'late')+'">'+esc(AC_KINDS[k]||k)+'</span>'+(urgent?' <span class="tag" data-s="absent">דחוף</span>':'');}
+function acKindSel(attr,k){return '<select class="inp acsel acks" data-k="'+esc(k)+'" '+attr+'>'+Object.keys(AC_KINDS).map(x=>opt(AC_KINDS[x],x,k)).join('')+'</select>';}
+/* שינוי ידני של פריט בזיכרון (קטגוריה, דחיפות, סטטוס) — נרשם בהיסטוריה */
+async function acEditItem(id,field,val){
+  const it=(S.as.items||[]).find(x=>x.id===id);if(!it)return;const now=Date.now(),ch={updated:now};let what='';
+  if(field==='kind'&&AC_KINDS[val]&&val!==it.kind){ch.kind=val;what='קטגוריה: '+(AC_KINDS[it.kind]||it.kind)+' ← '+AC_KINDS[val];if(val==='done')ch.status='done';}
+  else if(field==='urgent'){ch.urgent=!!val;what=val?'סומן כדחוף':'הוסר מהדחופים';}
+  else if(field==='status'&&AC_ST[val]&&val!==it.status){ch.status=val;what='סטטוס: '+(AC_ST[it.status]||'')+' ← '+AC_ST[val];}
+  if(!what)return;ch.log=(it.log||[]).concat([{at:now,what:what+' (ידני)'}]);
+  try{await asRetry(()=>FS.doc(asBase()+'items/'+id).set(ch,{merge:true}));Object.assign(it,ch);toast('עודכן');}catch(e){toast(fbErr(e));}
+  render();
+}
 function acViewAnalyze(){
   const A=S.as,convs=(A.convs||[]).slice().sort((a,b)=>(b.updated||0)-(a.updated||0));
   let h='<div class="card"><h3>מה כבר נותח</h3>'+(convs.length?table(['שיחה','נותחו','ממתינות','חבילה פתוחה',''],convs.map(function(c){
@@ -3730,10 +3745,10 @@ function acViewInbox(){
     P.map(function(p){const d=p.data||{},t=tgt(p.target);
       let head,body='';
       if(p.type==='topic')head='<span class="tag" data-s="admin">'+(p.op==='new'?'נושא חדש':'עדכון נושא')+'</span> <b>'+esc(p.op==='new'?d.title:t.title||'')+'</b>'+(p.merged?' <span class="note">(זוהה כנושא קיים)</span>':'');
-      else if(p.op==='new'){head=acKindTag(d.kind,d.urgent)+' <input class="inp acin" data-acf="title" data-id="'+p.id+'" value="'+esc(d.title)+'">';
+      else if(p.op==='new'){head=acKindSel('data-acf="kind" data-id="'+p.id+'"',d.kind)+' <label class="chk acurg"><input type="checkbox" data-acf="urgent" data-id="'+p.id+'"'+(d.urgent?' checked':'')+'> דחוף</label> <input class="inp acin" data-acf="title" data-id="'+p.id+'" value="'+esc(d.title)+'">';
         body=(d.details?'<div>'+esc(d.details)+'</div>':'')+'<div class="row" style="gap:8px;margin-top:4px">'+(d.owner?'<span class="note">אחראי: '+esc(d.owner)+'</span>':'')+
           '<label class="note">מועד <input type="date" class="inp" data-acf="due" data-id="'+p.id+'" value="'+esc(d.due||'')+'"></label>'+(topicName(d.topic)?'<span class="note">נושא: '+esc(topicName(d.topic))+'</span>':'')+
-          (AC_TASKY[d.kind]&&d.status!=='done'?'<label class="chk"><input type="checkbox" data-acf="task" data-id="'+p.id+'" checked> להוסיף גם ליומן המשימות</label>':'')+'</div>';}
+          (d.status!=='done'?'<label class="chk"><input type="checkbox" data-acf="task" data-id="'+p.id+'"'+(AC_TASKY[d.kind]?' checked':'')+'> להוסיף גם ליומן המשימות</label>':'')+'</div>';}
       else{head='<span class="tag" data-s="admin">עדכון</span> <b>'+esc(t.title||'(פריט)')+'</b>'+(p.merged?' <span class="note">(אותו עניין עלה שוב — מעדכן את הקיים במקום כפילות)</span>':'');
         body='<div>'+(d.status&&d.status!==t.status?'סטטוס: '+esc(AC_ST[t.status]||'')+' ← <b>'+esc(AC_ST[d.status]||d.status)+'</b> ':'')+(d.due&&d.due!==t.due?' · מועד: '+esc(d.due):'')+(d.note?'<div class="note">'+esc(d.note)+'</div>':'')+'</div>'+
           (d.status==='done'&&t.taskId?'<label class="chk"><input type="checkbox" data-acf="closeTask" data-id="'+p.id+'"> לסמן גם את המשימה ביומן כבוצעה</label>':'');}
@@ -3742,13 +3757,16 @@ function acViewInbox(){
 }
 function acViewMemory(){
   const A=S.as,T=(A.topics||[]).slice().sort((a,b)=>(b.updated||0)-(a.updated||0)),I=(A.items||[]);
-  const f=A.memF||'open',its=I.filter(x=>f==='all'||(f==='open'?x.status!=='done':x.status==='done'));
+  const f=A.memF||'open',its=I.filter(x=>f==='all'||(f==='open'?x.status!=='done':f==='urgent'?x.urgent&&x.status!=='done':x.status==='done'));
   const grp={};its.forEach(x=>{(grp[x.topic||'']=grp[x.topic||'']||[]).push(x);});
-  const row=x=>'<div class="acitem"><div>'+acKindTag(x.kind,x.urgent)+' <b>'+esc(x.title)+'</b> <span class="note">'+esc(AC_ST[x.status]||'')+(x.due?' · עד '+esc(shortDate(x.due)):'')+(x.owner?' · '+esc(x.owner):'')+(x.taskId?' · ביומן המשימות':'')+'</span></div>'+
+  const row=x=>'<div class="acitem"><div class="row" style="gap:6px">'+acKindSel('data-acm="kind" data-id="'+x.id+'"',x.kind)+
+    '<label class="chk acurg"><input type="checkbox" data-acm="urgent" data-id="'+x.id+'"'+(x.urgent?' checked':'')+'> דחוף</label>'+
+    '<select class="inp acsel" data-acm="status" data-id="'+x.id+'">'+Object.keys(AC_ST).map(k=>opt(AC_ST[k],k,x.status)).join('')+'</select>'+
+    ' <b>'+esc(x.title)+'</b> <span class="note">'+(x.due?' · עד '+esc(shortDate(x.due)):'')+(x.owner?' · '+esc(x.owner):'')+(x.taskId?' · ביומן המשימות':'')+'</span></div>'+
     (x.details?'<div class="note" style="white-space:pre-wrap">'+esc(x.details)+'</div>':'')+'<details><summary class="note">מקורות ('+(x.sources||[]).length+') והיסטוריה</summary>'+(x.sources||[]).map(s=>acSrcHtml(s,x.conv)).join('')+
     (x.log||[]).map(l=>'<div class="note">'+esc(tsLine(l.at))+' · '+esc(l.what)+'</div>').join('')+'</details></div>';
   return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">הזיכרון</h3><div class="row" style="gap:6px">'+
-    [['open','פתוחים'],['done','טופלו'],['all','הכול']].map(x=>'<button class="btn sm" data-act="as-mem-f" data-f="'+x[0]+'"'+(f===x[0]?' data-v="primary"':'')+'>'+x[1]+'</button>').join('')+'</div></div>'+
+    [['open','פתוחים'],['urgent','🔥 דחופים'],['done','טופלו'],['all','הכול']].map(x=>'<button class="btn sm" data-act="as-mem-f" data-f="'+x[0]+'"'+(f===x[0]?' data-v="primary"':'')+'>'+x[1]+'</button>').join('')+'</div></div>'+
     (its.length?T.filter(t=>grp[t.id]).map(t=>'<div class="actopic"><h3 style="font-size:16px">'+esc(t.title)+(t.status==='closed'?' <span class="tag" data-s="present">נסגר</span>':'')+'</h3>'+(t.summary?'<p class="note">'+esc(t.summary)+'</p>':'')+grp[t.id].map(row).join('')+'</div>').join('')+
       (grp['']?'<div class="actopic"><h3 style="font-size:16px">ללא נושא</h3>'+grp[''].map(row).join('')+'</div>':''):'<div class="empty">'+(I.length?'אין פריטים בסינון הזה.':'הזיכרון עדיין ריק. הוא מתמלא מהצעות שאישרת.')+'</div>')+'</div>';
 }
@@ -3771,10 +3789,16 @@ async function acAction(a,el,id){
     if(A.acRep.ok)logAct('קליטת ניתוח שיחה',A.acRep.props+' הצעות');return render();}
   if(a==='as-prop-ok'||a==='as-prop-okall'){
     const ids=a==='as-prop-ok'?[id]:(A.props||[]).filter(p=>p.state==='pending').map(p=>p.id);
+    // קודם קוראים את מה שתוקן על המסך (כותרת, מועד, קטגוריה, דחיפות), ורק אחר כך מציגים "שומר…"
+    const plan=ids.map(function(pid){const g=f=>document.querySelector('#main [data-acf="'+f+'"][data-id="'+pid+'"]');const p=(A.props||[]).find(x=>x.id===pid);if(!p||p.state!=='pending')return null;
+      const edit={},ti=g('title'),du=g('due'),kd=g('kind'),ug=g('urgent');
+      if(ti&&ti.value.trim()&&ti.value.trim()!==p.data.title)edit.title=ti.value.trim();
+      if(kd&&kd.value!==p.data.kind){edit.kind=kd.value;if(kd.value==='done')edit.status='done';else if(kd.value==='waiting')edit.status='waiting';else if(p.data.status!=='open')edit.status='open';}
+      if(ug&&ug.checked!==!!p.data.urgent)edit.urgent=ug.checked;
+      if(du&&(du.value||null)!==(p.data.due||null))edit.due=du.value||null;
+      return {pid:pid,opt:{edit:Object.keys(edit).length?edit:null,task:g('task')?g('task').checked:false,closeTask:g('closeTask')?g('closeTask').checked:false}};}).filter(Boolean);
     A.busy='שומר…';render();let n=0;
-    for(const pid of ids){const g=f=>document.querySelector('#main [data-acf="'+f+'"][data-id="'+pid+'"]');const p=(A.props||[]).find(x=>x.id===pid);if(!p||p.state!=='pending')continue;
-      const edit={};const ti=g('title'),du=g('due');if(ti&&ti.value.trim()&&ti.value.trim()!==p.data.title)edit.title=ti.value.trim();if(du&&(du.value||null)!==(p.data.due||null))edit.due=du.value||null;
-      try{await acApprove(pid,{edit:Object.keys(edit).length?edit:null,task:g('task')?g('task').checked:false,closeTask:g('closeTask')?g('closeTask').checked:false});n++;}catch(e){toast(fbErr(e));break;}}
+    for(const x of plan){try{await acApprove(x.pid,x.opt);n++;}catch(e){toast(fbErr(e));break;}}
     A.busy='';logAct('אישור ממצאי ניתוח',n+' הצעות');toast('אושרו '+n);return render();}
   if(a==='as-prop-no'){await acReject(id);return render();}
   if(a==='as-goto-msg'){A.tabA='chats';A.cur=el.dataset.c;A.day=el.dataset.d;A.q='';A.page=0;render();if(!(A.msgs&&A.msgs[A.cur]))await asLoadConv(A.cur);return render();}
@@ -4723,6 +4747,7 @@ document.getElementById('main').addEventListener('change',function(e){
   if(el.id==='ev-time'&&S.evc){evCapture();const pn=perOfTime(S.evc.time);if(pn!==''){S.evc.period=pn;const sp=document.getElementById('ev-per');if(sp)sp.value=pn;}return;}
   if(el.id==='ev-date'||el.id==='ev-per'){evCapture();return;}
   if(el.id==='ex-cls'&&S.exEdit){exCapture();return render();}
+  if(el.dataset&&el.dataset.acm&&S.as){acEditItem(el.dataset.id,el.dataset.acm,el.type==='checkbox'?el.checked:el.value);return;}
   if(el.id==='asFiles'&&el.files&&el.files.length){const fs=Array.from(el.files);el.value='';return asFilesChosen(fs);}
   if(el.dataset&&el.dataset.asf!==undefined&&S.as&&S.as.pending){document.querySelectorAll('#main [data-asn]').forEach(i=>S.as.pending[+i.dataset.asn].newName=i.value);S.as.pending[+el.dataset.asf].target=el.value;return render();}
   if(el.dataset&&el.dataset.asday&&S.as){S.as.day=el.value;S.as.page=0;return render();}
