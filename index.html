@@ -1082,7 +1082,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=38;
+const APP_VER=39;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -3524,7 +3524,7 @@ const AC_INSTR=`אתה עוזר ניהולי של מנהל תלמוד תורה. 
 - אם הודעה חדשה מעדכנת עניין קיים מהזיכרון (למשל הושלם, נדחה, השתנה מועד) — החזר op:"update" עם המזהה הקיים, ולא פריט חדש.
 כללים מחייבים:
 1. לכל ממצא חובה לצרף sources: הפניה (ref) להודעה מהרשימה, וציטוט קצר מדויק (quote) שמופיע מילה במילה בהודעה. אין ממצא בלי מקור.
-2. אל תמציא. אל תקבע שמשהו הושלם בלי הודעה שמראה זאת. הקשר והזיכרון רק עוזרים להבין — ממצאים חדשים רק מהודעות החדשות (ref שמתחיל ב-m).
+2. אל תמציא. אל תקבע שמשהו הושלם בלי הודעה שמראה זאת. שאלה שכבר נענתה בהמשך ההודעות אינה "question". ברכות ושיחת נימוס אינן ממצאים. הקשר והזיכרון רק עוזרים להבין — ממצאים חדשים רק מהודעות החדשות (ref שמתחיל ב-m).
 3. שמות אנשים מופיעים ככינויים בסוגריים מרובעים ([אני] הוא המנהל). השתמש בכינויים כפי שהם בשדות owner, title ו-details.
 4. אל תכלול פרטים אישיים שאינם נחוצים. כתוב בעברית, קצר וברור. title עד 12 מילים.
 5. due בפורמט YYYY-MM-DD רק אם נאמר מועד מפורש; אחרת null. urgent:true רק אם יש דחיפות מפורשת.
@@ -3590,7 +3590,7 @@ async function acImportResult(text,route){
   // מקור תקין: הפניה מהחבילה + ציטוט שמופיע בהודעה (אחרי אותה הסתרת פרטים)
   const srcs=(arr,onlyNew)=>{const out=[];(Array.isArray(arr)?arr:[]).forEach(s=>{const ref=String(s&&s.ref||''),k=pk.refs[ref],m=k&&byK[k];
     if(!m||(onlyNew&&ref.charAt(0)!=='m')){R.invalidSrc++;return;}
-    const body=acNorm(acMask(m.b,al)),q=String(s.quote||'');
+    const body=acNorm(acMask(m.b,al)),q=String(s.quote||'').replace(/⏎/g,' ');
     const parts=q.split(/…|\.\.\./).map(acNorm).filter(x=>x.length>=3);
     if(!parts.length||!parts.every(p=>body.indexOf(p)>-1)){R.invalidSrc++;return;}
     out.push({k:m.k,t:m.t,s:m.s||'',n:m.n,q:acUnalias(q,al).slice(0,300),ref:ref});});return out;};
@@ -3629,12 +3629,12 @@ async function acImportResult(text,route){
   const b=FS.batch();
   props.forEach(p=>{p.id='Q'+asId().slice(0,9);Object.assign(p,{pack:pid,conv:cid,state:'pending',created:now,route:route||pk.route||'paste'});b.set(FS.doc(asBase()+'props/'+p.id),p);});
   pendingSame.filter(p=>p._dirty).forEach(p=>{delete p._dirty;b.set(FS.doc(asBase()+'props/'+p.id),{sources:p.sources},{merge:true});});
-  b.set(FS.doc(asBase()+'packs/'+pid),{status:'returned',returned:now,summary:String(j.summary||'').slice(0,1500),props:props.length,dropped:R.dropped.length,merged:R.merged,invalidSrc:R.invalidSrc},{merge:true});
+  b.set(FS.doc(asBase()+'packs/'+pid),{status:'returned',returned:now,summary:acUnalias(String(j.summary||''),al).slice(0,1500),props:props.length,dropped:R.dropped.length,merged:R.merged,invalidSrc:R.invalidSrc},{merge:true});
   await asRetry(()=>b.commit());
   const nk=new Set(Object.keys(pk.refs).filter(r=>r.charAt(0)==='m').map(r=>pk.refs[r]));
   all.forEach(m=>{if(nk.has(m.k))m.a=pid;});
   await asRewriteConv(cid,all);
-  Object.assign(pk,{status:'returned',returned:now,summary:String(j.summary||'').slice(0,1500)});
+  Object.assign(pk,{status:'returned',returned:now,summary:acUnalias(String(j.summary||''),al).slice(0,1500)});
   A.props=(A.props||[]).concat(props);
   await asLoadMeta();
   R.ok=true;R.props=props.length;R.pack=pid;R.analyzed=nk.size;return R;
