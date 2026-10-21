@@ -1066,7 +1066,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=36;
+const APP_VER=42;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -1296,7 +1296,7 @@ function viewDash(){
      (adm?'<button class="btn" data-act="rem-new">🔔 תזכורת למורה</button>':'')+'</div></div>'+
    (S.remc&&adm?remComposer():'')+
    '<div class="grid g4" style="margin-bottom:14px">'+
-     stat(pctToday===null?'—':pctToday+'%','נוכחות היום'+(marked?' ('+(c.present+c.late)+'/'+marked+')':''),pctToday!==null&&pctToday<85?'var(--late)':'var(--present)')+
+     stat(pctToday===null?'—':pctToday+'%','נוכחות היום'+(marked?': '+(c.present+c.late)+' נוכחים מתוך '+marked+' שסומנו':'')+(c.none&&list.length?' · '+c.none+' מתוך '+list.length+' טרם סומנו':''),pctToday!==null&&pctToday<85?'var(--late)':'var(--present)')+
      stat(c.absent,'חיסורים היום'+(c.late?' · '+c.late+' איחורים':''),c.absent?'var(--absent)':'')+
      stat('<span style="color:var(--present)">'+posW.length+'</span> / <span style="color:var(--late)">'+negW+'</span>','אירועים השבוע: לשבח / לשיפור','')+
      stat(openTasks.length,'המשימות הפתוחות שלי'+(overdue.length?' · '+overdue.length+' באיחור':''),overdue.length?'var(--absent)':'')+'</div>'+
