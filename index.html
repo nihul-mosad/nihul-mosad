@@ -60,6 +60,26 @@ main{flex:1;min-width:0;padding:24px 28px 80px}
 .rchead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid var(--line);padding-bottom:10px}
 .rcgrp{margin:12px 0 4px}
 .dmi{border-bottom:1px solid var(--surface2);padding:10px 0}
+.asfile{border-bottom:1px solid var(--surface2);padding:10px 0}
+.asmsgs{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:4px 12px}
+.asm{border-bottom:1px solid var(--surface2);padding:8px 0}
+.asb{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:2px}
+.asx{background:none;border:0;color:var(--muted);cursor:pointer;float:left;font-size:12px;opacity:.5}
+.asx:hover{opacity:1;color:var(--absent)}
+.asm[data-a="1"]{border-right:3px solid var(--present);padding-right:8px}
+.asm[data-a="0"]{border-right:3px solid var(--late);padding-right:8px}
+.acstep{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px}
+.acprop{border-bottom:1px solid var(--surface2);padding:12px 0}
+.acprop .row{flex-wrap:wrap}
+.acsrc{margin-top:6px;padding:6px 10px;border-right:3px solid var(--line);background:var(--surface2);border-radius:6px}
+.acq{font-size:13.5px;overflow-wrap:anywhere}
+.acin{min-width:0;width:min(520px,100%)}
+.acitem{padding:8px 0;border-bottom:1px solid var(--surface2)}
+.actopic{margin-top:14px}
+.acsel{width:auto;padding:3px 6px;font-size:13px}
+.acks{font-weight:700;color:var(--accent)}
+.acurg{font-size:13px}
+.acurg:has(input:checked){color:var(--absent);font-weight:700}
 .nbadge{display:inline-block;min-width:18px;padding:0 5px;margin-inline-start:6px;border-radius:99px;background:var(--absent);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
 #dmPill{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);z-index:9000;background:var(--accent);color:#fff;border:0;border-radius:99px;padding:11px 20px;font:inherit;font-weight:700;box-shadow:0 8px 24px rgba(20,27,52,.3);cursor:pointer;animation:remIn .35s ease;white-space:nowrap}
 @media print{#dmPill{display:none}}
@@ -568,7 +588,7 @@ function logAct(act,info){
 function enterSystem(user){
   S.inst=null;S.owner=true;S.instList=null;DB=null;
   S.config={name:'מסוף המערכת',classes:[],logo:'',users:[],domains:SEED_DOMAINS};
-  S.students=[];S.staff=[];S.att={};S.latt={};S.reviews=[];S.tasks=[];S.timetable=[];S.events=[];S.evRoster=[];S.meetings=[];S.mtEdit=null;S.exams=[];S.exEdit=null;S.rc=null;S.daylog={};S.dm={};S.dlDate='';LIDX=null;
+  S.students=[];S.staff=[];S.att={};S.latt={};S.reviews=[];S.tasks=[];S.timetable=[];S.events=[];S.evRoster=[];S.meetings=[];S.mtEdit=null;S.exams=[];S.exEdit=null;S.rc=null;S.daylog={};S.dm={};S.dlDate='';S.as=null;LIDX=null;
   S.me={id:user.uid,user:'בעל המערכת',role:'admin',cls:'',teacher:'',mustChange:false};
   S.tab='console';S.console=null;
   try{localStorage.setItem('tt:inst','system');localStorage.setItem('tt:instName','מסוף המערכת');}catch(e){}
@@ -962,7 +982,7 @@ const S={tab:'dash',me:null,config:{name:'המוסד',classes:[],logo:'',users:[
   msgGroup:'all',msgText:'',msgTo:'both',importPreview:null,focus:null,
   repFrom:daysAgo(30),repTo:iso(new Date()),repCls:''};
 
-const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['mark','נוכחות'],['events','אירועים'],['grades','ציונים'],['schedule','מערכת שעות'],['tasks','משימות'],['meetings','ישיבות צוות'],['daylog','יומן יומי'],['reports','דוחות'],['analytics','ניתוחים'],['staff','צוות'],['settings','הגדרות']];
+const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['mark','נוכחות'],['events','אירועים'],['grades','ציונים'],['schedule','מערכת שעות'],['tasks','משימות'],['meetings','ישיבות צוות'],['daylog','יומן יומי'],['assist','עוזר אישי'],['reports','דוחות'],['analytics','ניתוחים'],['staff','צוות'],['settings','הגדרות']];
 const isAdmin=()=>S.me&&S.me.role==='admin';
 function homeroomOf(t){const h=S.config.homeroom||{};return S.config.classes.filter(c=>t&&h[c]===t);}
 const myClasses=()=>isAdmin()?S.config.classes:Array.from(new Set((S.me.cls?[S.me.cls]:[]).concat(homeroomOf(S.me.teacher))));
@@ -1066,7 +1086,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=43;
+const APP_VER=44;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -3143,6 +3163,698 @@ function dmCard(){
     '<button class="btn sm" data-v="ghost" data-act="dm-del" data-id="'+m.id+'">מחיקה</button></div><div style="white-space:pre-wrap;margin-top:4px">'+esc(m.text)+'</div></div>').join('')+'</div>';
 }
 
+/* ================= עוזר אישי: שיחות וואטסאפ (אבן דרך B) =================
+   ייבוא ידני של קובצי ייצוא (TXT / MD) בלבד. אין AI, אין מייל, אין חיבור לוואטסאפ.
+   אחסון: insts/{מוסד}/assist/{uid}/... — לפי חוקי האבטחה רק המשתמש עצמו (ורק אם הוא מנהל) קורא וכותב.
+     convs/{convId}    שיחה: שם תצוגה, שמות מקור שנקלטו, מונים
+     chunks/{chunkId}  מקטע הודעות של שיחה: מחרוזת JSON אחת (עד ~900KB), כדי לא לעבור את מגבלת 1MB
+                       ואת מגבלת מספר השדות/האינדקסים של Firestore
+     imports/{id}      דוח לכל ייבוא: נוספו, כפולות, כפולות אפשריות, שגיאות */
+const AS_CHUNK_BYTES=900000;
+const AS_BIDI=/[‎‏‪-‮⁦-⁩﻿]/g;
+const AS_MONTHS={'בינואר':1,'בפברואר':2,'במרץ':3,'במרס':3,'באפריל':4,'במאי':5,'ביוני':6,'ביולי':7,'באוגוסט':8,'בספטמבר':9,'באוקטובר':10,'בנובמבר':11,'בדצמבר':12};
+function asBase(){return IB()+'assist/'+S.me.id+'/';}
+function asId(){const a=new Uint8Array(9);crypto.getRandomValues(a);return Array.from(a,b=>b.toString(36).padStart(2,'0')).join('').slice(0,14);}
+const asBytes=s=>new TextEncoder().encode(s).length;
+async function asRetry(fn,tries){let e;for(let i=0;i<(tries||3);i++){try{return await fn();}catch(x){e=x;if(/permission|invalid/.test((x&&x.code)||''))break;await new Promise(r=>setTimeout(r,600*Math.pow(2,i)));}}throw e;}
+async function asHash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b).slice(0,10),x=>x.toString(16).padStart(2,'0')).join('');}
+
+/* ---------- ניתוח קבצים ---------- */
+function asNormSender(s){return String(s||'').replace(AS_BIDI,'').replace(/\s+/g,' ').trim().normalize('NFC');}
+function asNormBody(b){
+  let t=String(b||'').replace(/\r/g,'').replace(AS_BIDI,'').normalize('NFC');
+  t=t.replace(/\\([*_`~\[\]#>|-])/g,'$1');                          // סימני markdown מוברחים בייצוא MD
+  t=t.replace(/\s*<(?:This message was edited|ההודעה נערכה|הודעה זו נערכה)>\s*$/i,'');
+  t=t.split('\n').map(x=>x.trim()).join('\n').replace(/\n+$/,'').replace(/^\n+/,'');
+  const one=t.replace(/\s+/g,' ').trim();
+  if(one.length<60&&/^<?[^<>]*(omitted|הושמט|הושמטה|הושמטו)[^<>]*>?$/i.test(one))return '<מדיה>';
+  return one;
+}
+function asTxtParse(text){
+  const re=/^\[?(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp]\.?\s?[Mm]\.?|לפנה["״׳']?צ|אחה["״׳']?צ)?\]?\s*(?:[-–]\s*)?(.*)$/;
+  const lines=text.replace(/\r/g,'').split('\n'),hits=[];let dmy=0,mdy=0;
+  lines.forEach((ln,i)=>{const m=ln.replace(AS_BIDI,'').match(re);if(m){hits.push([i,m]);if(+m[1]>12)dmy++;if(+m[2]>12)mdy++;}});
+  const order=mdy>dmy?'mdy':'dmy',out=[],bad=[];let cur=null,sys=0;
+  const at={};hits.forEach(h=>at[h[0]]=h[1]);
+  lines.forEach(function(ln,i){
+    const m=at[i];
+    if(!m){if(cur)cur.b+='\n'+ln;else if(ln.trim())bad.push(i+1);return;}
+    if(cur){out.push(cur);cur=null;}
+    let d=+m[1],mo=+m[2],y=+m[3],h=+m[4];if(order==='mdy'){const x=d;d=mo;mo=x;}if(y<100)y+=2000;
+    const ap=(m[7]||'').toLowerCase();if(ap){const pm=/^p|אחה/.test(ap);h=h%12+(pm?12:0);}
+    if(mo<1||mo>12||d<1||d>31||h>23){bad.push(i+1);return;}
+    const p=m[8].match(/^(.{1,120}?):\s([\s\S]*)$/)||m[8].match(/^(.{1,120}?):()$/);
+    if(!p){sys++;return;}                                                 // הודעות מערכת (הצטרפות, הצפנה וכו')
+    cur={day:y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0'),hm:String(h).padStart(2,'0')+':'+m[5],sec:m[6]||'',n:p[1],b:p[2]};
+  });
+  if(cur)out.push(cur);
+  return {msgs:out,bad:bad,sys:sys,order:order,prec:hits.some(h=>h[1][6])?'sec':'min'};
+}
+function asMdParse(text){
+  const out=[],bad=[];let day='',cur=null,sys=0,title='';
+  text.replace(/\r/g,'').split('\n').forEach(function(raw,i){
+    const ln=raw.replace(AS_BIDI,'');
+    let m=ln.match(/^#\s+(.+)$/);if(m&&!/^##/.test(ln)){const t=m[1].match(/WhatsApp:?\s*(.+)$/);title=(t?t[1]:m[1]).trim();return;}
+    m=ln.match(/^##\s+.*?(\d{1,2})\s+(ב\S+)\s+(\d{4})/);
+    if(m){if(cur){out.push(cur);cur=null;}const mo=AS_MONTHS[m[2]];day=mo?m[3]+'-'+String(mo).padStart(2,'0')+'-'+String(+m[1]).padStart(2,'0'):'';if(!mo)bad.push(i+1);return;}
+    m=ln.match(/^\s*\[(\d{1,2}):(\d{2})(?::(\d{2}))?\]\s+\*\*(.+?):\*\*\s?(.*)$/);
+    if(m&&day){if(cur)out.push(cur);cur={day:day,hm:String(+m[1]).padStart(2,'0')+':'+m[2],sec:m[3]||'',n:m[4],b:m[5]};return;}
+    if(/^\s*\[(\d{1,2}):(\d{2})/.test(ln)&&day){if(cur){out.push(cur);cur=null;}sys++;return;}
+    if(cur)cur.b+='\n'+raw;else if(ln.trim()&&!/^---+$/.test(ln.trim()))bad.push(i+1);
+  });
+  if(cur)out.push(cur);
+  return {msgs:out,bad:bad,sys:sys,order:'',prec:out.some(x=>x.sec)?'sec':'min',title:title};
+}
+function asSourceName(fname,title){
+  if(title)return title;
+  return String(fname||'').replace(/\.(txt|md)$/i,'').replace(/^WhatsApp Chat (with|-)\s*/i,'').replace(/^צ['׳]אט (WhatsApp )?עם\s*/,'').replace(/_/g,' ').trim()||'שיחה ללא שם';
+}
+async function asParseFile(file){
+  const raw=await file.text(),md=/\.md$/i.test(file.name)||/^\s*#\s/.test(raw);
+  const r=md?asMdParse(raw):asTxtParse(raw);
+  r.fmt=md?'md':'txt';r.file=file.name;r.source=asSourceName(file.name,r.title);
+  r.msgs=r.msgs.map(x=>Object.assign(x,{n:asNormSender(x.n),b:String(x.b).replace(/\n+$/,'')})).filter(x=>x.n&&asNormBody(x.b));
+  r.msgs.forEach(x=>x.t=x.day+'T'+x.hm);
+  const ts=r.msgs.map(x=>x.t).sort();r.first=ts[0]||'';r.last=ts[ts.length-1]||'';
+  return r;
+}
+/* מפתח יציב להודעה: שיחה + דקה מדויקת + דובר + תוכן מנורמל + מספר מופע.
+   "מספר מופע" מבדיל בין הודעות זהות לגיטימיות באותה דקה, ונשמר זהה בייצוא חוזר של אותה שיחה (TXT או MD) */
+async function asKeys(conv,msgs){
+  const occ={};
+  for(const x of msgs){const base=x.t+'|'+asNormSender(x.n)+'|'+asNormBody(x.b);x.o=occ[base]=(occ[base]===undefined?0:occ[base]+1);x.k=await asHash(conv+'|'+base+'|'+x.o);x.sb=asNormSender(x.n)+'|'+asNormBody(x.b);}
+  return msgs;
+}
+const asMin=t=>Math.round(Date.parse(t+':00Z')/60000);
+
+/* ---------- טעינה ושמירה ---------- */
+async function asLoadMeta(){
+  S.as=S.as||{};S.as.err='';
+  try{
+    const c=await FS.collection(asBase()+'convs').get(),im=await FS.collection(asBase()+'imports').get();
+    S.as.convs=c.docs.map(d=>Object.assign({id:d.id},d.data()));
+    S.as.imports=im.docs.map(d=>Object.assign({id:d.id},d.data())).sort((a,b)=>(b.at||0)-(a.at||0));
+    S.as.loaded=true;
+  }catch(e){S.as.err=/permission/.test((e&&e.code)||'')?'אין הרשאה. צריך לעדכן את חוקי האבטחה ב-Firebase (החלק של assist).':fbErr(e);S.as.convs=S.as.convs||[];S.as.imports=S.as.imports||[];}
+}
+async function asLoadConv(cid){
+  S.as.msgs=S.as.msgs||{};S.as.chunks=S.as.chunks||{};
+  const q=await asRetry(()=>FS.collection(asBase()+'chunks').where('c','==',cid).get());
+  const ch=[],all=[];
+  q.docs.forEach(function(d){const v=d.data()||{};let arr=[];try{arr=JSON.parse(v.d||'[]');}catch(e){}ch.push({id:d.id,seq:v.q||0,arr:arr});arr.forEach(m=>all.push(m));});
+  ch.sort((a,b)=>a.seq-b.seq);
+  S.as.chunks[cid]=ch;S.as.msgs[cid]=all.sort((a,b)=>(a.t+(a.s||'')).localeCompare(b.t+(b.s||''))||a.o-b.o);
+  return all;
+}
+/* כתיבת מקטעים: ממלאים את המקטע האחרון עד הגבול ופותחים חדשים לפי הצורך. נכתב ב-batch (אטומי) כשאפשר */
+async function asWriteConv(cid,convPatch,newMsgs,extraWrites){
+  const ch=S.as.chunks[cid]||[],dirty={};
+  let last=ch[ch.length-1];
+  if(last&&last.bytes===undefined)last.bytes=asBytes(JSON.stringify(last.arr));
+  for(const m of newMsgs){
+    const mb=asBytes(JSON.stringify(m))+1;
+    if(!last||last.bytes+mb>AS_CHUNK_BYTES){last={id:cid+'_'+asId(),seq:ch.length?ch[ch.length-1].seq+1:0,arr:[],bytes:2};ch.push(last);}
+    last.arr.push(m);last.bytes+=mb;dirty[last.id]=last;
+  }
+  S.as.chunks[cid]=ch;
+  const ops=Object.values(dirty).map(c=>({p:asBase()+'chunks/'+c.id,v:{c:cid,q:c.seq,n:c.arr.length,d:JSON.stringify(c.arr),u:Date.now()}}));
+  ops.push({p:asBase()+'convs/'+cid,v:convPatch,merge:true});
+  (extraWrites||[]).forEach(w=>ops.push(w));
+  // batch עד ~8MB לבקשה
+  let batch=FS.batch(),bytes=0,n=0;const commits=[];
+  for(const o of ops){const b=asBytes(JSON.stringify(o.v));if(n&&(bytes+b>8e6||n>=450)){commits.push(batch);batch=FS.batch();bytes=0;n=0;}
+    if(o.del)batch.delete(FS.doc(o.p));else batch.set(FS.doc(o.p),o.v,o.merge?{merge:true}:undefined);bytes+=b;n++;}
+  commits.push(batch);
+  for(const b of commits)await asRetry(()=>b.commit());
+}
+function asConvStats(cid){const a=S.as.msgs[cid]||[];return {count:a.length,first:a.length?a[0].t:'',last:a.length?a[a.length-1].t:''};}
+
+/* ---------- ייבוא ---------- */
+async function asImport(p,cid,newName){
+  const now=Date.now(),isNew=!cid;
+  if(isNew)cid=asId();
+  const existing=isNew?[]:await asLoadConv(cid);
+  S.as.msgs=S.as.msgs||{};S.as.chunks=S.as.chunks||{};S.as.convs=S.as.convs||[];S.as.imports=S.as.imports||[];
+  if(isNew){S.as.msgs[cid]=[];S.as.chunks[cid]=[];}
+  await asKeys(cid,p.msgs);
+  const have={},bySB={};existing.forEach(m=>{have[m.k]=1;(bySB[m.n+'|'+m.nb]=bySB[m.n+'|'+m.nb]||[]).push(asMin(m.t));});
+  const iid=asId(),add=[],dup=[],maybe=[],seen={},shifts={};let longN=0;
+  const exact={};existing.forEach(m=>exact[m.n+'|'+m.nb+'|'+asMin(m.t)]=1);
+  p.msgs.forEach(function(x){
+    if(have[x.k]||seen[x.k]){dup.push(x);return;}seen[x.k]=1;
+    const nb=asNormBody(x.b),mx=asMin(x.t);let hit=0;
+    (bySB[x.n+'|'+nb]||[]).forEach(t=>{const d=mx-t,ad=Math.abs(d);if(ad>0&&ad<=180&&[0,1,59].indexOf(ad%60)>-1){hit=d;}});
+    if(nb.length>=6&&nb!=='<מדיה>'){longN++;if(hit){shifts[Math.round(hit/60)*60]=(shifts[Math.round(hit/60)*60]||0)+1;maybe.push(x);return;}}   // כנראה אותה הודעה עם הפרש שעון/אזור זמן
+    add.push(x);
+  });
+  // אם רוב ההודעות בקובץ מוזזות באותו הפרש (למשל שעה), גם הודעות קצרות שתואמות להפרש הזה מסומנות כאפשריות
+  const dom=Object.keys(shifts).sort((a,b)=>shifts[b]-shifts[a])[0];
+  if(dom&&shifts[dom]>=3&&shifts[dom]>=longN*0.5){
+    for(let i=add.length-1;i>=0;i--){const x=add[i],key=x.n+'|'+asNormBody(x.b)+'|';
+      if([0,1,-1].some(e=>exact[key+(asMin(x.t)-(+dom)+e)])){maybe.push(x);add.splice(i,1);}}
+  }
+  const rec=x=>({k:x.k,t:x.t,s:x.sec||'',n:x.n,b:x.b,nb:asNormBody(x.b),o:x.o,i:iid,f:p.fmt});
+  const addRecs=add.map(rec),all=existing.concat(addRecs).sort((a,b)=>(a.t+(a.s||'')).localeCompare(b.t+(b.s||'')));
+  const conv=isNew?{name:(newName||p.source).trim(),aliases:[p.source],created:now}:{aliases:Array.from(new Set(((S.as.convs.find(c=>c.id===cid)||{}).aliases||[]).concat([p.source])))};
+  Object.assign(conv,{updated:now,count:all.length,analyzed:all.filter(m=>m.a).length,first:all.length?all[0].t:'',last:all.length?all[all.length-1].t:'',lastImport:now});
+  const imp={conv:cid,file:p.file,fmt:p.fmt,source:p.source,at:now,total:p.msgs.length,added:add.length,dup:dup.length,maybe:maybe.length,sys:p.sys,bad:p.bad.length,badLines:p.bad.slice(0,30),first:p.first,last:p.last,prec:p.prec,order:p.order||'',
+    maybeList:maybe.slice(0,200).map(x=>({t:x.t,s:x.sec||'',n:x.n,b:x.b.slice(0,2000),o:x.o,k:x.k}))};
+  await asWriteConv(cid,conv,addRecs,[{p:asBase()+'imports/'+iid,v:imp}]);
+  S.as.msgs[cid]=all;
+  await asLoadMeta();
+  return Object.assign({id:iid},imp);
+}
+/* הוספה ידנית של "כפולות אפשריות" שאושרו */
+async function asAcceptMaybe(iid){
+  const im=S.as.imports.find(x=>x.id===iid);if(!im||!im.maybeList||!im.maybeList.length)return;
+  const cid=im.conv,ex=await asLoadConv(cid),have={};ex.forEach(m=>have[m.k]=1);
+  const add=im.maybeList.filter(x=>!have[x.k]).map(x=>({k:x.k,t:x.t,s:x.s||'',n:x.n,b:x.b,nb:asNormBody(x.b),o:x.o,i:iid,f:im.fmt}));
+  const all=ex.concat(add).sort((a,b)=>(a.t+(a.s||'')).localeCompare(b.t+(b.s||'')));
+  await asWriteConv(cid,{updated:Date.now(),count:all.length,first:all[0]?all[0].t:'',last:all.length?all[all.length-1].t:''},add,
+    [{p:asBase()+'imports/'+iid,v:{added:(im.added||0)+add.length,maybe:0,maybeList:[],accepted:add.length},merge:true}]);
+  S.as.msgs[cid]=all;await asLoadMeta();return add.length;
+}
+/* כתיבה מחדש של כל המקטעים של שיחה (אחרי הסרה/העברה של הודעות) */
+async function asRewriteConv(cid,msgs,convPatch,extra){
+  const old=(S.as.chunks[cid]||[]).map(c=>c.id);S.as.chunks[cid]=[];
+  const dels=old.map(id=>({p:asBase()+'chunks/'+id,v:{},del:true}));
+  msgs.sort((a,b)=>(a.t+(a.s||'')).localeCompare(b.t+(b.s||'')));
+  await asWriteConv(cid,Object.assign({updated:Date.now(),count:msgs.length,analyzed:msgs.filter(m=>m.a).length,first:msgs[0]?msgs[0].t:'',last:msgs.length?msgs[msgs.length-1].t:''},convPatch||{}),msgs,dels.concat(extra||[]));
+  S.as.msgs[cid]=msgs;
+}
+/* תיקון שיוך שגוי: העברת כל ההודעות של ייבוא לשיחה אחרת (או חדשה) */
+async function asMoveImport(iid,target,newName){
+  const im=S.as.imports.find(x=>x.id===iid);if(!im)return;
+  const from=im.conv,src=await asLoadConv(from),moving=src.filter(m=>m.i===iid),stay=src.filter(m=>m.i!==iid);
+  let to=target,isNew=!to;if(isNew)to=asId();
+  const dest=isNew?[]:await asLoadConv(to);if(isNew){S.as.chunks[to]=[];S.as.msgs[to]=[];}
+  const raw=moving.map(m=>({t:m.t,day:m.t.slice(0,10),hm:m.t.slice(11),sec:m.s,n:m.n,b:m.b}));
+  await asKeys(to,raw);
+  const have={};dest.forEach(m=>have[m.k]=1);let moved=0,dupN=0;const addRecs=[];
+  raw.forEach((x,i)=>{if(have[x.k]){dupN++;return;}have[x.k]=1;moved++;addRecs.push({k:x.k,t:x.t,s:x.sec||'',n:x.n,b:x.b,nb:asNormBody(x.b),o:x.o,i:iid,f:moving[i].f});});
+  const all=dest.concat(addRecs);all.sort((a,b)=>(a.t+(a.s||'')).localeCompare(b.t+(b.s||'')));
+  const fromConv=S.as.convs.find(c=>c.id===from)||{},toConv=S.as.convs.find(c=>c.id===to)||{};
+  const patchTo={updated:Date.now(),count:all.length,first:all[0]?all[0].t:'',last:all.length?all[all.length-1].t:'',aliases:Array.from(new Set((toConv.aliases||[]).concat([im.source||''].filter(Boolean))))};
+  if(isNew)Object.assign(patchTo,{name:(newName||im.source||'שיחה').trim(),created:Date.now()});
+  await asWriteConv(to,patchTo,addRecs,[{p:asBase()+'imports/'+iid,v:{conv:to,movedFrom:from,movedAt:Date.now()},merge:true}]);
+  S.as.msgs[to]=all;
+  const srcAliases=Array.from(new Set(S.as.imports.filter(x=>x.conv===from&&x.id!==iid).map(x=>x.source).filter(Boolean)));
+  await asRewriteConv(from,stay,{aliases:srcAliases.length?srcAliases:(fromConv.aliases||[])});
+  await asLoadMeta();
+  return {moved:moved,dup:dupN,to:to};
+}
+async function asDeleteImport(iid){
+  const im=S.as.imports.find(x=>x.id===iid);if(!im)return;
+  const src=await asLoadConv(im.conv),stay=src.filter(m=>m.i!==iid);
+  await asRewriteConv(im.conv,stay,null,[{p:asBase()+'imports/'+iid,v:{},del:true}]);
+  await asLoadMeta();return src.length-stay.length;
+}
+async function asDeleteMsg(cid,k){
+  const src=S.as.msgs[cid]||await asLoadConv(cid),stay=src.filter(m=>m.k!==k);
+  await asRewriteConv(cid,stay);await asLoadMeta();
+}
+async function asDeleteConv(cid){
+  await asLoadConv(cid);
+  const ops=(S.as.chunks[cid]||[]).map(c=>({p:asBase()+'chunks/'+c.id,del:true,v:{}})).concat(S.as.imports.filter(x=>x.conv===cid).map(x=>({p:asBase()+'imports/'+x.id,del:true,v:{}})));
+  ops.push({p:asBase()+'convs/'+cid,del:true,v:{}});
+  for(let i=0;i<ops.length;i+=400){const b=FS.batch();ops.slice(i,i+400).forEach(o=>b.delete(FS.doc(o.p)));await asRetry(()=>b.commit());}
+  delete S.as.msgs[cid];delete S.as.chunks[cid];if(S.as.cur===cid)S.as.cur='';await asLoadMeta();
+}
+
+/* ---------- מסך ---------- */
+function asDT(t,s){return t?esc(shortDate(t.slice(0,10)))+' '+esc(t.slice(11,16))+(s?':'+esc(s):''):'';}
+function asConvName(id){const c=(S.as.convs||[]).find(x=>x.id===id);return c?c.name:'(שיחה שנמחקה)';}
+function asSuggest(source){const s=String(source||'').trim();const c=(S.as.convs||[]).find(x=>(x.aliases||[]).indexOf(s)>-1||x.name===s);return c?c.id:'';}
+function asViewChats(){
+  if(!isAdmin())return '<div class="empty">העוזר האישי זמין להנהלה בלבד.</div>';
+  const A=S.as=S.as||{};
+  if(!A.loaded&&!A.loading){A.loading=true;asLoadMeta().then(()=>{A.loading=false;if(S.tab==='assist')render();});}
+  const convs=(A.convs||[]).slice().sort((a,b)=>(b.updated||0)-(a.updated||0));
+  let h='';
+  // שלב בחירת קבצים ושיוך
+  if(A.pending&&A.pending.length){
+    h+='<div class="card evc"><h3>שיוך הקבצים לשיחות</h3><p class="note" style="margin-bottom:10px">לכל קובץ בחרו לאיזו שיחה הוא שייך. אם השיחה כבר קיימת, יתווספו רק הודעות חדשות.</p>'+
+      A.pending.map(function(p,i){const sug=p.target!==undefined?p.target:asSuggest(p.source);
+        return '<div class="asfile"><div><b>'+esc(p.file)+'</b> <span class="note">· '+p.fmt.toUpperCase()+' · '+p.msgs.length+' הודעות'+(p.first?' · '+asDT(p.first)+' עד '+asDT(p.last):'')+
+          (p.prec==='sec'?' · כולל שניות':'')+(p.order==='mdy'?' · תאריך בפורמט חודש/יום':'')+(p.bad.length?' · <span style="color:var(--late)">'+p.bad.length+' שורות לא זוהו</span>':'')+'</span></div>'+
+          '<div class="row" style="gap:8px;margin-top:6px"><span class="note">שם בקובץ: '+esc(p.source)+'</span>'+
+          '<select class="inp" data-asf="'+i+'">'+opt('➕ שיחה חדשה','',sug)+convs.map(c=>opt(c.name+' ('+(c.count||0)+')',c.id,sug)).join('')+'</select>'+
+          (sug?'':'<input class="inp" data-asn="'+i+'" placeholder="שם השיחה" value="'+esc(p.newName!==undefined?p.newName:p.source)+'">')+'</div></div>';}).join('')+
+      '<div class="row" style="margin-top:12px"><button class="btn" data-v="primary" data-act="as-run">ייבוא</button><button class="btn" data-v="ghost" data-act="as-cancel">ביטול</button></div></div>';
+  }else{
+    h+='<div class="card"><h3>ייבוא שיחה</h3><p class="note" style="margin-bottom:10px">בוואטסאפ: פתיחת השיחה ← ⋮ ← עוד ← ייצוא צ׳אט ← בלי מדיה. בפעם הראשונה מעלים את כל ההיסטוריה; בהמשך אפשר להעלות שוב ייצוא של אותה שיחה, ורק הודעות חדשות יתווספו.</p>'+
+      '<div class="row"><button class="btn" data-v="primary" data-act="as-pick">בחירת קבצים (TXT / MD)</button><input type="file" id="asFiles" accept=".txt,.md,text/plain,text/markdown" multiple style="display:none"></div>'+
+      (A.busy?'<p class="note" style="margin-top:8px">⏳ '+esc(A.busy)+'</p>':'')+'</div>';
+  }
+  // דוח ייבוא אחרון
+  if(A.report&&A.report.length){
+    h+='<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">דוח ייבוא</h3><button class="btn sm" data-v="ghost" data-act="as-close-report">סגירה</button></div>'+
+      table(['קובץ','שיחה','בקובץ','נוספו','כפולות','כפולות אפשריות','הודעות מערכת','שורות לא מזוהות'],A.report.map(r=>r.error?['<b>'+esc(r.file)+'</b>','<span style="color:var(--absent)">'+esc(r.error)+'</span>','','','','','','']:
+        ['<b>'+esc(r.file)+'</b>',esc(asConvName(r.conv)),r.total,'<b style="color:var(--present)">'+r.added+'</b>',r.dup,r.maybe?'<b style="color:var(--late)">'+r.maybe+'</b>':'0',r.sys,r.bad?'<span style="color:var(--late)">'+r.bad+'</span>':'0']))+
+      (A.report.some(r=>r.maybe)?'<p class="note" style="margin-top:8px">"כפולות אפשריות": הודעות זהות להודעות שכבר שמורות אבל בהפרש של שעה עגולה (בדרך כלל ייצוא מטלפון עם אזור זמן אחר). הן לא נקלטו. אפשר לבדוק ולהוסיף בכל זאת ברשימת הייבואים.</p>':'')+'</div>';
+  }
+  // שיחות
+  h+='<div class="card"><h3>שיחות ('+convs.length+')</h3>'+(convs.length?table(['שיחה','הודעות','נותחו','מתאריך','עד תאריך','ייבוא אחרון',''],convs.map(c=>[
+      A.ren===c.id?'<div class="row" style="gap:6px;flex-wrap:nowrap"><input class="inp" id="asRen" value="'+esc(c.name)+'"><button class="btn sm" data-v="primary" data-act="as-ren-save" data-id="'+c.id+'">שמירה</button></div>':
+        '<button class="link" data-act="as-open" data-id="'+c.id+'"><b>'+esc(c.name)+'</b></button>'+((c.aliases||[]).filter(a=>a!==c.name).length?'<br><span class="note">שמות בקבצים: '+esc((c.aliases||[]).filter(a=>a!==c.name).join(', '))+'</span>':''),
+      c.count||0,(c.analyzed||0)>=(c.count||0)&&c.count?'<span style="color:var(--present)">✓ הכול</span>':(c.analyzed||0)+' <span class="note">('+((c.count||0)-(c.analyzed||0))+' ממתינות)</span>',c.first?asDT(c.first):'—',c.last?asDT(c.last):'—',c.lastImport?esc(tsLine(c.lastImport)):'—',
+      '<div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn sm" data-act="as-open" data-id="'+c.id+'">הודעות</button><button class="btn sm" data-act="as-ren" data-id="'+c.id+'">שינוי שם</button><button class="btn sm" data-v="ghost" data-act="as-del-conv" data-id="'+c.id+'">מחיקה</button></div>'])):
+    '<div class="empty">'+(A.loaded?'עדיין לא יובאו שיחות.':'טוען…')+'</div>')+'</div>';
+  // הודעות של שיחה
+  if(A.cur){
+    const all=A.msgs&&A.msgs[A.cur];
+    if(!all)h+='<div class="card"><p class="note">טוען הודעות…</p></div>';
+    else{
+      const q=(A.q||'').trim(),days=Array.from(new Set(all.map(m=>m.t.slice(0,10)))).sort();
+      if(!A.day||days.indexOf(A.day)<0)A.day=days[days.length-1]||'';
+      const list=q?all.filter(m=>(m.n+' '+m.b).indexOf(q)>-1):all.filter(m=>m.t.slice(0,10)===A.day);
+      const pg=A.page||0,per=200,shown=list.slice(pg*per,pg*per+per),di=days.indexOf(A.day);
+      h+='<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">'+esc(asConvName(A.cur))+' <span class="note">· '+all.length+' הודעות · '+days.length+' ימים</span></h3><button class="btn sm" data-v="ghost" data-act="as-close">סגירה</button></div>'+
+        '<div class="row" style="gap:8px;margin:10px 0">'+(q?'':'<button class="btn sm" data-act="as-day" data-n="-1"'+(di<=0?' disabled':'')+'>→ יום קודם</button><select class="inp" data-asday="1">'+days.slice().reverse().map(d=>opt(gregLabel(d)+' · '+hebLabel(d),d,A.day)).join('')+'</select><button class="btn sm" data-act="as-day" data-n="1"'+(di>=days.length-1?' disabled':'')+'>יום הבא ←</button>')+
+        '<input class="inp" id="asQ" data-asq="1" placeholder="חיפוש בכל השיחה" value="'+esc(q)+'" style="flex:1;min-width:150px"></div>'+
+        (q?'<p class="note">'+list.length+' תוצאות</p>':'<p class="note">'+esc(dual(A.day))+' · '+list.length+' הודעות</p>')+
+        '<div class="asmsgs">'+(shown.length?shown.map(m=>'<div class="asm" data-a="'+(m.a?1:0)+'" title="'+(m.a?'נותחה':'ממתינה לניתוח')+'"><div class="note">'+(q?asDT(m.t,m.s):esc(m.t.slice(11,16))+(m.s?':'+esc(m.s):''))+' · <b>'+esc(m.n)+'</b><button class="asx" data-act="as-del-msg" data-id="'+m.k+'" title="מחיקת ההודעה">✕</button></div><div class="asb">'+esc(m.b)+'</div></div>').join(''):'<div class="empty">אין הודעות.</div>')+'</div>'+
+        (list.length>per?'<div class="row" style="margin-top:8px;gap:6px">'+(pg>0?'<button class="btn sm" data-act="as-page" data-n="-1">הקודמים</button>':'')+'<span class="note">'+(pg*per+1)+'–'+Math.min(list.length,pg*per+per)+' מתוך '+list.length+'</span>'+(pg*per+per<list.length?'<button class="btn sm" data-act="as-page" data-n="1">הבאים</button>':'')+'</div>':'')+'</div>';
+    }
+  }
+  // ייבואים
+  const ims=A.imports||[];
+  if(ims.length)h+='<div class="card"><h3>היסטוריית ייבוא</h3>'+table(['מתי','קובץ','שיחה','נוספו','כפולות','אפשריות',''],ims.slice(0,40).map(im=>[
+      esc(tsLine(im.at)),esc(im.file)+' <span class="note">'+esc((im.fmt||'').toUpperCase())+'</span>',esc(asConvName(im.conv))+(im.movedFrom?' <span class="note">(הועבר)</span>':''),im.added||0,im.dup||0,
+      im.maybe?'<button class="btn sm" data-act="as-maybe" data-id="'+im.id+'">'+im.maybe+' · הצגה</button>':'0',
+      A.move===im.id?'<div class="row" style="gap:4px;flex-wrap:nowrap"><select class="inp" id="asMoveTo">'+opt('➕ שיחה חדשה','','')+convs.filter(c=>c.id!==im.conv).map(c=>opt(c.name,c.id,'')).join('')+'</select><button class="btn sm" data-v="primary" data-act="as-move-run" data-id="'+im.id+'">העברה</button></div>':
+        '<div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn sm" data-act="as-move" data-id="'+im.id+'">שיוך לשיחה אחרת</button><button class="btn sm" data-v="ghost" data-act="as-del-imp" data-id="'+im.id+'">ביטול ייבוא</button></div>']))+'</div>';
+  if(A.maybeOpen){const im=ims.find(x=>x.id===A.maybeOpen);if(im&&im.maybeList&&im.maybeList.length)
+    h+='<div class="card evc"><div class="row" style="justify-content:space-between"><h3 style="margin:0">כפולות אפשריות · '+esc(im.file)+'</h3><button class="btn sm" data-v="ghost" data-act="as-maybe-close">סגירה</button></div>'+
+      '<p class="note" style="margin:6px 0 10px">ההודעות האלה זהות להודעות שכבר שמורות, בהפרש של שעה עגולה. אם אלה הודעות שונות באמת, אפשר להוסיף אותן.</p>'+
+      im.maybeList.slice(0,100).map(m=>'<div class="asm"><div class="note">'+asDT(m.t,m.s)+' · <b>'+esc(m.n)+'</b></div><div class="asb">'+esc(m.b)+'</div></div>').join('')+
+      '<div class="row" style="margin-top:10px"><button class="btn" data-act="as-maybe-add" data-id="'+im.id+'">להוסיף את כולן בכל זאת</button></div></div>';}
+  return h;
+}
+async function asAction(a,el,id){
+  const A=S.as=S.as||{};
+  const busy=async(msg,fn)=>{A.busy=msg;render();try{return await fn();}catch(e){toast(fbErr(e));}finally{A.busy='';render();}};
+  if(a==='as-pick'){const f=document.getElementById('asFiles');if(f)f.click();return;}
+  if(a==='as-cancel'){A.pending=null;return render();}
+  if(a==='as-close-report'){A.report=null;return render();}
+  if(a==='as-run'){
+    const P=A.pending||[];document.querySelectorAll('#main [data-asn]').forEach(i=>P[+i.dataset.asn].newName=i.value);
+    document.querySelectorAll('#main [data-asf]').forEach(s=>P[+s.dataset.asf].target=s.value);
+    for(const p of P)if(!p.target&&!String(p.newName===undefined?p.source:p.newName).trim())return toast('כתבו שם לשיחה החדשה');
+    A.pending=null;const rep=[];
+    await busy('מייבא…',async function(){
+      for(const p of P){
+        try{A.busy='מייבא את '+p.file+' ('+p.msgs.length+' הודעות)…';render();
+          // שני קבצים חדשים באותו ייבוא עם אותו שם שיחה חדש → אותה שיחה
+          let t=p.target;if(!t){const same=rep.find(r=>r._new&&r._name===String(p.newName===undefined?p.source:p.newName).trim());if(same)t=same.conv;}
+          const r=await asImport(p,t,p.newName===undefined?p.source:p.newName);r._new=!p.target;r._name=String(p.newName===undefined?p.source:p.newName).trim();rep.push(r);}
+        catch(e){rep.push({file:p.file,error:fbErr(e)});}
+      }
+    });
+    A.report=rep;logAct('ייבוא שיחות וואטסאפ',rep.length+' קבצים');return render();
+  }
+  if(a==='as-open'){A.cur=id;A.q='';A.day='';A.page=0;render();if(!(A.msgs&&A.msgs[id]))await busy('טוען הודעות…',()=>asLoadConv(id));return render();}
+  if(a==='as-close'){A.cur='';return render();}
+  if(a==='as-day'){const all=A.msgs[A.cur]||[],days=Array.from(new Set(all.map(m=>m.t.slice(0,10)))).sort(),i=days.indexOf(A.day)+(+el.dataset.n);if(days[i]){A.day=days[i];A.page=0;}return render();}
+  if(a==='as-page'){A.page=Math.max(0,(A.page||0)+(+el.dataset.n));return render();}
+  if(a==='as-ren'){A.ren=id;return render();}
+  if(a==='as-ren-save'){const v=(document.getElementById('asRen')||{}).value||'';if(!v.trim())return toast('כתבו שם');
+    await busy('שומר…',()=>asRetry(()=>FS.doc(asBase()+'convs/'+id).set({name:v.trim(),updated:Date.now()},{merge:true})));A.ren='';await asLoadMeta();toast('השם עודכן (השיחה נשארה אותה שיחה)');return render();}
+  if(a==='as-del-conv'){const c=(A.convs||[]).find(x=>x.id===id);if(!c||!confirm('למחוק לצמיתות את השיחה "'+c.name+'" עם כל '+(c.count||0)+' ההודעות שלה?'))return;
+    await busy('מוחק…',()=>asDeleteConv(id));logAct('מחיקת שיחה מהעוזר',c.name);toast('השיחה נמחקה');return render();}
+  if(a==='as-del-msg'){if(!confirm('למחוק את ההודעה הזו מהמאגר?'))return;await busy('מוחק…',()=>asDeleteMsg(A.cur,id));toast('ההודעה נמחקה');return render();}
+  if(a==='as-move'){A.move=id;return render();}
+  if(a==='as-move-run'){const to=(document.getElementById('asMoveTo')||{}).value||'';const im=(A.imports||[]).find(x=>x.id===id);let nm='';
+    if(!to){nm=prompt('שם לשיחה החדשה:',(im&&im.source)||'');if(nm===null)return;if(!nm.trim())return toast('כתבו שם');}
+    if(!confirm('להעביר את כל ההודעות מהייבוא "'+(im&&im.file)+'" לשיחה '+(to?'"'+asConvName(to)+'"':'חדשה')+'?'))return;
+    A.move='';const r=await busy('מעביר…',()=>asMoveImport(id,to,nm));
+    if(r){logAct('תיקון שיוך שיחה',(im&&im.file)||'');toast('הועברו '+r.moved+' הודעות'+(r.dup?' ('+r.dup+' כבר היו שם)':''));A.cur=r.to;A.day='';}return render();}
+  if(a==='as-del-imp'){const im=(A.imports||[]).find(x=>x.id===id);if(!im||!confirm('לבטל את הייבוא "'+im.file+'"? ההודעות שנוספו בו יימחקו מהשיחה.'))return;
+    const n=await busy('מבטל…',()=>asDeleteImport(id));toast('נמחקו '+(n||0)+' הודעות');return render();}
+  if(a==='as-maybe'){A.maybeOpen=id;return render();}
+  if(a==='as-maybe-close'){A.maybeOpen='';return render();}
+  if(a==='as-maybe-add'){if(!confirm('להוסיף את ההודעות האלה לשיחה?'))return;const n=await busy('מוסיף…',()=>asAcceptMaybe(id));A.maybeOpen='';toast('נוספו '+(n||0)+' הודעות');return render();}
+}
+async function asFilesChosen(files){
+  const A=S.as=S.as||{},P=[],errs=[];
+  for(const f of files){
+    if(!/\.(txt|md)$/i.test(f.name)){errs.push(f.name+' (רק TXT או MD)');continue;}
+    if(f.size>60e6){errs.push(f.name+' (גדול מדי)');continue;}
+    try{const p=await asParseFile(f);if(!p.msgs.length)errs.push(f.name+' (לא נמצאו הודעות בפורמט של וואטסאפ)');else P.push(p);}catch(e){errs.push(f.name);}
+  }
+  if(errs.length)toast('לא נקראו: '+errs.join(', '));
+  A.pending=P.length?P:null;render();
+}
+
+/* ================= עוזר אישי: ניתוח שיחות (אבן דרך C) =================
+   מנגנון אחד לשני המסלולים: (1) העתקה-הדבקה לדף "מסכם וואטסאפ" ב-Claude, (2) ניתוח דרך Claude Code.
+   שניהם משתמשים באותה "חבילת ניתוח" ובאותו פורמט תוצאה, וכל תוצאה עוברת בדיקת תקינות ותיבת אישורים.
+   אחסון (תחת insts/{מוסד}/assist/{uid}/, לפי החוקים רק המשתמש עצמו):
+     packs/{id}   חבילה שנשלחה לניתוח: אילו הודעות, מיפוי הפניות (m1→מפתח הודעה), מיפוי כינויים
+     props/{id}   הצעות שחזרו מהניתוח וממתינות לאישור (נשמרות גם אחרי אישור/דחייה, לתיעוד)
+     topics/{id}  נושאים מאושרים (הזיכרון)
+     items/{id}   משימות, תזכורות, התחייבויות, דיונים וכו' מאושרים (הזיכרון)
+   הודעה שנותחה מסומנת ב-a (מזהה החבילה) בתוך מקטע ההודעות. */
+const AC_VER=1,AC_NEW_BYTES=140000,AC_CTX_BYTES=30000,AC_MEM_BYTES=25000;
+const AC_KINDS={task:'משימה',reminder:'תזכורת',commitment:'התחייבות שלי',request:'בקשה מאחרים',waiting:'ממתין למענה',discussion:'נושא לדיון',question:'שאלה פתוחה',done:'טופל'};
+const AC_ST={open:'פתוח',waiting:'ממתין',done:'טופל'};
+const AC_TASKY={task:1,reminder:1,commitment:1,request:1};
+const AC_STOP=new Set(['של','את','על','עם','זה','זו','גם','אני','אתה','הוא','היא','אנחנו','לא','כן','מה','מי','אם','כי','או','רק','עוד','כל','יש','אין','היה','היום','מחר','תודה','שלום','בוקר','טוב','ערב','אפשר','צריך','אבל','כבר','עכשיו','שם','פה','לך','לי','לו','לה','להם','שלי','שלך','אחרי','לפני','בסדר','אוקיי','בבקשה']);
+const acNorm=s=>String(s||'').replace(AS_BIDI,'').replace(/[“”"״׳'`]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+function acWords(s){return new Set((acNorm(s).match(/[֐-׿a-z0-9]{3,}/g)||[]).filter(w=>!AC_STOP.has(w)));}
+function acSim(a,b){const A=acWords(a),B=acWords(b);if(!A.size||!B.size)return 0;let n=0;A.forEach(w=>{if(B.has(w))n++;});return n/Math.min(A.size,B.size);}
+/* צמצום מידע מזהה: טלפונים, מיילים, מספרי זהות ומספרים ארוכים, ושמות המשתתפים מוחלפים בכינוי */
+function acMask(text,al){
+  let t=String(text||'');
+  t=t.replace(/\[איש קשר:[\s\S]*?END:VCARD\]?/g,'[איש קשר]').replace(/BEGIN:VCARD[\s\S]*?END:VCARD/g,'[איש קשר]');
+  t=t.replace(/https?:\/\/(?:docs|drive|forms)\.google\.com\/\S+|https?:\/\/forms\.gle\/\S+/g,'[קישור למסמך]');
+  t=t.replace(/[\w.+-]+@[\w-]+\.[\w.]+/g,'[מייל]');
+  t=t.replace(/(?:\+?972[-\s]?|\b0)(?:[2-9]\d?)[-\s]?\d{3}[-\s]?\d{4}\b/g,'[טלפון]');
+  t=t.replace(/\b\d{9}\b/g,'[מספר מזהה]').replace(/\b\d{8,}\b/g,'[מספר]');
+  Object.keys(al||{}).filter(n=>n.length>=3).sort((a,b)=>b.length-a.length).forEach(n=>{t=t.split(n).join(al[n]);});
+  return t;
+}
+function acUnalias(text,al){let t=String(text||'');Object.keys(al||{}).sort((a,b)=>al[b].length-al[a].length).forEach(n=>{t=t.split(al[n]).join(n);});return t;}
+function acConv(cid){return (S.as.convs||[]).find(c=>c.id===cid)||{};}
+
+/* ---------- טעינת הזיכרון ---------- */
+async function acLoad(){
+  const A=S.as;const get=async c=>(await FS.collection(asBase()+c).get()).docs.map(d=>Object.assign({id:d.id},d.data()));
+  try{const [t,i,p,k]=await Promise.all([get('topics'),get('items'),get('props'),get('packs')]);A.topics=t;A.items=i;A.props=p;A.packs=k;A.acLoaded=true;}
+  catch(e){A.acErr=fbErr(e);}
+}
+const acPending=cid=>((S.as.msgs||{})[cid]||[]).filter(m=>!m.a);
+function acOutPack(cid){return (S.as.packs||[]).find(p=>p.conv===cid&&p.status==='out');}
+
+/* ---------- כינויים למשתתפים (נשמרים קבועים לכל שיחה) ---------- */
+async function acAliases(cid,msgs){
+  const c=acConv(cid),al=Object.assign({},c.al||{}),me=(c.me&&c.me.length?c.me:Array.from(new Set(msgs.map(m=>m.n))).filter(n=>/^(את\/ה|אתה|You)$/.test(n)));let n=Object.values(al).filter(a=>/^\[משתתף \d+\]$/.test(a)).length,ch=false;
+  me.forEach(x=>{if(al[x]!=='[אני]'){al[x]='[אני]';ch=true;}});
+  msgs.forEach(m=>{if(!al[m.n]){n++;al[m.n]='[משתתף '+n+']';ch=true;}});
+  if(ch){await asRetry(()=>FS.doc(asBase()+'convs/'+cid).set({al:al},{merge:true}));c.al=al;}
+  return al;
+}
+
+/* ---------- בניית חבילת ניתוח ---------- */
+const AC_INSTR=`אתה עוזר ניהולי של מנהל תלמוד תורה. לפניך הודעות וואטסאפ חדשות מתוך שיחה אחת, יחד עם "זיכרון" של נושאים ועניינים פתוחים מניתוחים קודמים, והודעות ישנות שעשויות להיות רלוונטיות (הקשר).
+המשימה: לזהות מתוך ההודעות החדשות בלבד:
+- task (משימה שצריך לבצע), reminder (משהו עם תאריך/מועד), commitment (המנהל [אני] התחייב לעשות), request (מישהו ביקש מהמנהל),
+  waiting (המנהל ממתין לתשובה ממישהו), discussion (נושא שדורש דיון/החלטה), question (שאלה שלא נענתה), done (דבר שטופל/הושלם).
+- נושאים (topics): קבץ את הממצאים לנושאים. אם הנושא כבר קיים בזיכרון — השתמש במזהה הקיים (op:"update") ואל תפתח נושא חדש.
+- אם הודעה חדשה מעדכנת עניין קיים מהזיכרון (למשל הושלם, נדחה, השתנה מועד) — החזר op:"update" עם המזהה הקיים, ולא פריט חדש.
+כללים מחייבים:
+1. לכל ממצא חובה לצרף sources: הפניה (ref) להודעה מהרשימה, וציטוט קצר מדויק (quote) שמופיע מילה במילה בהודעה. אין ממצא בלי מקור.
+2. אל תמציא. אל תקבע שמשהו הושלם בלי הודעה שמראה זאת. שאלה שכבר נענתה בהמשך ההודעות אינה "question". ברכות ושיחת נימוס אינן ממצאים. הקשר והזיכרון רק עוזרים להבין — ממצאים חדשים רק מהודעות החדשות (ref שמתחיל ב-m).
+3. שמות אנשים מופיעים ככינויים בסוגריים מרובעים ([אני] הוא המנהל). השתמש בכינויים כפי שהם בשדות owner, title ו-details.
+4. אל תכלול פרטים אישיים שאינם נחוצים. כתוב בעברית, קצר וברור. title עד 12 מילים.
+5. due בפורמט YYYY-MM-DD רק אם נאמר מועד מפורש; אחרת null. urgent:true רק אם יש דחיפות מפורשת.
+6. אם אין ממצאים — החזר מערכים ריקים.
+החזר JSON בלבד, במבנה הזה בדיוק:
+{"pack":"<מזהה החבילה>","summary":"2-4 משפטים: מה קרה בהודעות החדשות",
+ "topics":[{"op":"new","ref":"T1","title":"...","summary":"...","status":"open"},{"op":"update","id":"<מזהה נושא קיים>","summary":"...","status":"open|closed"}],
+ "items":[{"op":"new","kind":"task|reminder|commitment|request|waiting|discussion|question|done","title":"...","details":"...","owner":"[אני]|[משתתף 2]|null","due":"YYYY-MM-DD|null","urgent":false,"topic":"T1 או מזהה נושא קיים","sources":[{"ref":"m12","quote":"..."}]},
+          {"op":"update","id":"<מזהה פריט קיים>","status":"open|waiting|done","due":"YYYY-MM-DD|null","note":"מה השתנה","sources":[{"ref":"m30","quote":"..."}]}]}`;
+function acLine(ref,m,al){return ref+' | '+m.t.slice(0,10)+' '+m.t.slice(11,16)+' | '+(al[m.n]||'[?]')+': '+acMask(m.b,al).replace(/\n+/g,' ⏎ ');}
+async function acBuildPack(cid,route){
+  const A=S.as;const all=await asLoadConv(cid);const old=acOutPack(cid);
+  if(old)await acCancelPack(old.id);
+  const pend=all.filter(m=>!m.a);if(!pend.length)return null;
+  const al=await acAliases(cid,all),refs={},lines=[];let bytes=0,i=0;
+  for(const m of pend){const ln=acLine('m'+(i+1),m,al),b=asBytes(ln)+1;if(i&&bytes+b>AC_NEW_BYTES)break;refs['m'+(i+1)]=m.k;lines.push(ln);bytes+=b;i++;}
+  const newKeys=new Set(Object.values(refs)),first=all.find(m=>m.k===refs.m1),lastK=refs['m'+i],last=all.find(m=>m.k===lastK);
+  // זיכרון: נושאים ופריטים פתוחים של השיחה
+  const tps=(A.topics||[]).filter(t=>(t.conv||[]).indexOf(cid)>-1&&t.status!=='closed');
+  const its=(A.items||[]).filter(x=>x.conv===cid&&x.status!=='done').sort((a,b)=>(b.updated||0)-(a.updated||0));
+  let mem=[];let mb=0;
+  tps.forEach(t=>{const s='נושא '+t.id+': '+acMask(t.title,al)+(t.summary?' — '+acMask(t.summary,al):'');if(mb+asBytes(s)<AC_MEM_BYTES*0.4){mem.push(s);mb+=asBytes(s);}});
+  its.forEach(x=>{const s='פריט '+x.id+' ['+x.kind+', '+(AC_ST[x.status]||x.status)+(x.due?', עד '+x.due:'')+(x.topic?', נושא '+x.topic:'')+']: '+acMask(x.title,al)+(x.owner?' (אחראי: '+acMask(x.owner,al)+')':'');if(mb+asBytes(s)<AC_MEM_BYTES){mem.push(s);mb+=asBytes(s);}});
+  // הקשר: הודעות שכבר נותחו, שקשורות למילים בהודעות החדשות או למקורות של עניינים פתוחים
+  const kw=new Set();pend.slice(0,i).forEach(m=>acWords(m.b).forEach(w=>kw.add(w)));
+  const srcK=new Set();its.forEach(x=>(x.sources||[]).forEach(s=>srcK.add(s.k)));
+  const hist=all.filter(m=>m.a&&!newKeys.has(m.k)).map(m=>{let sc=srcK.has(m.k)?3:0;acWords(m.b).forEach(w=>{if(kw.has(w))sc++;});return {m:m,sc:sc};}).filter(x=>x.sc>=2).sort((a,b)=>b.sc-a.sc);
+  const ctx=[];let cb=0,ci=0;
+  for(const h of hist){const ln=acLine('c'+(ci+1),h.m,al),b=asBytes(ln)+1;if(cb+b>AC_CTX_BYTES)break;ctx.push({ln:ln,t:h.m.t});refs['c'+(ci+1)]=h.m.k;cb+=b;ci++;}
+  ctx.sort((a,b)=>a.t.localeCompare(b.t));
+  const id='P'+asId().slice(0,8),remain=pend.length-i;
+  const text='[[חבילת-ניתוח v'+AC_VER+' id='+id+']]\n'+AC_INSTR.replace('<מזהה החבילה>',id)+
+    '\n\n=== זיכרון ('+mem.length+') ===\n'+(mem.join('\n')||'(ריק — זו הקליטה הראשונה)')+
+    '\n\n=== הודעות קודמות להקשר בלבד ('+ctx.length+') ===\n'+(ctx.map(x=>x.ln).join('\n')||'(אין)')+
+    '\n\n=== הודעות חדשות לניתוח ('+i+') ===\n'+lines.join('\n')+'\n\n[[סוף החבילה '+id+']]';
+  const pack={conv:cid,created:Date.now(),route:route||'paste',status:'out',refs:refs,count:i,ctx:ci,first:first?first.t:'',last:last?last.t:'',remain:remain,bytes:asBytes(text)};
+  await asRetry(()=>FS.doc(asBase()+'packs/'+id).set(pack));
+  A.packs=(A.packs||[]).filter(p=>p.id!==id).concat([Object.assign({id:id},pack)]);
+  return {id:id,text:text,count:i,ctx:ci,remain:remain,bytes:pack.bytes,first:pack.first,last:pack.last};
+}
+async function acCancelPack(pid){
+  await asRetry(()=>FS.doc(asBase()+'packs/'+pid).set({status:'cancelled',cancelled:Date.now()},{merge:true}));
+  const p=(S.as.packs||[]).find(x=>x.id===pid);if(p)p.status='cancelled';
+}
+
+/* ---------- קליטת תוצאה: בדיקת תקינות, מניעת כפילויות, יצירת הצעות לאישור ---------- */
+function acParse(text){
+  const s=String(text||'').trim();try{return JSON.parse(s);}catch(e){}
+  const f=s.match(/```(?:json)?\s*([\s\S]*?)```/);if(f){try{return JSON.parse(f[1]);}catch(e){}}
+  const a=s.indexOf('{'),b=s.lastIndexOf('}');if(a>-1&&b>a){try{return JSON.parse(s.slice(a,b+1));}catch(e){}}
+  return null;
+}
+const acDate=d=>d&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&!isNaN(Date.parse(d))?d:null;
+async function acImportResult(text,route){
+  const A=S.as,R={ok:false,errors:[],props:0,dropped:[],merged:0,invalidSrc:0};
+  const j=acParse(text);if(!j||typeof j!=='object'){R.errors.push('לא נמצא JSON תקין בתוצאה.');return R;}
+  const pid=String(j.pack||'');const pk=(A.packs||[]).find(p=>p.id===pid);
+  if(!pk){R.errors.push('מזהה החבילה ('+(pid||'חסר')+') לא מוכר. ייתכן שהתוצאה שייכת לחבילה אחרת.');return R;}
+  if(pk.status==='returned'){R.errors.push('התוצאות של החבילה הזו כבר נקלטו. קליטה חוזרת הייתה יוצרת כפילויות.');return R;}
+  if(pk.status==='cancelled'){R.errors.push('החבילה הזו בוטלה (נוצרה חבילה חדשה יותר לאותה שיחה). צריך לנתח את החבילה החדשה.');return R;}
+  const cid=pk.conv,all=await asLoadConv(cid),byK={};all.forEach(m=>byK[m.k]=m);
+  const al=acConv(cid).al||{};
+  // מקור תקין: הפניה מהחבילה + ציטוט שמופיע בהודעה (אחרי אותה הסתרת פרטים)
+  const srcs=(arr,onlyNew)=>{const out=[];(Array.isArray(arr)?arr:[]).forEach(s=>{const ref=String(s&&s.ref||''),k=pk.refs[ref],m=k&&byK[k];
+    if(!m||(onlyNew&&ref.charAt(0)!=='m')){R.invalidSrc++;return;}
+    const body=acNorm(acMask(m.b,al)),q=String(s.quote||'').replace(/⏎/g,' ');
+    const parts=q.split(/…|\.\.\./).map(acNorm).filter(x=>x.length>=3);
+    if(!parts.length||!parts.every(p=>body.indexOf(p)>-1)){R.invalidSrc++;return;}
+    out.push({k:m.k,t:m.t,s:m.s||'',n:m.n,q:acUnalias(q,al).slice(0,300),ref:ref});});return out;};
+  const props=[],now=Date.now(),tref={};
+  const openItems=(A.items||[]).filter(x=>x.conv===cid&&x.status!=='done'),topics=(A.topics||[]).filter(t=>(t.conv||[]).indexOf(cid)>-1);
+  const pendingSame=(A.props||[]).filter(p=>p.conv===cid&&p.state==='pending');
+  (Array.isArray(j.topics)?j.topics:[]).forEach(function(t){
+    if(!t||!t.title&&t.op!=='update')return;
+    if(t.op==='update'){const ex=topics.find(x=>x.id===t.id);if(!ex){R.dropped.push('עדכון לנושא לא קיים ('+t.id+')');return;}
+      props.push({type:'topic',op:'update',target:ex.id,data:{summary:acUnalias(String(t.summary||'').slice(0,800),al),status:t.status==='closed'?'closed':'open'},sources:[]});return;}
+    const title=acUnalias(String(t.title).slice(0,160),al),dup=topics.find(x=>acSim(x.title,title)>=0.7);
+    if(dup){tref[t.ref]=dup.id;R.merged++;props.push({type:'topic',op:'update',target:dup.id,merged:true,data:{summary:acUnalias(String(t.summary||'').slice(0,800),al),status:'open'},sources:[]});return;}
+    tref[t.ref]={ref:t.ref};props.push({type:'topic',op:'new',tref:String(t.ref||''),data:{title:title,summary:acUnalias(String(t.summary||'').slice(0,800),al),status:'open'},sources:[]});
+  });
+  const resolveTopic=x=>{if(!x)return '';const s=String(x);if(tref[s])return typeof tref[s]==='string'?tref[s]:'#'+s;return topics.some(t=>t.id===s)?s:'';};
+  (Array.isArray(j.items)?j.items:[]).forEach(function(it){
+    if(!it||typeof it!=='object')return;
+    if(it.op==='update'){
+      const ex=openItems.find(x=>x.id===it.id)||(A.items||[]).find(x=>x.id===it.id&&x.conv===cid);
+      if(!ex){R.dropped.push('עדכון לפריט לא קיים ('+it.id+')');return;}
+      const so=srcs(it.sources,true);if(!so.length){R.dropped.push('עדכון בלי מקור תקין: '+ex.title);return;}
+      props.push({type:'item',op:'update',target:ex.id,data:{status:AC_ST[it.status]?it.status:ex.status,due:acDate(it.due)||ex.due||null,note:acUnalias(String(it.note||'').slice(0,500),al)},sources:so});return;}
+    const kind=AC_KINDS[it.kind]?it.kind:null,title=acUnalias(String(it.title||'').trim().slice(0,200),al);
+    if(!kind||!title){R.dropped.push('פריט בלי סוג או כותרת תקינים');return;}
+    const so=srcs(it.sources,true);if(!so.length){R.dropped.push('בלי מקור תקין: '+title);return;}
+    const data={kind:kind,title:title,details:acUnalias(String(it.details||'').slice(0,1500),al),owner:it.owner&&it.owner!=='null'?acUnalias(String(it.owner).slice(0,80),al):'',
+      due:acDate(it.due),urgent:!!it.urgent,status:kind==='done'?'done':kind==='waiting'?'waiting':'open',topic:resolveTopic(it.topic)};
+    // אותו עניין כבר קיים (בזיכרון או בהצעה שממתינה) → עדכון ולא כפילות
+    const dupI=openItems.find(x=>acSim(x.title,title)>=0.75||(x.sources||[]).some(s=>so.some(o=>o.k===s.k)&&acSim(x.title,title)>=0.4));
+    if(dupI){R.merged++;props.push({type:'item',op:'update',target:dupI.id,merged:true,data:{status:data.status,due:data.due||dupI.due||null,note:title+(data.details?' — '+data.details:'')},sources:so});return;}
+    const dupP=pendingSame.find(p=>p.type==='item'&&p.op==='new'&&acSim(p.data.title,title)>=0.75)||props.find(p=>p.type==='item'&&p.op==='new'&&acSim(p.data.title,title)>=0.8);
+    if(dupP){R.merged++;(dupP.sources=dupP.sources||[]).push(...so.filter(o=>!dupP.sources.some(s=>s.k===o.k)));if(dupP.id)dupP._dirty=true;return;}
+    props.push({type:'item',op:'new',data:data,sources:so});
+  });
+  // שמירה: הצעות, סטטוס החבילה, וסימון ההודעות שנותחו
+  const b=FS.batch();
+  props.forEach(p=>{p.id='Q'+asId().slice(0,9);Object.assign(p,{pack:pid,conv:cid,state:'pending',created:now,route:route||pk.route||'paste'});b.set(FS.doc(asBase()+'props/'+p.id),p);});
+  pendingSame.filter(p=>p._dirty).forEach(p=>{delete p._dirty;b.set(FS.doc(asBase()+'props/'+p.id),{sources:p.sources},{merge:true});});
+  b.set(FS.doc(asBase()+'packs/'+pid),{status:'returned',returned:now,summary:acUnalias(String(j.summary||''),al).slice(0,1500),props:props.length,dropped:R.dropped.length,merged:R.merged,invalidSrc:R.invalidSrc},{merge:true});
+  await asRetry(()=>b.commit());
+  const nk=new Set(Object.keys(pk.refs).filter(r=>r.charAt(0)==='m').map(r=>pk.refs[r]));
+  all.forEach(m=>{if(nk.has(m.k))m.a=pid;});
+  await asRewriteConv(cid,all);
+  Object.assign(pk,{status:'returned',returned:now,summary:acUnalias(String(j.summary||''),al).slice(0,1500)});
+  A.props=(A.props||[]).concat(props);
+  await asLoadMeta();
+  R.ok=true;R.props=props.length;R.pack=pid;R.analyzed=nk.size;return R;
+}
+
+/* ---------- אישור / דחייה ---------- */
+async function acApprove(pid,opt){
+  const A=S.as,p=(A.props||[]).find(x=>x.id===pid);if(!p||p.state!=='pending')return;
+  opt=opt||{};const now=Date.now(),d=Object.assign({},p.data,opt.edit||{});let created='';
+  if(p.type==='topic'&&p.op==='new'){
+    created='T'+asId().slice(0,9);const t={title:d.title,summary:d.summary||'',status:'open',conv:[p.conv],created:now,updated:now,pack:p.pack};
+    await asRetry(()=>FS.doc(asBase()+'topics/'+created).set(t));A.topics=(A.topics||[]).concat([Object.assign({id:created},t)]);
+  }else if(p.type==='topic'){
+    const t=(A.topics||[]).find(x=>x.id===p.target);if(t){const ch={updated:now};if(d.summary)ch.summary=d.summary;if(d.status)ch.status=d.status;
+      await asRetry(()=>FS.doc(asBase()+'topics/'+t.id).set(ch,{merge:true}));Object.assign(t,ch);}
+  }else if(p.op==='new'){
+    let topic=d.topic||'';
+    if(topic.charAt(0)==='#'){const tp=(A.props||[]).find(x=>x.pack===p.pack&&x.type==='topic'&&x.op==='new'&&x.tref===topic.slice(1));
+      if(tp&&tp.state==='pending')await acApprove(tp.id);topic=tp&&tp.created?tp.created:'';}
+    created='I'+asId().slice(0,9);
+    const it={kind:d.kind,title:d.title,details:d.details||'',owner:d.owner||'',due:d.due||null,urgent:!!d.urgent,status:d.status||'open',topic:topic,conv:p.conv,sources:p.sources,
+      created:now,updated:now,pack:p.pack,log:[{at:now,what:'נוצר מהניתוח ואושר'+(opt.edit?' (עם עריכה)':'')}]};
+    if(opt.task&&d.status!=='done'){
+      const tk={id:uid(),text:d.title+(d.owner&&d.owner!=='[אני]'?' ('+d.owner+')':''),due:d.due||'',status:'open',by:S.me.user,uid:S.me.id,src:'wa',item:created};
+      S.tasks.push(tk);await save(K.tasks,S.tasks);it.taskId=tk.id;it.log.push({at:now,what:'נוספה משימה ביומן המשימות'});
+    }
+    await asRetry(()=>FS.doc(asBase()+'items/'+created).set(it));A.items=(A.items||[]).concat([Object.assign({id:created},it)]);
+  }else{
+    const it=(A.items||[]).find(x=>x.id===p.target);if(it){
+      const ch={updated:now,status:d.status||it.status,due:d.due||it.due||null,sources:(it.sources||[]).concat((p.sources||[]).filter(s=>!(it.sources||[]).some(o=>o.k===s.k))),
+        log:(it.log||[]).concat([{at:now,what:'עודכן: '+(AC_ST[d.status]||'')+(d.note?' — '+d.note:'')}])};
+      if(d.note)ch.details=(it.details?it.details+'\n':'')+'• '+d.note;
+      if(opt.closeTask&&ch.status==='done'&&it.taskId){S.tasks=S.tasks.map(t=>t.id===it.taskId?Object.assign({},t,{status:'done'}):t);await save(K.tasks,S.tasks);ch.log.push({at:now,what:'המשימה ביומן סומנה כבוצעה'});}
+      await asRetry(()=>FS.doc(asBase()+'items/'+it.id).set(ch,{merge:true}));Object.assign(it,ch);
+    }
+  }
+  const st={state:'approved',decided:now};if(created)st.created=created;if(opt.edit)st.edited=opt.edit;
+  await asRetry(()=>FS.doc(asBase()+'props/'+pid).set(st,{merge:true}));Object.assign(p,st);
+}
+async function acReject(pid){
+  const p=(S.as.props||[]).find(x=>x.id===pid);if(!p)return;const st={state:'rejected',decided:Date.now()};
+  await asRetry(()=>FS.doc(asBase()+'props/'+pid).set(st,{merge:true}));Object.assign(p,st);
+}
+
+/* ---------- מסכים ---------- */
+function acSrcHtml(s,cid){return '<div class="acsrc"><span class="note">'+esc(shortDate(s.t.slice(0,10)))+' '+esc(s.t.slice(11,16))+' · <b>'+esc(s.n)+'</b></span> <button class="link" data-act="as-goto-msg" data-c="'+cid+'" data-d="'+s.t.slice(0,10)+'">להודעה</button><div class="acq">״'+esc(s.q)+'״</div></div>';}
+function acKindTag(k,urgent){return '<span class="tag" data-s="'+(k==='done'?'present':k==='waiting'||k==='question'?'excused':k==='reminder'?'admin':'late')+'">'+esc(AC_KINDS[k]||k)+'</span>'+(urgent?' <span class="tag" data-s="absent">דחוף</span>':'');}
+function acKindSel(attr,k){return '<select class="inp acsel acks" data-k="'+esc(k)+'" '+attr+'>'+Object.keys(AC_KINDS).map(x=>opt(AC_KINDS[x],x,k)).join('')+'</select>';}
+/* שינוי ידני של פריט בזיכרון (קטגוריה, דחיפות, סטטוס) — נרשם בהיסטוריה */
+async function acEditItem(id,field,val){
+  const it=(S.as.items||[]).find(x=>x.id===id);if(!it)return;const now=Date.now(),ch={updated:now};let what='';
+  if(field==='kind'&&AC_KINDS[val]&&val!==it.kind){ch.kind=val;what='קטגוריה: '+(AC_KINDS[it.kind]||it.kind)+' ← '+AC_KINDS[val];if(val==='done')ch.status='done';}
+  else if(field==='urgent'){ch.urgent=!!val;what=val?'סומן כדחוף':'הוסר מהדחופים';}
+  else if(field==='status'&&AC_ST[val]&&val!==it.status){ch.status=val;what='סטטוס: '+(AC_ST[it.status]||'')+' ← '+AC_ST[val];}
+  if(!what)return;ch.log=(it.log||[]).concat([{at:now,what:what+' (ידני)'}]);
+  try{await asRetry(()=>FS.doc(asBase()+'items/'+id).set(ch,{merge:true}));Object.assign(it,ch);toast('עודכן');}catch(e){toast(fbErr(e));}
+  render();
+}
+function acViewAnalyze(){
+  const A=S.as,convs=(A.convs||[]).slice().sort((a,b)=>(b.updated||0)-(a.updated||0));
+  let h='<div class="card"><h3>מה כבר נותח</h3>'+(convs.length?table(['שיחה','נותחו','ממתינות','חבילה פתוחה',''],convs.map(function(c){
+      const tot=c.count||0,an=c.analyzed||0,pk=acOutPack(c.id);
+      return ['<b>'+esc(c.name)+'</b>','<div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar" style="flex:1;min-width:70px"><i style="width:'+(tot?Math.round(an/tot*100):0)+'%"></i></div><span>'+an+'/'+tot+'</span></div>',
+        tot-an?'<b style="color:var(--late)">'+(tot-an)+'</b>':'<span style="color:var(--present)">✓ הכול</span>',
+        pk?'<span class="tag" data-s="late">'+pk.count+' הודעות, מחכה לתוצאות</span>':'—',
+        '<button class="btn sm" data-act="as-an-open" data-id="'+c.id+'"'+(A.anCur===c.id?' data-v="primary"':'')+'>ניתוח</button>'];})):'<div class="empty">עדיין אין שיחות.</div>')+'</div>';
+  const cid=A.anCur;if(!cid)return h;
+  const c=acConv(cid),all=(A.msgs||{})[cid];
+  if(!all)return h+'<div class="card"><p class="note">טוען…</p></div>';
+  const pend=all.filter(m=>!m.a).length,pk=acOutPack(cid),senders=Array.from(new Set(all.map(m=>m.n))).sort((a,b)=>a.localeCompare(b,'he'));
+  h+='<div class="card evc"><div class="row" style="justify-content:space-between"><h3 style="margin:0">ניתוח: '+esc(c.name)+'</h3><button class="btn sm" data-v="ghost" data-act="as-an-close">סגירה</button></div>'+
+    '<div class="row" style="gap:8px;margin:10px 0"><span class="note">מי אתה בשיחה הזו?</span><select class="inp" id="acMe">'+opt('— לא נבחר —','',(c.me||[])[0]||'')+senders.map(n=>opt(n,n,(c.me||[])[0]||'')).join('')+'</select>'+
+      '<span class="note">(כדי שהניתוח ידע מה הן ההתחייבויות שלך)</span></div>'+
+    '<p style="margin:8px 0">'+(pend?'<b>'+pend+'</b> הודעות ממתינות לניתוח'+(all.length-pend?' · '+(all.length-pend)+' כבר נותחו':' · זו תהיה הקליטה הראשונה (ניתוח היסטורי מלא, בחבילות)'):'✓ כל ההודעות בשיחה נותחו.')+'</p>'+
+    '<p class="note" style="margin-bottom:10px">🔒 לפני השליחה: שמות המשתתפים מוחלפים בכינויים ([אני], [משתתף 1]…), ומספרי טלפון, מיילים ומספרי זהות מוסתרים. הכינויים מתורגמים בחזרה לשמות רק אצלך במערכת.</p>'+
+    '<p class="note" style="margin-bottom:10px">אפשר גם לכתוב ל-Claude Code ״סכם את הוואטסאפ״. זה אותו מנגנון בדיוק: אותן חבילות, אותו זיכרון ואותה תיבת אישורים.</p>';
+  if(pk&&pk.status==='out'){
+    h+='<div class="acstep"><b>חבילה '+esc(pk.id)+' ממתינה לתוצאות</b> <span class="note">· '+pk.count+' הודעות ('+asDT(pk.first)+' עד '+asDT(pk.last)+')'+(pk.remain?' · אחריה יישארו עוד '+pk.remain:'')+'</span>'+
+      '<div class="row" style="gap:6px;margin-top:8px"><button class="btn sm" data-act="as-pack-copy" data-id="'+cid+'">העתקה מחדש</button><button class="btn sm" data-v="ghost" data-act="as-pack-cancel" data-id="'+pk.id+'">ביטול החבילה</button></div>'+
+      (A.lastPack&&A.lastPack.id===pk.id?'<details'+(A.showPack===pk.id?' open':'')+' style="margin-top:8px"><summary class="note">הצגת הטקסט שהועתק (אם ההעתקה לא עבדה, סמנו והעתיקו מכאן)</summary><textarea readonly style="min-height:120px;margin-top:6px">'+esc(A.lastPack.text)+'</textarea></details>':'')+'</div>'+
+      '<div class="acstep"><b>הדבקת התוצאות מ"מסכם וואטסאפ"</b><textarea id="acRes" style="min-height:120px;margin-top:6px" placeholder="הדביקו כאן את מה שהועתק מהדף ב-Claude"></textarea>'+
+      '<div class="row" style="margin-top:8px"><button class="btn" data-v="primary" data-act="as-res-check">בדיקה וקליטה</button></div></div>';
+  }else if(pend){
+    h+='<div class="row" style="gap:8px"><button class="btn" data-v="primary" data-act="as-pack-copy" data-id="'+cid+'">העתקה לסיכום</button><span class="note">מעתיק חבילה אחת (עד כ-'+Math.round(AC_NEW_BYTES/1000)+'KB) להדבקה בדף "מסכם וואטסאפ" ב-Claude</span></div>';
+  }
+  if(A.acRep){const r=A.acRep;h+='<div class="acstep" style="border-color:'+(r.ok?'var(--present)':'var(--absent)')+'">'+(r.ok?
+      '<b style="color:var(--present)">✓ התוצאות נקלטו</b><div class="note">'+r.analyzed+' הודעות סומנו כמנותחות · '+r.props+' הצעות ממתינות לאישורך'+(r.merged?' · '+r.merged+' זוהו כעניין קיים ויעדכנו אותו':'')+(r.invalidSrc?' · '+r.invalidSrc+' מקורות לא תקינים הוסרו':'')+'</div>'+
+        (r.dropped.length?'<div class="note" style="color:var(--late);margin-top:4px">נפסלו '+r.dropped.length+': '+esc(r.dropped.slice(0,6).join(' · '))+'</div>':'')+
+        '<div class="row" style="margin-top:8px"><button class="btn sm" data-v="primary" data-act="as-tab" data-t="inbox">לאישור ההצעות</button></div>':
+      '<b style="color:var(--absent)">התוצאה לא נקלטה</b><div class="note">'+esc(r.errors.join(' '))+'</div>')+'</div>';}
+  const done=(A.packs||[]).filter(p=>p.conv===cid&&p.status==='returned').sort((a,b)=>(b.returned||0)-(a.returned||0));
+  if(done.length)h+='<h3 style="font-size:15px;margin-top:12px">ניתוחים קודמים</h3>'+done.slice(0,8).map(p=>'<div class="alert" style="display:block"><span class="note">'+esc(tsLine(p.returned))+' · '+(p.route==='code'?'Claude Code':'מסכם וואטסאפ')+' · '+p.count+' הודעות · '+(p.props||0)+' הצעות</span>'+(p.summary?'<div>'+esc(p.summary)+'</div>':'')+'</div>').join('');
+  return h+'</div>';
+}
+function acViewInbox(){
+  const A=S.as,P=(A.props||[]).filter(p=>p.state==='pending').sort((a,b)=>a.created-b.created);
+  if(!P.length)return '<div class="card"><div class="empty">אין הצעות שממתינות לאישור. ✓</div></div>';
+  const topicName=t=>{if(!t)return '';if(t.charAt(0)==='#'){const tp=P.find(x=>x.type==='topic'&&x.tref===t.slice(1));return tp?tp.data.title+' (חדש)':'';}const x=(A.topics||[]).find(y=>y.id===t);return x?x.title:'';};
+  const tgt=id=>(A.items||[]).find(x=>x.id===id)||(A.topics||[]).find(x=>x.id===id)||{};
+  return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">ממתין לאישור ('+P.length+')</h3>'+
+    '<button class="btn sm" data-act="as-prop-okall">אישור הכול</button></div><p class="note" style="margin:6px 0 10px">שום דבר לא נכנס לזיכרון או למשימות לפני שתאשר. אפשר לתקן כותרת ומועד לפני האישור.</p>'+
+    P.map(function(p){const d=p.data||{},t=tgt(p.target);
+      let head,body='';
+      if(p.type==='topic')head='<span class="tag" data-s="admin">'+(p.op==='new'?'נושא חדש':'עדכון נושא')+'</span> <b>'+esc(p.op==='new'?d.title:t.title||'')+'</b>'+(p.merged?' <span class="note">(זוהה כנושא קיים)</span>':'');
+      else if(p.op==='new'){head=acKindSel('data-acf="kind" data-id="'+p.id+'"',d.kind)+' <label class="chk acurg"><input type="checkbox" data-acf="urgent" data-id="'+p.id+'"'+(d.urgent?' checked':'')+'> דחוף</label> <input class="inp acin" data-acf="title" data-id="'+p.id+'" value="'+esc(d.title)+'">';
+        body=(d.details?'<div>'+esc(d.details)+'</div>':'')+'<div class="row" style="gap:8px;margin-top:4px">'+(d.owner?'<span class="note">אחראי: '+esc(d.owner)+'</span>':'')+
+          '<label class="note">מועד <input type="date" class="inp" data-acf="due" data-id="'+p.id+'" value="'+esc(d.due||'')+'"></label>'+(topicName(d.topic)?'<span class="note">נושא: '+esc(topicName(d.topic))+'</span>':'')+
+          (d.status!=='done'?'<label class="chk"><input type="checkbox" data-acf="task" data-id="'+p.id+'"'+(AC_TASKY[d.kind]?' checked':'')+'> להוסיף גם ליומן המשימות</label>':'')+'</div>';}
+      else{head='<span class="tag" data-s="admin">עדכון</span> <b>'+esc(t.title||'(פריט)')+'</b>'+(p.merged?' <span class="note">(אותו עניין עלה שוב — מעדכן את הקיים במקום כפילות)</span>':'');
+        body='<div>'+(d.status&&d.status!==t.status?'סטטוס: '+esc(AC_ST[t.status]||'')+' ← <b>'+esc(AC_ST[d.status]||d.status)+'</b> ':'')+(d.due&&d.due!==t.due?' · מועד: '+esc(d.due):'')+(d.note?'<div class="note">'+esc(d.note)+'</div>':'')+'</div>'+
+          (d.status==='done'&&t.taskId?'<label class="chk"><input type="checkbox" data-acf="closeTask" data-id="'+p.id+'"> לסמן גם את המשימה ביומן כבוצעה</label>':'');}
+      return '<div class="acprop"><div>'+head+'</div>'+body+(p.sources||[]).map(s=>acSrcHtml(s,p.conv)).join('')+
+        '<div class="row" style="gap:6px;margin-top:8px"><button class="btn sm" data-v="primary" data-act="as-prop-ok" data-id="'+p.id+'">אישור</button><button class="btn sm" data-v="ghost" data-act="as-prop-no" data-id="'+p.id+'">דחייה</button></div></div>';}).join('')+'</div>';
+}
+function acViewMemory(){
+  const A=S.as,T=(A.topics||[]).slice().sort((a,b)=>(b.updated||0)-(a.updated||0)),I=(A.items||[]);
+  const f=A.memF||'open',its=I.filter(x=>f==='all'||(f==='open'?x.status!=='done':f==='urgent'?x.urgent&&x.status!=='done':x.status==='done'));
+  const grp={};its.forEach(x=>{(grp[x.topic||'']=grp[x.topic||'']||[]).push(x);});
+  const row=x=>'<div class="acitem"><div class="row" style="gap:6px">'+acKindSel('data-acm="kind" data-id="'+x.id+'"',x.kind)+
+    '<label class="chk acurg"><input type="checkbox" data-acm="urgent" data-id="'+x.id+'"'+(x.urgent?' checked':'')+'> דחוף</label>'+
+    '<select class="inp acsel" data-acm="status" data-id="'+x.id+'">'+Object.keys(AC_ST).map(k=>opt(AC_ST[k],k,x.status)).join('')+'</select>'+
+    ' <b>'+esc(x.title)+'</b> <span class="note">'+(x.due?' · עד '+esc(shortDate(x.due)):'')+(x.owner?' · '+esc(x.owner):'')+(x.taskId?' · ביומן המשימות':'')+'</span></div>'+
+    (x.details?'<div class="note" style="white-space:pre-wrap">'+esc(x.details)+'</div>':'')+'<details><summary class="note">מקורות ('+(x.sources||[]).length+') והיסטוריה</summary>'+(x.sources||[]).map(s=>acSrcHtml(s,x.conv)).join('')+
+    (x.log||[]).map(l=>'<div class="note">'+esc(tsLine(l.at))+' · '+esc(l.what)+'</div>').join('')+'</details></div>';
+  return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">הזיכרון</h3><div class="row" style="gap:6px">'+
+    [['open','פתוחים'],['urgent','🔥 דחופים'],['done','טופלו'],['all','הכול']].map(x=>'<button class="btn sm" data-act="as-mem-f" data-f="'+x[0]+'"'+(f===x[0]?' data-v="primary"':'')+'>'+x[1]+'</button>').join('')+'</div></div>'+
+    (its.length?T.filter(t=>grp[t.id]).map(t=>'<div class="actopic"><h3 style="font-size:16px">'+esc(t.title)+(t.status==='closed'?' <span class="tag" data-s="present">נסגר</span>':'')+'</h3>'+(t.summary?'<p class="note">'+esc(t.summary)+'</p>':'')+grp[t.id].map(row).join('')+'</div>').join('')+
+      (grp['']?'<div class="actopic"><h3 style="font-size:16px">ללא נושא</h3>'+grp[''].map(row).join('')+'</div>':''):'<div class="empty">'+(I.length?'אין פריטים בסינון הזה.':'הזיכרון עדיין ריק. הוא מתמלא מהצעות שאישרת.')+'</div>')+'</div>';
+}
+async function acAction(a,el,id){
+  const A=S.as;
+  if(a==='as-tab'){A.tabA=el.dataset.t;if(!A.acLoaded)await acLoad();return render();}
+  if(a==='as-mem-f'){A.memF=el.dataset.f;return render();}
+  if(a==='as-an-open'){A.anCur=id;A.acRep=null;render();await asLoadConv(id);return render();}
+  if(a==='as-an-close'){A.anCur='';A.acRep=null;return render();}
+  if(a==='as-pack-copy'){
+    const me=(document.getElementById('acMe')||{}).value;if(me!==undefined&&me!==((acConv(id).me||[])[0]||'')){await asRetry(()=>FS.doc(asBase()+'convs/'+id).set({me:me?[me]:[]},{merge:true}));acConv(id).me=me?[me]:[];}
+    A.busy='מכין חבילה…';render();let p;try{p=await acBuildPack(id,'paste');}catch(e){A.busy='';toast(fbErr(e));return render();}A.busy='';
+    if(!p){toast('אין הודעות שממתינות לניתוח');return render();}
+    A.lastPack=p;
+    try{await navigator.clipboard.writeText(p.text);toast('הועתק: '+p.count+' הודעות. הדביקו בדף "מסכם וואטסאפ" ב-Claude');}catch(e){A.showPack=p.id;toast('ההעתקה האוטומטית נחסמה. סמנו את הטקסט והעתיקו ידנית');}
+    return render();}
+  if(a==='as-pack-cancel'){await acCancelPack(id);toast('החבילה בוטלה');return render();}
+  if(a==='as-res-check'){const t=(document.getElementById('acRes')||{}).value||'';if(!t.trim())return toast('הדביקו קודם את התוצאות');
+    A.busy='בודק וקולט…';render();try{A.acRep=await acImportResult(t,'paste');}catch(e){A.acRep={ok:false,errors:[fbErr(e)]};}A.busy='';
+    if(A.acRep.ok)logAct('קליטת ניתוח שיחה',A.acRep.props+' הצעות');return render();}
+  if(a==='as-prop-ok'||a==='as-prop-okall'){
+    const ids=a==='as-prop-ok'?[id]:(A.props||[]).filter(p=>p.state==='pending').map(p=>p.id);
+    // קודם קוראים את מה שתוקן על המסך (כותרת, מועד, קטגוריה, דחיפות), ורק אחר כך מציגים "שומר…"
+    const plan=ids.map(function(pid){const g=f=>document.querySelector('#main [data-acf="'+f+'"][data-id="'+pid+'"]');const p=(A.props||[]).find(x=>x.id===pid);if(!p||p.state!=='pending')return null;
+      const edit={},ti=g('title'),du=g('due'),kd=g('kind'),ug=g('urgent');
+      if(ti&&ti.value.trim()&&ti.value.trim()!==p.data.title)edit.title=ti.value.trim();
+      if(kd&&kd.value!==p.data.kind){edit.kind=kd.value;if(kd.value==='done')edit.status='done';else if(kd.value==='waiting')edit.status='waiting';else if(p.data.status!=='open')edit.status='open';}
+      if(ug&&ug.checked!==!!p.data.urgent)edit.urgent=ug.checked;
+      if(du&&(du.value||null)!==(p.data.due||null))edit.due=du.value||null;
+      return {pid:pid,opt:{edit:Object.keys(edit).length?edit:null,task:g('task')?g('task').checked:false,closeTask:g('closeTask')?g('closeTask').checked:false}};}).filter(Boolean);
+    A.busy='שומר…';render();let n=0;
+    for(const x of plan){try{await acApprove(x.pid,x.opt);n++;}catch(e){toast(fbErr(e));break;}}
+    A.busy='';logAct('אישור ממצאי ניתוח',n+' הצעות');toast('אושרו '+n);return render();}
+  if(a==='as-prop-no'){await acReject(id);return render();}
+  if(a==='as-goto-msg'){A.tabA='chats';A.cur=el.dataset.c;A.day=el.dataset.d;A.q='';A.page=0;render();if(!(A.msgs&&A.msgs[A.cur]))await asLoadConv(A.cur);return render();}
+}
+
+const AC_ACTS=new Set(['as-tab','as-mem-f','as-an-open','as-an-close','as-pack-copy','as-pack-cancel','as-res-check','as-prop-ok','as-prop-okall','as-prop-no','as-goto-msg']);
+function viewAssist(){
+  if(!isAdmin())return '<div class="empty">העוזר האישי זמין להנהלה בלבד.</div>';
+  const A=S.as=S.as||{};
+  if(!A.loaded&&!A.loading){A.loading=true;asLoadMeta().then(acLoad).then(()=>{A.loading=false;if(S.tab==='assist')render();});}
+  const convs=(A.convs||[]);
+  let h='<div class="head"><div><h2>עוזר אישי · שיחות וואטסאפ</h2><div class="sub">קליטה, ניתוח ואישור. הניתוח נעשה ב-Claude (העתקה והדבקה) או דרך Claude Code, ושום דבר לא נכנס למערכת בלי אישורך.</div></div></div>'+
+    '<div class="warn" style="margin-bottom:12px">🔒 השיחות גלויות רק למשתמש שלך. הן מכילות מידע אישי על תלמידים, הורים וצוות. ייבוא רק מייצוא ידני של וואטסאפ (TXT או MD).</div>'+
+    (A.err?'<div class="warn" style="margin-bottom:12px;color:var(--absent)">'+esc(A.err)+'</div>':'');
+  const t=A.tabA||'chats',pend=(A.props||[]).filter(p=>p.state==='pending').length;
+  h+='<div class="row" style="gap:6px;margin-bottom:12px">'+[['chats','שיחות וייבוא'],['analyze','ניתוח'],['inbox','לאישור'+(pend?' ('+pend+')':'')],['memory','זיכרון']].map(x=>
+    '<button class="btn sm" data-act="as-tab" data-t="'+x[0]+'"'+(t===x[0]?' data-v="primary"':'')+'>'+x[1]+'</button>').join('')+'</div>';
+  if(t!=='chats'&&A.busy)h+='<p class="note">⏳ '+esc(A.busy)+'</p>';
+  if(A.acErr)h+='<div class="warn" style="margin-bottom:12px">'+esc(A.acErr)+'</div>';
+  return h+(t==='analyze'?acViewAnalyze():t==='inbox'?acViewInbox():t==='memory'?acViewMemory():asViewChats());
+}
+
 /* ================= ישיבות צוות ================= */
 // נשמר ב-store/meetings_{שנת לימודים}: כל הצוות קורא, רק ההנהלה כותבת
 const mtYear=d=>{const y=+String(d).slice(0,4),m=+String(d).slice(5,7);return m>=8?y:y-1;};
@@ -3673,7 +4385,7 @@ function render(){
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
     '<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
-    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,bdays:viewBirthdays,analytics:viewAnalytics,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,account:viewAccount,import:viewImport,card:viewCard};
+    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,bdays:viewBirthdays,analytics:viewAnalytics,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,assist:viewAssist,account:viewAccount,import:viewImport,card:viewCard};
   if(S.inst&&!isAdmin()&&['card','account','bdays','rcard'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
   if(S.tab==='tasks')dmMarkRead();
   const v=map[S.tab]||viewDash;
@@ -3729,6 +4441,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a.indexOf('lm-')===0||a==='mark-view')return markAction(a,el);
   if(a.indexOf('scan-')===0)return scanAction(a,el);
   if(a.indexOf('ev-')===0||a.indexOf('evt-')===0||a==='goto-events')return evAction(a,el);
+  if(a.indexOf('as-')===0)return AC_ACTS.has(a)?acAction(a,el,id):asAction(a,el,id);
   if(/^(bulk-|cred-|join-|jr-)/.test(a)||a==='user-pin')return userAction(a,el);
   if(a.indexOf('con-')===0)return consoleAction(a,el);
   if(a.indexOf('ac-')===0)return accountAction(a);
@@ -4064,6 +4777,10 @@ document.getElementById('main').addEventListener('change',function(e){
   if(el.id==='ev-time'&&S.evc){evCapture();const pn=perOfTime(S.evc.time);if(pn!==''){S.evc.period=pn;const sp=document.getElementById('ev-per');if(sp)sp.value=pn;}return;}
   if(el.id==='ev-date'||el.id==='ev-per'){evCapture();return;}
   if(el.id==='ex-cls'&&S.exEdit){exCapture();return render();}
+  if(el.dataset&&el.dataset.acm&&S.as){acEditItem(el.dataset.id,el.dataset.acm,el.type==='checkbox'?el.checked:el.value);return;}
+  if(el.id==='asFiles'&&el.files&&el.files.length){const fs=Array.from(el.files);el.value='';return asFilesChosen(fs);}
+  if(el.dataset&&el.dataset.asf!==undefined&&S.as&&S.as.pending){document.querySelectorAll('#main [data-asn]').forEach(i=>S.as.pending[+i.dataset.asn].newName=i.value);S.as.pending[+el.dataset.asf].target=el.value;return render();}
+  if(el.dataset&&el.dataset.asday&&S.as){S.as.day=el.value;S.as.page=0;return render();}
   if(el.dataset&&el.dataset.rc&&S.rc){S.rc[el.dataset.rc]=el.value;return render();}
   if(el.id==='ttFile'&&el.files&&el.files[0]){const f=el.files[0];el.value='';return handleTtFile(f);}
   if(el.dataset&&el.dataset.bk!==undefined&&S.bulk){document.querySelectorAll('#main [data-bku]').forEach(inp=>{S.bulk.list[+inp.dataset.bku].user=inp.value.trim();});S.bulk.list[+el.dataset.bk].on=el.checked;return render();}
@@ -4116,6 +4833,7 @@ document.getElementById('main').addEventListener('change',function(e){
 
 document.getElementById('main').addEventListener('input',function(e){
   const t=e.target;
+  if(t.dataset&&t.dataset.asq&&S.as){S.as.q=t.value;S.as.page=0;S.focus='asQ';return render();}
   if(t.dataset&&t.dataset.evq){evCapture();S.evc.q=t.value;S.focus='evq';return render();}
   if(t.dataset&&t.dataset.evf==='q'){S.evf.q=t.value;S.focus='evfq';return render();}
   if(t.id==='ev-note'&&S.evc){S.evc.note=t.value;return;}
