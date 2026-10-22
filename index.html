@@ -94,6 +94,8 @@ main{flex:1;min-width:0;padding:24px 28px 80px}
 .hmt td.hm{text-align:center;font-weight:600;min-width:58px;border-radius:6px;font-variant-numeric:tabular-nums}
 .hmt th{white-space:nowrap}
 .ains{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 7%,var(--surface))}
+.afresh .alert[data-tone="bad"]{color:var(--absent)}
+.afresh .alert[data-tone="good"]{color:var(--present)}
 #remBox{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;width:min(440px,calc(100vw - 32px));display:flex;flex-direction:column;gap:10px}
 .remp{background:var(--surface);border:2px solid var(--gold);border-radius:16px;padding:14px 16px;box-shadow:0 12px 40px rgba(20,27,52,.28);animation:remIn .35s ease;transition:opacity .3s,transform .3s}
 .remp.out{opacity:0;transform:translateY(-12px)}
@@ -1087,7 +1089,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=45;
+const APP_VER=46;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -2807,6 +2809,40 @@ function anSlotOf(e,slots){
   const s=slots.find(x=>x.s<=t&&t<x.e);if(s)return s.k;
   if(slots.length&&t<slots[0].s)return 'pre';if(slots.length)return 'post';return '';
 }
+/* "מה חדש": השוואה בין השבוע הנוכחי לשבוע הקודם, ומה קרה היום — מתעדכן עם כל יום נוכחות חדש */
+function anFresh(cf){
+  const today=iso(new Date()),d0=new Date();d0.setDate(d0.getDate()-d0.getDay());const ws=iso(d0);
+  const p0=new Date(d0);p0.setDate(p0.getDate()-7);const pws=iso(p0),pwe=iso(new Date(d0.getTime()-864e5));
+  const rec=attLogAll(pws,today).filter(r=>!cf||r.cls===cf),cur=rec.filter(r=>r.d>=ws),prev=rec.filter(r=>r.d<ws);
+  const pct=a=>a.length?Math.round(a.filter(r=>r.v==='present'||r.v==='late').length/a.length*100):null;
+  const cnt=(a,v)=>a.filter(r=>r.v===v).length,out=[];
+  const arrow=(x,y,good)=>{if(x===null||y===null)return '';const d=x-y;if(!d)return ' (ללא שינוי)';return ' ('+(d>0?'▲':'▼')+Math.abs(d)+(good?'':'')+')';};
+  const pc=pct(cur),pp=pct(prev);
+  if(pc!==null)out.push({tone:pp!==null&&pc<pp-2?'bad':pp!==null&&pc>pp+2?'good':'',t:'נוכחות השבוע: '+pc+'%'+(pp!==null?' לעומת '+pp+'% בשבוע שעבר':'')});
+  const lc=cnt(cur,'late'),lp=cnt(prev,'late');if(lc||lp)out.push({tone:lc>lp*1.3&&lc>=5?'bad':'',t:'איחורים השבוע: '+lc+(prev.length?' לעומת '+lp+' בשבוע שעבר':'')});
+  // כיתה שהנוכחות בה ירדה הכי הרבה
+  const byC={};rec.forEach(r=>{const o=byC[r.cls]=byC[r.cls]||{c:[],p:[]};(r.d>=ws?o.c:o.p).push(r);});
+  const drops=Object.keys(byC).map(c=>({c:c,a:pct(byC[c].c),b:pct(byC[c].p)})).filter(x=>x.a!==null&&x.b!==null&&x.b-x.a>=5).sort((x,y)=>(y.b-y.a)-(x.b-x.a));
+  if(drops.length)out.push({tone:'bad',t:'ירידה בנוכחות השבוע: '+drops.slice(0,2).map(x=>x.c+' ('+x.b+'% ← '+x.a+'%)').join(', ')});
+  // תלמידים שחסרו לפחות שני ימים השבוע
+  const abs={};cur.filter(r=>r.v==='absent').forEach(r=>{(abs[r.sid]=abs[r.sid]||{n:r.name,c:r.cls,d:{}}).d[r.d]=1;});
+  const many=Object.values(abs).filter(x=>Object.keys(x.d).length>=2);
+  if(many.length)out.push({tone:'bad',t:many.length+' תלמידים חסרו יומיים ומעלה השבוע: '+many.slice(0,6).map(x=>x.n+' ('+x.c+')').join(', ')+(many.length>6?' ועוד':'')});
+  // אירועים לשיפור השבוע מול שבוע שעבר
+  const ev=S.events.filter(e=>e.kind==='neg'&&(!cf||e.cls===cf)),ec=ev.filter(e=>e.date>=ws).length,ep=ev.filter(e=>e.date>=pws&&e.date<=pwe).length;
+  if(ec||ep)out.push({tone:ec>ep+2?'bad':ec<ep?'good':'',t:'אירועים לשיפור השבוע: '+ec+' לעומת '+ep+' בשבוע שעבר'});
+  // סימון נוכחות השבוע לפי מורה
+  const tm={};Object.keys(S.latt).filter(d=>d>=ws&&d<=today).forEach(function(d){const day=S.latt[d]||{},done={};Object.keys(day).forEach(k=>{const i=k.indexOf(':');if(i>0)done[k.slice(0,i)]=1;});
+    const hm=d===today?nowHM():'99:99';
+    lessonsOn(d).forEach(function(l){if(cf&&(l.classes||[]).indexOf(cf)<0)return;if(l.type==='private'&&!(l.students||[]).length)return;const pp=periods().find(x=>x.n===l.period);if(!pp||!pp.end||pp.end>hm)return;
+      const t=l.teacher||'ללא מורה',o=tm[t]=tm[t]||{n:0,m:0};o.n++;if(done[l.id])o.m++;});});
+  const weak=Object.keys(tm).filter(t=>tm[t].n>=3&&tm[t].m/tm[t].n<0.8).sort((a,b)=>tm[a].m/tm[a].n-tm[b].m/tm[b].n);
+  if(weak.length)out.push({tone:'bad',t:'סימנו פחות מ-80% מהשיעורים השבוע: '+weak.slice(0,5).map(t=>t+' ('+Math.round(tm[t].m/tm[t].n*100)+'%)').join(', ')});
+  else if(Object.keys(tm).length)out.push({tone:'good',t:'כל המורים סימנו לפחות 80% מהשיעורים השבוע'});
+  // היום
+  const td=rec.filter(r=>r.d===today);if(td.length)out.push({tone:'',t:'היום עד עכשיו: '+td.length+' רישומים, '+cnt(td,'absent')+' חיסורים, '+cnt(td,'late')+' איחורים'});
+  return {items:out,ws:ws};
+}
 function viewAnalytics(){
   if(!isAdmin())return '<div class="empty">הניתוחים זמינים להנהלה בלבד.</div>';
   const today=iso(new Date()),from=S.anFrom||(mtYear(today)+'-08-01'),to=S.anTo||today,cf=S.anCls||'';
@@ -2912,7 +2948,9 @@ function viewAnalytics(){
       stat(cnt.absent+cnt.excused,'חיסורים'+(cnt.late?' · '+cnt.late+' איחורים':''),'var(--absent)')+
       stat('<span style="color:var(--present)">'+poss.length+'</span> / <span style="color:var(--late)">'+negs.length+'</span>','אירועים: לשבח / לשיפור','')+
       stat(compPct===null?'—':compPct+'%','שיעורים שסומנה בהם נוכחות',compPct!==null&&compPct<85?'var(--late)':'')+'</div>'+
-    (ins.length?'<div class="card ains"><h3>💡 תובנות</h3>'+ins.map(t=>'<div class="alert">'+esc(t)+'</div>').join('')+'</div>':'')+
+    (function(){const F=anFresh(cf);return F.items.length?'<div class="card afresh"><h3>🆕 מה חדש השבוע <span class="note">(מיום ראשון '+esc(shortDate(F.ws))+' · '+esc(dataAgo())+')</span></h3>'+
+      F.items.map(x=>'<div class="alert" data-tone="'+x.tone+'">'+esc(x.t)+'</div>').join('')+'</div>':'';})()+
+    (ins.length?'<div class="card ains"><h3>💡 תובנות לתקופה שנבחרה</h3>'+ins.map(t=>'<div class="alert">'+esc(t)+'</div>').join('')+'</div>':'')+
     card('מתי חסרים ומאחרים','אחוז החיסורים והאיחורים בכל משבצת במערכת. ככל שהצבע חזק יותר, הבעיה גדולה יותר.',Object.keys(hv).length?attHeat:empty)+
     card('מתי קורים אירועים לשיפור','לפי יום ושעה, כולל הפסקות'+(noTime?' · '+noTime+' אירועים בלי שעה לא נכללו':''),(evHeat||empty)+
       (types.length?'<div class="grid g2" style="margin-top:14px"><div><h3 style="font-size:15px">סוגי האירועים</h3>'+types.map(t=>'<div class="dcls"><span style="min-width:120px">'+esc(t)+'</span><div class="bar" style="flex:1"><i style="width:'+Math.round(byType[t]/tMax*100)+'%" data-low="1"></i></div><b>'+byType[t]+'</b></div>').join('')+'</div>'+
