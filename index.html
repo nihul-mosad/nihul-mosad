@@ -628,6 +628,7 @@ async function enterInst(inst,user,typed){
   S.timetable=await load(K.timetable,[]);
   const sec=await loadSec();
   if(sec){remListen();setTimeout(function(){try{missCheck();}catch(e){}},8000);}
+  DATA_AT=Date.now();
   if(!sec){
     S.students=await load(K.students,[]);S.att=await load(K.att,{});S.reviews=await load(K.reviews,[]);S.tasks=await load(K.tasks,[]);S.latt=await load(K.latt,{});S.events=await load(K.events,[]);LIDX=null;
   }
@@ -1086,7 +1087,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=44;
+const APP_VER=45;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -1192,6 +1193,22 @@ function remPopup(r){
 }
 /* תזכורת למורה: שיעור שלו שהסתיים היום בלי סימון נוכחות — חלונית צפה בתחילת השיעור הבא, וחוזרת כל 15 דקות עד שמסמנים.
    עובד כשהאפליקציה פתוחה אצל המורה (אין שליחה לטלפון סגור). */
+/* רענון נתונים: הנתונים נטענים בכניסה, ומתעדכנים מחדש מהשרת כשחוזרים לאפליקציה, כל 5 דקות במסכי הסיכום, ובלחיצה על "רענון".
+   כך לוח הבקרה, הניתוחים והדוחות מראים גם מה שמורים אחרים סימנו בינתיים. */
+let DATA_AT=0,DATA_BUSY=false;
+const LIVE_TABS={dash:1,analytics:1,reports:1,events:1,daylog:1,review:1,grades:1};
+async function refreshData(manual){
+  if(DATA_BUSY||!S.me||!S.inst||S.legacy||!FS)return;
+  if(S.dirty||S.ldirty||S.evc||S.exEdit||S.mtEdit||S.remc){if(manual)toast('יש שינויים שלא נשמרו. שמרו קודם ואז רעננו.');return;}
+  DATA_BUSY=true;if(manual)toast('מרענן…');
+  try{S.timetable=await load(K.timetable,S.timetable);const ok=await loadSec();if(ok&&isAdmin())S.staff=await load(K.staff,S.staff);DATA_AT=Date.now();if(manual)toast('הנתונים עודכנו');render();}
+  catch(e){if(manual)toast(fbErr(e));}
+  finally{DATA_BUSY=false;}
+}
+function dataAgo(){if(!DATA_AT)return '';const m=Math.floor((Date.now()-DATA_AT)/60000);return m<1?'עודכן עכשיו':'עודכן לפני '+m+' דק׳';}
+function refreshBtn(){return '<button class="btn sm" data-v="ghost" data-act="data-refresh" title="טעינה מחדש של הנתונים מהשרת">⟳ רענון <span class="note">('+dataAgo()+')</span></button>';}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&DATA_AT&&Date.now()-DATA_AT>3*60000)refreshData(false);});
+setInterval(function(){if(document.visibilityState==='visible'&&DATA_AT&&LIVE_TABS[S.tab]&&Date.now()-DATA_AT>5*60000)refreshData(false);},60000);
 const MISS={last:0,keys:''};
 function myMissedLessons(){
   if(!S.me||!S.inst||!S.me.teacher||!(S.timetable||[]).length)return [];
@@ -1346,7 +1363,7 @@ function viewDash(){
    '<div class="dhero"><div><div class="note" style="font-size:15px">'+greet+(nm?', '+esc(nm):'')+'</div><h2 style="margin:2px 0">'+gregLabel(today)+'</h2><div class="hebdate">'+hebLabel(today)+'</div>'+
      (S.timetable.length?'<div class="dnow">'+esc(dashNow())+'</div>':'')+'</div>'+
      '<div class="row dquick"><button class="btn" data-v="primary" data-act="goto-mark">נוכחות</button><button class="btn" data-act="dash-ev">+ דיווח אירוע</button>'+
-     '<button class="btn" data-act="goto-review">תמונת מצב</button><button class="btn" data-act="goto-tasks">+ משימה</button>'+
+     '<button class="btn" data-act="goto-review">תמונת מצב</button><button class="btn" data-act="goto-tasks">+ משימה</button>'+refreshBtn()+
      (adm?'<button class="btn" data-act="rem-new">🔔 תזכורת למורה</button>':'')+'</div></div>'+
    (S.remc&&adm?remComposer():'')+
    '<div class="grid g4" style="margin-bottom:14px">'+
@@ -2884,7 +2901,7 @@ function viewAnalytics(){
   const empty='<div class="empty">אין מספיק נתונים בטווח הזה.</div>';
   const clsO=S.config.classes;
   return printHead()+'<div class="head"><div><h2>ניתוחים</h2><div class="sub">'+esc(dual(from))+' עד '+esc(dual(to))+(cf?' · '+esc(cf):'')+'</div></div>'+
-    '<div class="row noprint"><button class="btn" data-act="print">הדפסה</button></div></div>'+
+    '<div class="row noprint">'+refreshBtn()+'<button class="btn" data-act="print">הדפסה</button></div></div>'+
     '<div class="card noprint"><div class="row" style="gap:6px;margin-bottom:10px">'+
       [['month','החודש'],['30','30 יום'],['90','3 חודשים'],['year','שנת הלימודים']].map(x=>'<button class="btn sm" data-act="an-range" data-r="'+x[0]+'">'+x[1]+'</button>').join('')+'</div>'+
       '<div class="grid g3"><label class="field"><span>מתאריך</span><input type="date" data-ch="anFrom" value="'+from+'"></label>'+
@@ -4574,6 +4591,7 @@ document.getElementById('main').addEventListener('click',async function(e){
     const all=[];recipients().forEach(s=>numbersFor(s).forEach(n=>all.push(n)));
     return copy(all.join(', '),all.length+' מספרים הועתקו');
   }
+  if(a==='data-refresh')return refreshData(true);
   if(a==='goto-bdays')return goTab('bdays');
   if(a==='dl-day'||a==='dl-goto'){dlCapture();saveDaylog();const n=+el.dataset.n;
     if(a==='dl-goto')S.dlDate=el.dataset.d;else if(!n)S.dlDate=iso(new Date());else{const o=new Date(S.dlDate+'T12:00:00');do{o.setDate(o.getDate()+n);}while(o.getDay()===6);S.dlDate=iso(o);}
