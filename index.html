@@ -333,6 +333,9 @@ table.tt td.pc{cursor:default;text-align:center;font-size:12px;color:var(--muted
 table.tt td.pc b{display:block;font-size:16px;color:var(--ink)}
 table.tt td.sel{outline:2px solid var(--accent);outline-offset:-2px}
 table.tt td.add:hover{background:var(--surface2)}
+table.ttall th.ttfree,table.ttall td.ttfree{width:160px;font-size:12px;color:var(--muted);background:var(--surface2);cursor:default}
+table.ttall tr.ttday td{background:var(--accent-soft);color:var(--accent);font-weight:700;padding:6px 10px;height:auto;cursor:default}
+table.ttall thead th{position:sticky;top:0;background:var(--surface);z-index:1}
 .lsn{background:var(--surface2);border-radius:8px;padding:5px 7px;margin-bottom:4px;font-size:12.5px;line-height:1.35;border-right:3px solid var(--accent)}
 .lsn b{display:block;font-size:13px}
 .lsn span{display:block;color:var(--muted)}
@@ -1089,7 +1092,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=46;
+const APP_VER=47;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -2530,6 +2533,23 @@ function lessonChip(l){
   return '<div class="lsn'+(l.type==='private'?' pr':'')+(cf?' cf':'')+'"'+(cf?' title="למורה יש שיעור נוסף באותה שעה"':'')+'><b>'+esc(main)+'</b><span>'+esc(sub)+'</span>'+
     (l.type==='private'?'<em class="bd">פרטני'+((l.students||[]).length?' · '+l.students.length+' תל׳':' · לא נבחרו תלמידים')+'</em>':'')+'</div>';
 }
+/* מבט כולל: כל הכיתות בטבלה אחת — שורה לכל שיעור בכל יום, עמודה לכל כיתה, ועמודה של מורים פנויים (למילוי מקום) */
+function ttAllGrid(){
+  const P=periods(),C=S.config.classes,T=teachersList(),sel=S.ttSlot;
+  const head='<thead><tr><th class="pc"></th>'+C.map(c=>'<th>'+esc(c)+'</th>').join('')+'<th class="ttfree">מורים פנויים</th></tr></thead>';
+  const body=DAYS.map(function(dn,d){
+    const rows=P.map(function(p){
+      const at=S.timetable.filter(l=>l.day===d&&l.period===p.n),busy={};at.forEach(l=>{if(l.teacher)busy[l.teacher]=1;});
+      const free=T.filter(t=>!busy[t]);
+      return '<tr><td class="pc"><b>'+p.n+'</b>'+esc(p.start||'')+'</td>'+C.map(function(c){
+        const ls=at.filter(l=>(l.classes||[]).indexOf(c)>-1),on=sel&&sel.day===d&&sel.period===p.n&&ttCurCls()===c;
+        return '<td class="add'+(on?' sel':'')+'" data-act="tt-slot" data-day="'+d+'" data-p="'+p.n+'" data-cls="'+esc(c)+'">'+(ls.length?ls.map(lessonChip).join(''):'')+'</td>';
+      }).join('')+'<td class="ttfree">'+(at.length?esc(free.join(', '))||'—':'')+'</td></tr>';
+    }).join('');
+    return '<tr class="ttday"><td colspan="'+(C.length+2)+'">יום '+dn+'</td></tr>'+rows;
+  }).join('');
+  return '<div class="tt-wrap"><table class="tt ttall" style="min-width:'+Math.max(760,90+C.length*150+160)+'px">'+head+'<tbody>'+body+'</tbody></table></div>';
+}
 function viewSchedule(){
   const P=periods(),sel=S.ttSlot;
   if(S.ttImport)return ttImportView();
@@ -2541,9 +2561,10 @@ function viewSchedule(){
   const head='<div class="head"><div><h2>מערכת שעות</h2><div class="sub">'+S.timetable.length+' שיעורים בשבוע · '+teachersList().length+' מורים</div></div>'+
     '<div class="row"><button class="btn" data-act="tt-pick-file">ייבוא מקובץ</button><input type="file" id="ttFile" accept=".xlsx,.xls" style="display:none">'+
     '<button class="btn" data-act="tt-periods">מבנה יום</button></div></div>';
-  const modes='<div class="seg" style="max-width:320px;margin-bottom:12px"><button data-act="tt-mode" data-m="class" data-on="'+(S.ttMode!=='teacher'?1:0)+'">לפי כיתה</button>'+
-    '<button data-act="tt-mode" data-m="teacher" data-on="'+(S.ttMode==='teacher'?1:0)+'">לפי מורה</button></div>';
-  const chips='<div class="row" style="margin-bottom:14px;gap:6px">'+(S.ttMode==='teacher'?
+  const modes='<div class="seg" style="max-width:420px;margin-bottom:12px"><button data-act="tt-mode" data-m="class" data-on="'+(S.ttMode!=='teacher'&&S.ttMode!=='all'?1:0)+'">לפי כיתה</button>'+
+    '<button data-act="tt-mode" data-m="teacher" data-on="'+(S.ttMode==='teacher'?1:0)+'">לפי מורה</button>'+
+    '<button data-act="tt-mode" data-m="all" data-on="'+(S.ttMode==='all'?1:0)+'">מבט כולל</button></div>';
+  const chips=S.ttMode==='all'?'':'<div class="row" style="margin-bottom:14px;gap:6px">'+(S.ttMode==='teacher'?
     (teachersList().map(t=>'<button class="chip" data-act="tt-teacher" data-t="'+esc(t)+'" data-on="'+(t===S.ttTeacher?1:0)+'">'+esc(t)+'</button>').join('')||'<span class="note">אין עדיין מורים. הוסיפו שיעור או אנשי צוות.</span>'):
     (S.config.classes.map(c=>'<button class="chip" data-act="tt-cls" data-c="'+esc(c)+'" data-on="'+(c===ttCurCls()?1:0)+'">'+esc(c)+'</button>').join('')||'<span class="note">אין כיתות. הוסיפו כיתות בהגדרות.</span>'))+'</div>';
   // desktop grid
@@ -2556,7 +2577,7 @@ function viewSchedule(){
     }).join('')+'</tbody></table></div>';
   // mobile: day by day
   if(S.ttDay===null){const t=new Date().getDay();S.ttDay=t<6?t:0;}
-  const mob='<div class="tt-mob"><div class="row" style="gap:6px;margin-bottom:8px">'+DAYS.map((d,i)=>'<button class="chip" data-act="tt-day" data-d="'+i+'" data-on="'+(i===S.ttDay?1:0)+'">'+d+'</button>').join('')+'</div>'+
+  let mob='<div class="tt-mob"><div class="row" style="gap:6px;margin-bottom:8px">'+DAYS.map((d,i)=>'<button class="chip" data-act="tt-day" data-d="'+i+'" data-on="'+(i===S.ttDay?1:0)+'">'+d+'</button>').join('')+'</div>'+
     P.map(function(p){const ls=lessonsAt(S.ttDay,p.n),on=sel&&sel.day===S.ttDay&&sel.period===p.n;
       return '<div class="per" data-act="tt-slot" data-day="'+S.ttDay+'" data-p="'+p.n+'"'+(on?' style="background:var(--accent-soft)"':'')+'><div class="pc"><b>'+p.n+'</b>'+esc(p.start||'')+'</div><div class="ls">'+
         (ls.length?ls.map(lessonChip).join(''):'<span class="note">— אין שיעור · לחצו להוספה</span>')+'</div></div>';}).join('')+'</div>';
@@ -2565,6 +2586,7 @@ function viewSchedule(){
   const hrCard=isAdmin()?'<div class="card"><h3>מחנכי כיתות</h3><p class="note" style="margin-bottom:10px">המחנך רואה את כל מה שקורה בכיתה שלו, כולל נוכחות בכל השיעורים. מורה שאינו מחנך רואה רק את השיעורים שלו.</p><div class="grid g3">'+
     S.config.classes.map(c=>'<label class="field"><span>'+esc(c)+'</span><select data-hr="'+esc(c)+'">'+opt('—','',hr[c]||'')+teachersList().map(t=>opt(t,t,hr[c]||'')).join('')+'</select></label>').join('')+'</div></div>':'';
   if(!isAdmin())return '<div class="head"><div><h2>המערכת שלי</h2><div class="sub">'+esc(S.me.teacher||'')+' · '+S.timetable.filter(l=>l.teacher===S.me.teacher).length+' שיעורים בשבוע</div></div></div><div class="card">'+grid+mob+'</div>';
+  if(S.ttMode==='all'){grid=ttAllGrid();mob='';}
   return head+(S.ttPeriods?periodsCard():'')+'<div class="card">'+modes+chips+grid+mob+legend+'</div>'+(sel?slotCard():'')+hrCard+
     '<div class="card"><h3>שנה חדשה</h3><p class="note" style="margin-bottom:10px">בתחילת שנה אפשר לרוקן את המערכת ולהזין מחדש (ידנית או מקובץ). התלמידים, הנוכחות והנתונים האחרים לא נמחקים.</p>'+
     '<button class="btn" data-v="danger" data-act="tt-clear">ריקון מערכת השעות</button></div>';
@@ -2695,7 +2717,7 @@ async function ttAction(a,el){
   if(a==='tt-teacher'){S.ttTeacher=el.dataset.t;S.ttSlot=null;S.ttEdit=null;return render();}
   if(a==='tt-day'){S.ttDay=+el.dataset.d;S.ttSlot=null;S.ttEdit=null;return render();}
   if(a==='tt-slot'){
-    S.ttSlot={day:+el.dataset.day,period:+el.dataset.p};S.ttEdit=null;render();
+    if(el.dataset.cls)S.ttCls=el.dataset.cls;S.ttSlot={day:+el.dataset.day,period:+el.dataset.p};S.ttEdit=null;render();
     const c=document.getElementById('ttSlotCard');if(c)c.scrollIntoView({behavior:'smooth',block:'nearest'});return;
   }
   if(a==='tt-close'){S.ttSlot=null;S.ttEdit=null;return render();}
