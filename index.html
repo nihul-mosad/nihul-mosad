@@ -325,6 +325,16 @@ button,.btn,.chip,.link,a,label,[data-act],[data-tab]{touch-action:manipulation}
 .seg button[data-on="1"]:not([data-s]){background:var(--accent)}
 .chip[data-on="1"]{background:var(--accent);color:#fff;border-color:var(--accent)}
 .tt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.dtt{border-collapse:collapse;width:100%;min-width:640px}
+table.dtt th{font-size:13px;color:var(--muted);font-weight:700;padding:8px 6px;border-bottom:1px solid var(--line);text-align:right}
+table.dtt td{border:1px solid var(--line);padding:6px;vertical-align:middle;background:var(--surface);font-size:14px}
+table.dtt td.dn b{display:block}table.dtt td.dn span{font-size:12px;color:var(--muted);white-space:nowrap}
+table.dtt th.today{color:var(--accent)}table.dtt td.today{background:var(--accent-soft)}
+table.dtt.ed{min-width:1180px;table-layout:fixed}table.dtt.ed .inp{width:100%;min-width:0;padding:6px}
+table.dtt.ed th:nth-child(1){width:150px}table.dtt.ed th:nth-child(2),table.dtt.ed th:nth-child(3){width:118px}table.dtt.ed th:last-child{width:46px}
+.dty.me{font-weight:700;color:var(--accent);background:#FFF4D6;border-radius:6px;padding:2px 6px}
+@media print{table.dtt{min-width:0}.dty.me{background:none}}
+
 table.tt{border-collapse:collapse;width:100%;min-width:760px;table-layout:fixed}
 table.tt th{font-size:13px;color:var(--muted);font-weight:700;padding:8px 4px;border-bottom:1px solid var(--line)}
 table.tt th.pc{width:74px}
@@ -593,7 +603,7 @@ function logAct(act,info){
 function enterSystem(user){
   S.inst=null;S.owner=true;S.instList=null;DB=null;
   S.config={name:'מסוף המערכת',classes:[],logo:'',users:[],domains:SEED_DOMAINS};
-  S.students=[];S.staff=[];S.att={};S.latt={};S.reviews=[];S.tasks=[];S.timetable=[];S.events=[];S.evRoster=[];S.meetings=[];S.mtEdit=null;S.exams=[];S.exEdit=null;S.rc=null;S.daylog={};S.dm={};S.dlDate='';S.as=null;LIDX=null;
+  S.students=[];S.staff=[];S.att={};S.latt={};S.reviews=[];S.tasks=[];S.timetable=[];S.events=[];S.evRoster=[];S.meetings=[];S.mtEdit=null;S.duty=null;S.dutyEdit=null;S.exams=[];S.exEdit=null;S.rc=null;S.daylog={};S.dm={};S.dlDate='';S.as=null;LIDX=null;
   S.me={id:user.uid,user:'בעל המערכת',role:'admin',cls:'',teacher:'',mustChange:false};
   S.tab='console';S.console=null;
   try{localStorage.setItem('tt:inst','system');localStorage.setItem('tt:instName','מסוף המערכת');}catch(e){}
@@ -632,7 +642,7 @@ async function enterInst(inst,user,typed){
   await reloadMembers();
   S.timetable=await load(K.timetable,[]);
   const sec=await loadSec();
-  if(sec){remListen();setTimeout(function(){try{missCheck();}catch(e){}},8000);}
+  if(sec){remListen();setTimeout(function(){try{missCheck();}catch(e){}},8000);setTimeout(function(){try{dutyCheck();}catch(e){}},4000);}
   DATA_AT=Date.now();
   if(!sec){
     S.students=await load(K.students,[]);S.att=await load(K.att,{});S.reviews=await load(K.reviews,[]);S.tasks=await load(K.tasks,[]);S.latt=await load(K.latt,{});S.events=await load(K.events,[]);LIDX=null;
@@ -813,6 +823,7 @@ async function loadSec(){
   }
   revs=S.reviews.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   await loadMeetings();
+  await loadDuty();
   await loadGrades();
   await loadDaylog();
   LIDX=null;return true;
@@ -988,7 +999,7 @@ const S={tab:'dash',me:null,config:{name:'המוסד',classes:[],logo:'',users:[
   msgGroup:'all',msgText:'',msgTo:'both',importPreview:null,focus:null,
   repFrom:daysAgo(30),repTo:iso(new Date()),repCls:''};
 
-const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['mark','נוכחות'],['events','אירועים'],['grades','ציונים'],['schedule','מערכת שעות'],['tasks','משימות'],['meetings','ישיבות צוות'],['daylog','יומן יומי'],['assist','עוזר אישי'],['reports','דוחות'],['analytics','ניתוחים'],['staff','צוות'],['settings','הגדרות']];
+const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['mark','נוכחות'],['events','אירועים'],['grades','ציונים'],['schedule','מערכת שעות'],['duty','תורנויות'],['tasks','משימות'],['meetings','ישיבות צוות'],['daylog','יומן יומי'],['assist','עוזר אישי'],['reports','דוחות'],['analytics','ניתוחים'],['staff','צוות'],['settings','הגדרות']];
 const isAdmin=()=>S.me&&S.me.role==='admin';
 function homeroomOf(t){const h=S.config.homeroom||{};return S.config.classes.filter(c=>t&&h[c]===t);}
 const myClasses=()=>isAdmin()?S.config.classes:Array.from(new Set((S.me.cls?[S.me.cls]:[]).concat(homeroomOf(S.me.teacher))));
@@ -1010,7 +1021,7 @@ function tasksInView(){
 }
 function myLessonIds(){const o={};myLessonAll().forEach(l=>o[l.id]=1);return o;}
 function myLessonStudents(){const ok={};myLessonAll().forEach(l=>lessonStudents(l).list.forEach(s=>ok[s.id]=1));return S.students.filter(s=>ok[s.id]);}
-const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','students','mark','events','grades','schedule','tasks','meetings','reports']:['mark','events','grades','schedule','tasks','meetings','reports']).indexOf(t[0])>-1).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
+const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','students','mark','events','grades','schedule','duty','tasks','meetings','reports']:['mark','events','grades','schedule','duty','tasks','meetings','reports']).indexOf(t[0])>-1).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
 const domains=()=>S.config.domains&&S.config.domains.length?S.config.domains:SEED_DOMAINS;
 
 /* ---- שליפות ---- */
@@ -1092,7 +1103,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=47;
+const APP_VER=48;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -1204,7 +1215,7 @@ let DATA_AT=0,DATA_BUSY=false;
 const LIVE_TABS={dash:1,analytics:1,reports:1,events:1,daylog:1,review:1,grades:1};
 async function refreshData(manual){
   if(DATA_BUSY||!S.me||!S.inst||S.legacy||!FS)return;
-  if(S.dirty||S.ldirty||S.evc||S.exEdit||S.mtEdit||S.remc){if(manual)toast('יש שינויים שלא נשמרו. שמרו קודם ואז רעננו.');return;}
+  if(S.dirty||S.ldirty||S.evc||S.exEdit||S.mtEdit||S.remc||S.dutyEdit){if(manual)toast('יש שינויים שלא נשמרו. שמרו קודם ואז רעננו.');return;}
   DATA_BUSY=true;if(manual)toast('מרענן…');
   try{S.timetable=await load(K.timetable,S.timetable);const ok=await loadSec();if(ok&&isAdmin())S.staff=await load(K.staff,S.staff);DATA_AT=Date.now();if(manual)toast('הנתונים עודכנו');render();}
   catch(e){if(manual)toast(fbErr(e));}
@@ -3932,6 +3943,212 @@ function viewAssist(){
   return h+(t==='analyze'?acViewAnalyze():t==='inbox'?acViewInbox():t==='memory'?acViewMemory():asViewChats());
 }
 
+/* ================= תורנויות חצר =================
+   נשמר בתוך store/config (שדה duty), שכל הצוות קורא ורק ההנהלה כותבת; בממשק, העריכה רק למי שיצר את הלוח — duty.ed הוא ה-uid שלו.
+   תזכורת: 5 דקות לפני תורנות, חלונית צפה אצל המורה התורן (כשהאפליקציה פתוחה אצלו). */
+const DUTY_DAYS=['יום א׳','יום ב׳','יום ג׳','יום ד׳','יום ה׳','יום ו׳'];
+const DUTY_LEAD=5;
+function dutyEmpty(){return {slots:[],cells:{}};}
+async function loadDuty(){
+  S.dutyErr=false;
+  try{const d=await fsGet('store/config');const v=d&&d.v&&d.v.duty;if(v){S.duty=v;S.config.duty=v;}else S.duty=S.config.duty||dutyEmpty();}
+  catch(e){S.duty=S.config.duty||S.duty||dutyEmpty();}
+  if(!S.duty.slots)S.duty.slots=[];if(!S.duty.cells)S.duty.cells={};
+}
+const canDuty=()=>isAdmin()&&!!S.me&&(!S.duty||!S.duty.ed||S.duty.ed===S.me.id);
+async function saveDuty(v){
+  const rec={slots:v.slots,cells:v.cells,ed:(S.duty&&S.duty.ed)||S.me.id,by:S.me.user||'',at:Date.now()};
+  const prev=S.config.duty;S.config.duty=rec;
+  const cv=Object.assign({},S.config);delete cv.users;
+  try{await queued('store/config',async()=>{await FS.doc(IB()+'store/config').set({v:cv});});LAST[K.config]=JSON.stringify(cv);S.duty=rec;return true;}
+  catch(e){S.config.duty=prev;saveFailed(e);return false;}
+}
+/* זיהוי שמות: "הרב ברוד" ↔ "שמואל ברוד" — בלי תארים, לפי מילה משותפת */
+const DUTY_TITLES=/^(הרב|הר׳|הר'|ר׳|ר'|רב|המורה|מורה|הגב׳|הגב'|גב׳|גב'|מר|הגננת)$/;
+function dutyToks(s){return String(s||'').replace(/["״.,()\-]/g,' ').trim().split(/\s+/).filter(t=>t&&!DUTY_TITLES.test(t)).map(t=>t.replace(/['׳]/g,'')).filter(Boolean);}
+function dutyNameMatch(a,b){const A=dutyToks(a),B=dutyToks(b);if(!A.length||!B.length)return false;return A.every(t=>t.length>1&&B.indexOf(t)>-1)||B.every(t=>t.length>1&&A.indexOf(t)>-1);}
+function dutyIsMe(c){
+  if(!c||!S.me)return false;if(c.u)return c.u===S.me.id;
+  return [S.me.teacher,S.me.user].some(n=>n&&dutyNameMatch(c.n,n));
+}
+function dutyUsers(){return (S.config.users||[]).map(u=>({id:u.id,name:u.teacher||u.user||''})).filter(u=>u.name);}
+function dutyAutoUser(name){const m=dutyUsers().filter(u=>dutyNameMatch(name,u.name));return m.length===1?m[0].id:'';}
+function dutyUserName(id){const u=(S.config.users||[]).find(x=>x.id===id);return u?(u.teacher||u.user||''):'';}
+function dutyHM(s){const m=String(s||'').match(/(\d{1,2})[:.](\d{2})/);return m?String(+m[1]).padStart(2,'0')+':'+m[2]:'';}
+function dutyTimes(s){const all=String(s||'').match(/\d{1,2}[:.]\d{2}/g)||[];return {start:dutyHM(all[0]),end:dutyHM(all[1])};}
+const dutySpan=sl=>sl.start?(sl.end?sl.start+'–'+sl.end:sl.start):'';
+const dutySpanH=sl=>'<bdi dir="ltr">'+esc(dutySpan(sl))+'</bdi>';
+/* פענוח טבלה מהגיליון (הדבקה מ-Google Sheets / CSV / אקסל) */
+function dutyParseRows(rows){
+  rows=rows.map(r=>(r||[]).map(x=>String(x==null?'':x).trim()));
+  const hi=rows.findIndex(r=>r.filter(x=>/^יום\s*[אבגדהו]/.test(x)).length>=3);
+  if(hi<0)return {err:'לא מצאתי שורת כותרת עם הימים (יום א׳, יום ב׳…).'};
+  const L='אבגדהו',dcol={};
+  rows[hi].forEach((x,i)=>{const m=x.match(/^יום\s*([אבגדהו])/);if(m)dcol[L.indexOf(m[1])]=i;});
+  const tcol=rows[hi].findIndex(x=>/שעה|שעות/.test(x));
+  const slots=[],cells={};
+  for(let r=hi+1;r<rows.length;r++){
+    const row=rows[r],name=row[0]||'';
+    if(!name&&row.every(x=>!x))break;
+    if(!name)continue;
+    const tm=dutyTimes(tcol>-1?row[tcol]:row[1]);
+    const id='d'+uid();slots.push({id:id,name:name,start:tm.start,end:tm.end});cells[id]={};
+    Object.keys(dcol).forEach(d=>{const n=row[dcol[d]];if(n)cells[id][d]={n:n,u:dutyAutoUser(n)};});
+  }
+  if(!slots.length)return {err:'לא מצאתי שורות תורנות מתחת לכותרת.'};
+  return {slots:slots,cells:cells};
+}
+function dutyParseText(t){
+  const lines=String(t||'').replace(/\r/g,'').split('\n');
+  const sep=lines.some(l=>l.indexOf('\t')>-1)?'\t':',';
+  return dutyParseRows(lines.map(l=>sep==='\t'?l.split('\t'):dutyCsvLine(l)));
+}
+function dutyCsvLine(l){const out=[];let cur='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];
+  if(q){if(ch==='"'&&l[i+1]==='"'){cur+='"';i++;}else if(ch==='"')q=false;else cur+=ch;}
+  else if(ch==='"')q=true;else if(ch===','){out.push(cur);cur='';}else cur+=ch;}out.push(cur);return out;}
+async function dutyFile(f){
+  try{
+    if(/\.csv$/i.test(f.name)){S.dutyEdit=dutyImported(dutyParseText(await f.text()));return render();}
+    const X=await loadSheetJS(),wb=X.read(await f.arrayBuffer(),{type:'array'});
+    let res=null;for(const n of wb.SheetNames){res=dutyParseRows(X.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:false,defval:''}));if(!res.err)break;}
+    S.dutyEdit=dutyImported(res);render();
+  }catch(e){toast('לא הצלחתי לקרוא את הקובץ');}
+}
+function dutyImported(res){
+  if(res.err){toast(res.err);return S.dutyEdit;}
+  toast('נקראו '+res.slots.length+' תורנויות. בדקו ושמרו.');
+  return {slots:res.slots,cells:res.cells,paste:false,imported:true};
+}
+/* התורנות הבאה שלי */
+function dutyMine(){
+  const out=[];if(!S.duty)return out;
+  S.duty.slots.forEach(sl=>{const row=S.duty.cells[sl.id]||{};Object.keys(row).forEach(d=>{if(dutyIsMe(row[d]))out.push({d:+d,sl:sl});});});
+  return out.sort((a,b)=>a.d-b.d||String(a.sl.start).localeCompare(String(b.sl.start)));
+}
+function dutyNext(){
+  const mine=dutyMine();if(!mine.length)return null;
+  const now=new Date(),wd=now.getDay(),hm=nowHM();
+  for(let k=0;k<7;k++){const d=(wd+k)%7;
+    const list=mine.filter(x=>x.d===d&&(k>0||(x.sl.end||x.sl.start)>hm));
+    if(list.length){const dt=new Date(now);dt.setDate(now.getDate()+k);return Object.assign({k:k,date:iso(dt)},list[0]);}}
+  return null;
+}
+/* תזכורת 5 דקות לפני */
+const DUTY_SHOWN={};
+function dutyCheck(){
+  if(!S.duty||!S.me||!S.inst)return;
+  const now=new Date(),wd=now.getDay(),today=iso(now),mins=now.getHours()*60+now.getMinutes();
+  S.duty.slots.forEach(sl=>{
+    if(!sl.start)return;const c=(S.duty.cells[sl.id]||{})[wd];if(!dutyIsMe(c))return;
+    const st=+sl.start.slice(0,2)*60+ +sl.start.slice(3,5),left=st-mins;
+    if(left<0||left>DUTY_LEAD)return;
+    const key='tt:dutyShown:'+S.inst+':'+today+':'+sl.id;
+    if(DUTY_SHOWN[key])return;DUTY_SHOWN[key]=1;
+    try{if(localStorage.getItem(key))return;localStorage.setItem(key,'1');}catch(e){}
+    dutyPopup(sl,left);
+  });
+}
+function dutyPopup(sl,left){
+  let box=document.getElementById('remBox');if(!box){box=document.createElement('div');box.id='remBox';document.body.appendChild(box);}
+  const el=document.createElement('div');el.className='remp';el.setAttribute('role','alert');
+  el.innerHTML='<div class="remh"><b>⏰ תורנות '+(left>0?'בעוד '+left+' דקות':'עכשיו')+'</b><button class="remx" aria-label="סגירה">✕</button></div>'+
+    '<div class="remt"><b>'+esc(sl.name)+'</b> · '+dutySpanH(sl)+'<br>אתה התורן היום.</div><div class="remb"><i></i></div>'+
+    '<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn sm remok" data-v="primary">הבנתי</button></div>';
+  let gone=false;const close=()=>{if(gone)return;gone=true;el.classList.add('out');setTimeout(()=>el.remove(),300);};
+  el.querySelector('.remx').onclick=close;el.querySelector('.remok').onclick=close;
+  box.appendChild(el);setTimeout(close,(DUTY_LEAD+1)*60000);
+  try{if(navigator.vibrate)navigator.vibrate([200,100,200,100,200]);}catch(e){}
+}
+setInterval(function(){try{dutyCheck();}catch(e){}},30000);
+/* תצוגה */
+function dutyCellHtml(c,today,edit){
+  if(!c||!c.n)return '<span class="note">—</span>';
+  const me=dutyIsMe(c);
+  return '<span class="dty'+(me?' me':'')+'">'+esc(c.n)+(me?' (אני)':'')+'</span>'+
+    (isAdmin()&&!c.u?' <span class="note" title="לא מקושר למשתמש במערכת — לא תקפוץ לו תזכורת">⚠</span>':'');
+}
+function viewDuty(){
+  const D=S.duty||dutyEmpty(),ed=canDuty(),wd=new Date().getDay();
+  if(S.dutyEdit)return dutyEditor();
+  let h='<div class="head"><div><h2>תורנויות</h2><div class="sub">לוח תורנויות שבועי'+(ed?'':' · לצפייה בלבד')+(D.at?' · עודכן '+esc(dual(iso(new Date(D.at)))):'')+'</div></div>'+
+    '<div class="row">'+(ed?'<button class="btn big" data-v="primary" data-act="duty-edit">עריכה</button>':'')+(D.slots.length?'<button class="btn" data-v="ghost" data-act="duty-print">🖨 הדפסה</button>':'')+'</div></div>';
+  if(S.dutyErr)h+='<div class="warn">לא הצלחתי לטעון את לוח התורנויות. נסו לרענן.</div>';
+  if(!D.slots.length)return h+'<div class="card"><div class="empty">'+(ed?'עדיין אין לוח תורנויות. לחצו "עריכה" כדי להזין או לייבא מהגיליון.':'עדיין לא פורסם לוח תורנויות.')+'</div></div>';
+  const nx=dutyNext();
+  if(nx)h+='<div class="card" style="border-right:4px solid var(--late)"><b>התורנות הבאה שלך:</b> '+esc(nx.sl.name)+' · '+dutySpanH(nx.sl)+' · '+
+    (nx.k===0?'היום':nx.k===1?'מחר':esc(DUTY_DAYS[nx.d]||''))+' <span class="note">('+esc(dual(nx.date))+')</span>'+
+    '<div class="note" style="margin-top:4px">תזכורת תקפוץ '+DUTY_LEAD+' דקות לפני, כשהאפליקציה פתוחה.</div></div>';
+  if(wd<=5){
+    const td=D.slots.map(sl=>({sl:sl,c:(D.cells[sl.id]||{})[wd]})).filter(x=>x.c&&x.c.n);
+    h+='<div class="card"><h3>היום · '+esc(DUTY_DAYS[wd])+' <span class="note">'+esc(dual(iso(new Date())))+'</span></h3>'+
+      (td.length?td.map(x=>'<div class="row" style="justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><span><b>'+esc(x.sl.name)+'</b> <span class="note">'+dutySpanH(x.sl)+'</span></span>'+dutyCellHtml(x.c)+'</div>').join(''):'<div class="note">אין תורנויות היום.</div>')+'</div>';
+  }
+  h+='<div class="card"><h3>הלוח השבועי</h3><div class="tt-wrap"><table class="dtt"><thead><tr><th>תורנות</th>'+DUTY_DAYS.map((d,i)=>'<th'+(i===wd?' class="today"':'')+'>'+d+'</th>').join('')+'</tr></thead><tbody>'+
+    D.slots.map(sl=>'<tr><td class="dn"><b>'+esc(sl.name)+'</b><span>'+dutySpanH(sl)+'</span></td>'+DUTY_DAYS.map((d,i)=>'<td'+(i===wd?' class="today"':'')+'>'+dutyCellHtml((D.cells[sl.id]||{})[i])+'</td>').join('')+'</tr>').join('')+
+    '</tbody></table></div>';
+  if(isAdmin()){const cnt={};D.slots.forEach(sl=>Object.values(D.cells[sl.id]||{}).forEach(c=>{if(c&&c.n)cnt[c.n]=(cnt[c.n]||0)+1;}));
+    const ks=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]||a.localeCompare(b,'he'));
+    h+='<div class="note" style="margin-top:10px">שיבוצים לשבוע: '+ks.map(k=>esc(k)+' '+cnt[k]).join(' · ')+' · סה״כ '+ks.reduce((a,k)=>a+cnt[k],0)+'</div>';
+    const unl=ks.filter(k=>D.slots.some(sl=>Object.values(D.cells[sl.id]||{}).some(c=>c&&c.n===k&&!c.u)));
+    if(unl.length)h+='<div class="note" style="margin-top:6px;color:var(--late)">⚠ לא מקושרים למשתמש במערכת (לא תקפוץ להם תזכורת): '+unl.map(esc).join(', ')+'</div>';}
+  return h+'</div>';
+}
+function dutyOpts(c){
+  const us=dutyUsers(),val=c?(c.u?'u:'+c.u:(c.n?'n:'+c.n:'')):'';
+  let o='<option value="">—</option>'+us.map(u=>'<option value="u:'+esc(u.id)+'"'+(val==='u:'+u.id?' selected':'')+'>'+esc(u.name)+'</option>').join('');
+  const names={};(S.staff||[]).forEach(s=>{if(s.name&&!us.some(u=>dutyNameMatch(u.name,s.name)))names[s.name]=1;});
+  if(c&&c.n&&!c.u)names[c.n]=1;
+  o+=Object.keys(names).map(n=>'<option value="n:'+esc(n)+'"'+(val==='n:'+n?' selected':'')+'>'+esc(n)+' (ללא משתמש)</option>').join('');
+  if(c&&c.u&&!us.some(u=>u.id===c.u))o+='<option value="u:'+esc(c.u)+'" selected>'+esc(c.n)+'</option>';
+  return o;
+}
+function dutyEditor(){
+  const E=S.dutyEdit;
+  let h='<div class="head"><div><h2>עריכת תורנויות</h2><div class="sub">השינויים יישמרו רק בלחיצה על "שמירה"</div></div>'+
+    '<div class="row"><button class="btn big" data-v="primary" data-act="duty-save">שמירה</button><button class="btn" data-v="ghost" data-act="duty-cancel">ביטול</button></div></div>';
+  h+='<div class="card"><h3>ייבוא מהגיליון</h3><p class="note">פתחו את הגיליון "תורנויות" ב-Google Sheets, סמנו את הטבלה (כולל שורת הימים), העתיקו והדביקו כאן. אפשר גם לבחור קובץ אקסל או CSV. הייבוא מחליף את הטבלה למטה, ואפשר לתקן לפני השמירה.</p>'+
+    '<textarea id="dutyPaste" style="width:100%;min-height:90px" placeholder="הדביקו כאן את הטבלה…"></textarea>'+
+    '<div class="row" style="margin-top:8px"><button class="btn" data-act="duty-paste">קריאת הטבלה שהודבקה</button><button class="btn" data-v="ghost" data-act="duty-pick">בחירת קובץ…</button><input type="file" id="dutyFile" accept=".xlsx,.xls,.csv" style="display:none"></div></div>';
+  h+='<div class="card"><h3>הלוח</h3><p class="note">בכל תא בחרו איש צוות. מי שמקושר למשתמש במערכת יקבל תזכורת '+DUTY_LEAD+' דקות לפני התורנות. שעת סיום אינה חובה.</p><div class="tt-wrap"><table class="dtt ed"><thead><tr><th>תורנות</th><th>התחלה</th><th>סיום</th>'+DUTY_DAYS.map(d=>'<th>'+d+'</th>').join('')+'<th></th></tr></thead><tbody>'+
+    E.slots.map((sl,r)=>'<tr data-slot="'+esc(sl.id)+'"><td><input class="inp" data-dk="name" value="'+esc(sl.name)+'" placeholder="למשל: הפסקה 1"></td>'+
+      '<td><input class="inp" type="time" data-dk="start" value="'+esc(sl.start)+'"></td><td><input class="inp" type="time" data-dk="end" value="'+esc(sl.end)+'"></td>'+
+      DUTY_DAYS.map((d,i)=>'<td><select class="inp" data-dd="'+i+'">'+dutyOpts((E.cells[sl.id]||{})[i])+'</select></td>').join('')+
+      '<td><button class="btn sm" data-v="ghost" data-act="duty-up" data-id="'+r+'" title="למעלה"'+(r?'':' disabled')+'>▲</button><button class="btn sm" data-v="ghost" data-act="duty-rm" data-id="'+r+'" title="מחיקת שורה">✕</button></td></tr>').join('')+
+    '</tbody></table></div><div class="row" style="margin-top:8px"><button class="btn" data-act="duty-add">+ שורת תורנות</button></div></div>';
+  return h;
+}
+function dutyCapture(){
+  const E=S.dutyEdit;if(!E)return;const cells={};
+  document.querySelectorAll('tr[data-slot]').forEach(tr=>{
+    const id=tr.dataset.slot,sl=E.slots.find(x=>x.id===id);if(!sl)return;
+    tr.querySelectorAll('[data-dk]').forEach(i=>sl[i.dataset.dk]=i.value.trim());
+    cells[id]={};tr.querySelectorAll('[data-dd]').forEach(s=>{const v=s.value;if(!v)return;
+      if(v.slice(0,2)==='u:'){const u=v.slice(2),old=(E.cells[id]||{})[s.dataset.dd];cells[id][s.dataset.dd]={n:(old&&old.u===u&&old.n)?old.n:(dutyUserName(u)||(old&&old.n)||''),u:u};}
+      else cells[id][s.dataset.dd]={n:v.slice(2),u:''};});
+  });
+  if(document.querySelector('tr[data-slot]')||!E.slots.length)E.cells=cells;
+}
+async function dutyAct(a,id){
+  if(a==='duty-print'){window.print();return true;}
+  if(!canDuty())return a.indexOf('duty-')===0;
+  if(a==='duty-edit'){S.dutyEdit=clone(S.duty&&S.duty.slots.length?{slots:S.duty.slots,cells:S.duty.cells}:{slots:[{id:'d'+uid(),name:'הפסקה 1',start:'',end:''}],cells:{}});render();return true;}
+  if(a==='duty-cancel'){S.dutyEdit=null;render();return true;}
+  if(!S.dutyEdit)return false;
+  dutyCapture();const E=S.dutyEdit;
+  if(a==='duty-add'){E.slots.push({id:'d'+uid(),name:'',start:'',end:''});render();return true;}
+  if(a==='duty-rm'){const sl=E.slots[+id];if(sl&&confirm('למחוק את השורה "'+(sl.name||'ללא שם')+'"?')){E.slots.splice(+id,1);delete E.cells[sl.id];render();}return true;}
+  if(a==='duty-up'){const i=+id;if(i>0){const t=E.slots[i];E.slots[i]=E.slots[i-1];E.slots[i-1]=t;render();}return true;}
+  if(a==='duty-pick'){const f=document.getElementById('dutyFile');if(f)f.click();return true;}
+  if(a==='duty-paste'){const t=(document.getElementById('dutyPaste')||{}).value||'';if(!t.trim()){toast('הדביקו קודם את הטבלה');return true;}S.dutyEdit=dutyImported(dutyParseText(t));render();return true;}
+  if(a==='duty-save'){
+    const bad=E.slots.find(sl=>!sl.name);if(bad){toast('לכל שורה צריך שם (למשל: הפסקה 1)');return true;}
+    const nost=E.slots.find(sl=>!sl.start);if(nost&&!confirm('לשורה "'+nost.name+'" אין שעת התחלה, ולכן לא תקפוץ עליה תזכורת. לשמור בכל זאת?'))return true;
+    if(!(await saveDuty({slots:E.slots,cells:E.cells})))return true;
+    logAct('תורנויות','עדכון לוח התורנויות ('+E.slots.length+' שורות)');S.dutyEdit=null;toast('לוח התורנויות נשמר');render();return true;
+  }
+  return false;
+}
+
 /* ================= ישיבות צוות ================= */
 // נשמר ב-store/meetings_{שנת לימודים}: כל הצוות קורא, רק ההנהלה כותבת
 const mtYear=d=>{const y=+String(d).slice(0,4),m=+String(d).slice(5,7);return m>=8?y:y-1;};
@@ -4462,7 +4679,7 @@ function render(){
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
     '<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
-    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,bdays:viewBirthdays,analytics:viewAnalytics,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,assist:viewAssist,account:viewAccount,import:viewImport,card:viewCard};
+    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,duty:viewDuty,bdays:viewBirthdays,analytics:viewAnalytics,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,assist:viewAssist,account:viewAccount,import:viewImport,card:viewCard};
   if(S.inst&&!isAdmin()&&['card','account','bdays','rcard'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
   if(S.tab==='tasks')dmMarkRead();
   const v=map[S.tab]||viewDash;
@@ -4482,7 +4699,7 @@ function goTab(t){
   S.tab=t;S.editStudent=null;S.editStaff=null;S.editUser=null;S.importPreview=null;S.ttSlot=null;S.ttEdit=null;S.ttImport=null;
   if(S.tab!=='review'){S.revIdx=null;}
   if(S.tab==='mark'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;S.markLesson=null;S.ldirty=false;}
-  S.scan=null;S.evc=null;S.evBack=null;S.mtEdit=null;S.remc=null;S.exEdit=null;
+  S.scan=null;S.evc=null;S.evBack=null;S.mtEdit=null;S.remc=null;S.exEdit=null;S.dutyEdit=null;
   render();
 }
 document.getElementById('nav').addEventListener('click',function(e){
@@ -4517,6 +4734,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a.indexOf('tt-')===0||a.indexOf('per-')===0)return ttAction(a,el);
   if(a.indexOf('lm-')===0||a==='mark-view')return markAction(a,el);
   if(a.indexOf('scan-')===0)return scanAction(a,el);
+  if(a.indexOf('duty-')===0){await dutyAct(a,id);return;}
   if(a.indexOf('ev-')===0||a.indexOf('evt-')===0||a==='goto-events')return evAction(a,el);
   if(a.indexOf('as-')===0)return AC_ACTS.has(a)?acAction(a,el,id):asAction(a,el,id);
   if(/^(bulk-|cred-|join-|jr-)/.test(a)||a==='user-pin')return userAction(a,el);
@@ -4849,6 +5067,7 @@ document.getElementById('main').addEventListener('click',async function(e){
 document.getElementById('main').addEventListener('change',function(e){
   const el=e.target;
   if(el.id==='importFile'&&el.files&&el.files[0])return handleImportFile(el.files[0]);
+  if(el.id==='dutyFile'&&el.files&&el.files[0]){const f=el.files[0];el.value='';dutyCapture();return dutyFile(f);}
   if(el.id==='scanFile'&&el.files&&el.files.length){const fs=Array.from(el.files);el.value='';return handleScanFiles(fs);}
   if(el.dataset&&el.dataset.scn!==undefined)return;
   if(el.dataset&&el.dataset.evf!==undefined){if(el.dataset.evf==='q')return;S.evf[el.dataset.evf]=el.value;return render();}
