@@ -61,6 +61,8 @@ main{flex:1;min-width:0;padding:24px 28px 80px}
 .rcgrp{margin:12px 0 4px}
 .dmi{border-bottom:1px solid var(--surface2);padding:10px 0}
 .asfile{border-bottom:1px solid var(--surface2);padding:10px 0}
+.asdrop{border:2px dashed var(--line);border-radius:12px;padding:16px;text-align:center}
+body.asdrag .asdrop{border-color:var(--accent);background:var(--accent-soft)}
 .asmsgs{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:4px 12px}
 .asm{border-bottom:1px solid var(--surface2);padding:8px 0}
 .asb{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:2px}
@@ -1103,7 +1105,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=48;
+const APP_VER=49;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -3315,7 +3317,7 @@ function asMdParse(text){
 }
 function asSourceName(fname,title){
   if(title)return title;
-  return String(fname||'').replace(/\.(txt|md)$/i,'').replace(/^WhatsApp Chat (with|-)\s*/i,'').replace(/^צ['׳]אט (WhatsApp )?עם\s*/,'').replace(/_/g,' ').trim()||'שיחה ללא שם';
+  return String(fname||'').replace(/\.(txt|md|zip)$/i,'').replace(/\s*\(\d+\)$/,'').replace(/^WhatsApp Chat (with|-)\s*/i,'').replace(/^צ['׳]אט (WhatsApp )?(עם|-)\s*/,'').replace(/_/g,' ').trim()||'שיחה ללא שם';
 }
 async function asParseFile(file){
   const raw=await file.text(),md=/\.md$/i.test(file.name)||/^\s*#\s/.test(raw);
@@ -3491,7 +3493,8 @@ function asViewChats(){
       '<div class="row" style="margin-top:12px"><button class="btn" data-v="primary" data-act="as-run">ייבוא</button><button class="btn" data-v="ghost" data-act="as-cancel">ביטול</button></div></div>';
   }else{
     h+='<div class="card"><h3>ייבוא שיחה</h3><p class="note" style="margin-bottom:10px">בוואטסאפ: פתיחת השיחה ← ⋮ ← עוד ← ייצוא צ׳אט ← בלי מדיה. בפעם הראשונה מעלים את כל ההיסטוריה; בהמשך אפשר להעלות שוב ייצוא של אותה שיחה, ורק הודעות חדשות יתווספו.</p>'+
-      '<div class="row"><button class="btn" data-v="primary" data-act="as-pick">בחירת קבצים (TXT / MD)</button><input type="file" id="asFiles" accept=".txt,.md,text/plain,text/markdown" multiple style="display:none"></div>'+
+      '<div class="asdrop"><div class="row" style="justify-content:center"><button class="btn" data-v="primary" data-act="as-pick">בחירת קבצים</button><input type="file" id="asFiles" accept=".zip,.txt,.md,application/zip,text/plain,text/markdown" multiple style="display:none"></div>'+
+      '<div class="note" style="margin-top:6px">אפשר לבחור כמה קבצי ZIP יחד, כמו שירדו מוואטסאפ, בלי לחלץ. במחשב אפשר גם לגרור אותם לכאן.</div></div>'+
       (A.busy?'<p class="note" style="margin-top:8px">⏳ '+esc(A.busy)+'</p>':'')+'</div>';
   }
   // דוח ייבוא אחרון
@@ -3583,16 +3586,57 @@ async function asAction(a,el,id){
   if(a==='as-maybe-close'){A.maybeOpen='';return render();}
   if(a==='as-maybe-add'){if(!confirm('להוסיף את ההודעות האלה לשיחה?'))return;const n=await busy('מוסיף…',()=>asAcceptMaybe(id));A.maybeOpen='';toast('נוספו '+(n||0)+' הודעות');return render();}
 }
-async function asFilesChosen(files){
-  const A=S.as=S.as||{},P=[],errs=[];
-  for(const f of files){
-    if(!/\.(txt|md)$/i.test(f.name)){errs.push(f.name+' (רק TXT או MD)');continue;}
-    if(f.size>60e6){errs.push(f.name+' (גדול מדי)');continue;}
-    try{const p=await asParseFile(f);if(!p.msgs.length)errs.push(f.name+' (לא נמצאו הודעות בפורמט של וואטסאפ)');else P.push(p);}catch(e){errs.push(f.name);}
+function loadJSZip(){
+  return new Promise(function(res,rej){
+    if(window.JSZip)return res(window.JSZip);
+    const sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    sc.onload=()=>res(window.JSZip);sc.onerror=()=>rej(new Error('cdn'));
+    document.head.appendChild(sc);
+  });
+}
+/* קובץ ZIP של ייצוא וואטסאפ: מחלצים רק את קובץ השיחה (TXT), בלי המדיה.
+   באייפון הקובץ בפנים נקרא _chat.txt, ולכן שם השיחה נלקח משם קובץ ה-ZIP. */
+async function asUnzip(f){
+  const Z=await loadJSZip(),zip=await Z.loadAsync(f),out=[];
+  const txts=Object.values(zip.files).filter(e=>!e.dir&&/\.txt$/i.test(e.name)&&!/(^|\/)__MACOSX\//.test(e.name));
+  for(const e of txts){
+    const base=e.name.split('/').pop(),generic=/^_?chat\.txt$/i.test(base)||txts.length===1;
+    const name=generic?f.name.replace(/\.zip$/i,'.txt'):base;
+    out.push(new File([await e.async('string')],name,{type:'text/plain'}));
   }
+  return out;
+}
+async function asFilesChosen(files){
+  const A=S.as=S.as||{},P=[],errs=[];let nz=0;
+  A.busy='קורא '+files.length+' קבצים…';render();
+  const flat=[];
+  for(const f of files){
+    if(/\.zip$/i.test(f.name)||f.type==='application/zip'||f.type==='application/x-zip-compressed'){
+      if(f.size>400e6){errs.push(f.name+' (גדול מדי — ייצאו "בלי מדיה")');continue;}
+      try{const inner=await asUnzip(f);nz++;if(!inner.length)errs.push(f.name+' (אין בו קובץ שיחה)');inner.forEach(x=>{x._zip=f.name;flat.push(x);});}
+      catch(e){errs.push(f.name+(e&&e.message==='cdn'?' (לא הצלחתי לטעון את רכיב הפתיחה של ZIP — בדקו חיבור)':' (קובץ ZIP פגום)'));}
+      continue;
+    }
+    flat.push(f);
+  }
+  for(const f of flat){
+    if(!/\.(txt|md)$/i.test(f.name)){errs.push(f.name+' (רק ZIP, TXT או MD)');continue;}
+    if(f.size>60e6){errs.push(f.name+' (גדול מדי)');continue;}
+    try{const p=await asParseFile(f);if(f._zip)p.file=f._zip;
+      if(!p.msgs.length)errs.push(p.file+' (לא נמצאו הודעות בפורמט של וואטסאפ)');
+      else{const same=P.find(q=>q.source===p.source&&q.fmt===p.fmt&&q.msgs.length===p.msgs.length&&q.last===p.last);if(!same)P.push(p);}}
+    catch(e){errs.push(f.name);}
+  }
+  A.busy='';
   if(errs.length)toast('לא נקראו: '+errs.join(', '));
   A.pending=P.length?P:null;render();
 }
+/* גרירת קבצים לחלון בלשונית העוזר */
+document.addEventListener('dragover',function(e){if(S.tab==='assist'&&isAdmin()&&e.dataTransfer&&Array.from(e.dataTransfer.types||[]).indexOf('Files')>-1){e.preventDefault();document.body.classList.add('asdrag');}});
+document.addEventListener('dragleave',function(e){if(!e.relatedTarget)document.body.classList.remove('asdrag');});
+document.addEventListener('drop',function(e){document.body.classList.remove('asdrag');if(S.tab!=='assist'||!isAdmin()||!e.dataTransfer||!e.dataTransfer.files.length)return;
+  e.preventDefault();if(S.as&&S.as.busy)return toast('ממתין לסיום הפעולה הנוכחית');asFilesChosen(Array.from(e.dataTransfer.files));});
 
 /* ================= עוזר אישי: ניתוח שיחות (אבן דרך C) =================
    מנגנון אחד לשני המסלולים: (1) העתקה-הדבקה לדף "מסכם וואטסאפ" ב-Claude, (2) ניתוח דרך Claude Code.
@@ -3933,7 +3977,7 @@ function viewAssist(){
   if(!A.loaded&&!A.loading){A.loading=true;asLoadMeta().then(acLoad).then(()=>{A.loading=false;if(S.tab==='assist')render();});}
   const convs=(A.convs||[]);
   let h='<div class="head"><div><h2>עוזר אישי · שיחות וואטסאפ</h2><div class="sub">קליטה, ניתוח ואישור. הניתוח נעשה ב-Claude (העתקה והדבקה) או דרך Claude Code, ושום דבר לא נכנס למערכת בלי אישורך.</div></div></div>'+
-    '<div class="warn" style="margin-bottom:12px">🔒 השיחות גלויות רק למשתמש שלך. הן מכילות מידע אישי על תלמידים, הורים וצוות. ייבוא רק מייצוא ידני של וואטסאפ (TXT או MD).</div>'+
+    '<div class="warn" style="margin-bottom:12px">🔒 השיחות גלויות רק למשתמש שלך. הן מכילות מידע אישי על תלמידים, הורים וצוות. ייבוא רק מייצוא ידני של וואטסאפ (ZIP, TXT או MD).</div>'+
     (A.err?'<div class="warn" style="margin-bottom:12px;color:var(--absent)">'+esc(A.err)+'</div>':'');
   const t=A.tabA||'chats',pend=(A.props||[]).filter(p=>p.state==='pending').length;
   h+='<div class="row" style="gap:6px;margin-bottom:12px">'+[['chats','שיחות וייבוא'],['analyze','ניתוח'],['inbox','לאישור'+(pend?' ('+pend+')':'')],['memory','זיכרון']].map(x=>
