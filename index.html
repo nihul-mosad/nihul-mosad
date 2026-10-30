@@ -1105,7 +1105,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=49;
+const APP_VER=50;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -3672,7 +3672,7 @@ function acConv(cid){return (S.as.convs||[]).find(c=>c.id===cid)||{};}
 /* ---------- טעינת הזיכרון ---------- */
 async function acLoad(){
   const A=S.as;const get=async c=>(await FS.collection(asBase()+c).get()).docs.map(d=>Object.assign({id:d.id},d.data()));
-  try{const [t,i,p,k]=await Promise.all([get('topics'),get('items'),get('props'),get('packs')]);A.topics=t;A.items=i;A.props=p;A.packs=k;A.acLoaded=true;}
+  try{const [t,i,p,k]=await Promise.all([get('topics'),get('items'),get('props'),get('packs')]);A.topics=t;A.items=i;A.props=p;A.packs=k;A.acLoaded=true;acLoadUsage().then(()=>{if(S.tab==='assist')render();});}
   catch(e){A.acErr=fbErr(e);}
 }
 const acPending=cid=>((S.as.msgs||{})[cid]||[]).filter(m=>!m.a);
@@ -3740,6 +3740,56 @@ async function acBuildPack(cid,route){
 async function acCancelPack(pid){
   await asRetry(()=>FS.doc(asBase()+'packs/'+pid).set({status:'cancelled',cancelled:Date.now()},{merge:true}));
   const p=(S.as.packs||[]).find(x=>x.id===pid);if(p)p.status='cancelled';
+}
+
+
+/* ---------- ניתוח אוטומטי דרך השרת (Claude API) ----------
+   החבילה נבנית כאן בדיוק כמו בהעתקה-הדבקה (עם הסתרת שמות ופרטים), נשלחת לפונקציה assistAnalyze בשרת,
+   שמחזיקה את מפתח ה-API (המפתח לעולם לא מגיע לדפדפן), והתוצאה עוברת את אותה בדיקה ואותה תיבת אישורים. */
+const AC_FN_REGION='europe-west1';
+function loadFnSDK(){
+  return new Promise(function(res,rej){
+    if(firebase.functions)return res();
+    const sc=document.createElement('script');sc.src='https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js';
+    sc.onload=()=>res();sc.onerror=()=>rej({code:'sdk'});document.head.appendChild(sc);
+  });
+}
+function acApiErr(e){
+  const c=String((e&&e.code)||'').replace('functions/','');
+  if(c==='sdk')return 'לא הצלחתי לטעון את רכיב החיבור לשרת. בדקו את האינטרנט.';
+  if(['permission-denied','failed-precondition','resource-exhausted','invalid-argument','unauthenticated'].indexOf(c)>-1&&e.message)return e.message;
+  if(c==='deadline-exceeded')return 'הניתוח לקח יותר מדי זמן. נסו שוב.';
+  if(c==='unavailable'&&e.message&&/Claude/.test(e.message))return e.message;
+  return 'לא הצלחתי להתחבר לשירות הניתוח. ייתכן שהוא עוד לא הופעל בשרת, או שנטפרי חוסם את הכתובת cloudfunctions.net.';
+}
+async function acApiCall(p){
+  await loadFnSDK();
+  const fn=firebase.app().functions(AC_FN_REGION).httpsCallable('assistAnalyze',{timeout:310000});
+  const r=await fn({inst:S.inst,pack:p.id,text:p.text});return r.data||{};
+}
+async function acLoadUsage(){try{const d=await FS.doc(asBase()+'meta/usage').get();S.as.usage=d.exists?d.data():null;}catch(e){}}
+async function acSaveMe(cid){const me=(document.getElementById('acMe')||{}).value;if(me!==undefined&&me!==((acConv(cid).me||[])[0]||'')){await asRetry(()=>FS.doc(asBase()+'convs/'+cid).set({me:me?[me]:[]},{merge:true}));acConv(cid).me=me?[me]:[];}}
+/* מנתח שיחה אחת או את כולן, חבילה אחרי חבילה, עד שאין הודעות ממתינות או שיש שגיאה */
+async function acAuto(cids){
+  const A=S.as,R={packs:0,msgs:0,props:0,tin:0,tout:0,errors:[],convs:0};A.autoStop=false;
+  for(const cid of cids){
+    let first=true;
+    for(let guard=0;guard<200&&!A.autoStop;guard++){
+      const name=acConv(cid).name||'';
+      A.busy='⚡ מנתח את "'+name+'"'+(R.packs?' · נותחו עד עכשיו '+R.msgs+' הודעות ב-'+R.packs+' חבילות':'')+'…';render();
+      let p;try{p=await acBuildPack(cid,'api');}catch(e){R.errors.push(name+': '+fbErr(e));break;}
+      if(!p)break;if(first){R.convs++;first=false;}
+      let d;try{d=await acApiCall(p);}catch(e){await acCancelPack(p.id).catch(()=>{});R.errors.push(name+': '+acApiErr(e));A.autoStop=true;break;}
+      R.tin+=(d.usage&&d.usage.in)||0;R.tout+=(d.usage&&d.usage.out)||0;
+      let ir;try{ir=await acImportResult(d.text||'','api');}catch(e){ir={ok:false,errors:[fbErr(e)]};}
+      if(!ir.ok){await acCancelPack(p.id).catch(()=>{});R.errors.push(name+': '+(d.stop==='max_tokens'?'התשובה נקטעה באמצע (ארוכה מדי). ':'')+ir.errors.join(' '));break;}
+      R.packs++;R.msgs+=ir.analyzed||0;R.props+=ir.props||0;
+      if(!p.remain)break;
+    }
+    if(A.autoStop)break;
+  }
+  await acLoadUsage();
+  return R;
 }
 
 /* ---------- קליטת תוצאה: בדיקת תקינות, מניעת כפילויות, יצירת הצעות לאישור ---------- */
@@ -3867,7 +3917,12 @@ async function acEditItem(id,field,val){
 }
 function acViewAnalyze(){
   const A=S.as,convs=(A.convs||[]).slice().sort((a,b)=>(b.updated||0)-(a.updated||0));
-  let h='<div class="card"><h3>מה כבר נותח</h3>'+(convs.length?table(['שיחה','נותחו','ממתינות','חבילה פתוחה',''],convs.map(function(c){
+  const pendAll=convs.reduce((n,c)=>n+Math.max(0,(c.count||0)-(c.analyzed||0)),0),pendC=convs.filter(c=>(c.count||0)>(c.analyzed||0)).length;
+  const um=A.usage&&A.usage.months&&A.usage.months[iso(new Date()).slice(0,7)];
+  let h='<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start"><h3>מה כבר נותח</h3>'+
+    (pendAll?'<button class="btn" data-v="primary" data-act="as-auto-all"'+(A.busy?' disabled':'')+'>⚡ ניתוח אוטומטי של כל הממתינות ('+pendAll+')</button>':'')+'</div>'+
+    (A.autoRep?acAutoRepHtml(A.autoRep):'')+
+    (um?'<p class="note" style="margin:0 0 8px">ניתוח אוטומטי החודש: '+um.calls+' חבילות · '+Math.round((um.in+um.out)/1000)+' אלף טוקנים. החיוב המדויק מופיע בחשבון ה-API ב-Anthropic.</p>':'')+(convs.length?table(['שיחה','נותחו','ממתינות','חבילה פתוחה',''],convs.map(function(c){
       const tot=c.count||0,an=c.analyzed||0,pk=acOutPack(c.id);
       return ['<b>'+esc(c.name)+'</b>','<div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar" style="flex:1;min-width:70px"><i style="width:'+(tot?Math.round(an/tot*100):0)+'%"></i></div><span>'+an+'/'+tot+'</span></div>',
         tot-an?'<b style="color:var(--late)">'+(tot-an)+'</b>':'<span style="color:var(--present)">✓ הכול</span>',
@@ -3890,7 +3945,8 @@ function acViewAnalyze(){
       '<div class="acstep"><b>הדבקת התוצאות מ"מסכם וואטסאפ"</b><textarea id="acRes" style="min-height:120px;margin-top:6px" placeholder="הדביקו כאן את מה שהועתק מהדף ב-Claude"></textarea>'+
       '<div class="row" style="margin-top:8px"><button class="btn" data-v="primary" data-act="as-res-check">בדיקה וקליטה</button></div></div>';
   }else if(pend){
-    h+='<div class="row" style="gap:8px"><button class="btn" data-v="primary" data-act="as-pack-copy" data-id="'+cid+'">העתקה לסיכום</button><span class="note">מעתיק חבילה אחת (עד כ-'+Math.round(AC_NEW_BYTES/1000)+'KB) להדבקה בדף "מסכם וואטסאפ" ב-Claude</span></div>';
+    h+='<div class="row" style="gap:8px"><button class="btn" data-v="primary" data-act="as-auto" data-id="'+cid+'"'+(A.busy?' disabled':'')+'>⚡ ניתוח אוטומטי</button><span class="note">שולח ל-Claude דרך השרת ומכניס את ההצעות לתיבת האישורים</span></div>'+
+      '<div class="row" style="gap:8px;margin-top:8px"><button class="btn" data-act="as-pack-copy" data-id="'+cid+'">העתקה לסיכום</button><span class="note">הדרך הידנית: מעתיק חבילה אחת (עד כ-'+Math.round(AC_NEW_BYTES/1000)+'KB) להדבקה בדף "מסכם וואטסאפ" ב-Claude</span></div>';
   }
   if(A.acRep){const r=A.acRep;h+='<div class="acstep" style="border-color:'+(r.ok?'var(--present)':'var(--absent)')+'">'+(r.ok?
       '<b style="color:var(--present)">✓ התוצאות נקלטו</b><div class="note">'+r.analyzed+' הודעות סומנו כמנותחות · '+r.props+' הצעות ממתינות לאישורך'+(r.merged?' · '+r.merged+' זוהו כעניין קיים ויעדכנו אותו':'')+(r.invalidSrc?' · '+r.invalidSrc+' מקורות לא תקינים הוסרו':'')+'</div>'+
@@ -3898,8 +3954,15 @@ function acViewAnalyze(){
         '<div class="row" style="margin-top:8px"><button class="btn sm" data-v="primary" data-act="as-tab" data-t="inbox">לאישור ההצעות</button></div>':
       '<b style="color:var(--absent)">התוצאה לא נקלטה</b><div class="note">'+esc(r.errors.join(' '))+'</div>')+'</div>';}
   const done=(A.packs||[]).filter(p=>p.conv===cid&&p.status==='returned').sort((a,b)=>(b.returned||0)-(a.returned||0));
-  if(done.length)h+='<h3 style="font-size:15px;margin-top:12px">ניתוחים קודמים</h3>'+done.slice(0,8).map(p=>'<div class="alert" style="display:block"><span class="note">'+esc(tsLine(p.returned))+' · '+(p.route==='code'?'Claude Code':'מסכם וואטסאפ')+' · '+p.count+' הודעות · '+(p.props||0)+' הצעות</span>'+(p.summary?'<div>'+esc(p.summary)+'</div>':'')+'</div>').join('');
+  if(done.length)h+='<h3 style="font-size:15px;margin-top:12px">ניתוחים קודמים</h3>'+done.slice(0,8).map(p=>'<div class="alert" style="display:block"><span class="note">'+esc(tsLine(p.returned))+' · '+(p.route==='code'?'Claude Code':p.route==='api'?'ניתוח אוטומטי':'מסכם וואטסאפ')+' · '+p.count+' הודעות · '+(p.props||0)+' הצעות</span>'+(p.summary?'<div>'+esc(p.summary)+'</div>':'')+'</div>').join('');
   return h+'</div>';
+}
+function acAutoRepHtml(r){
+  const okc=!r.errors.length;
+  return '<div class="acstep" style="border-color:'+(okc?'var(--present)':'var(--late)')+'"><b'+(okc?' style="color:var(--present)"':'')+'>'+(okc?'✓ הניתוח האוטומטי הסתיים':'הניתוח האוטומטי נעצר')+'</b>'+
+    '<div class="note">'+r.msgs+' הודעות נותחו ב-'+r.packs+' חבילות'+(r.convs?' ('+r.convs+' שיחות)':'')+' · '+r.props+' הצעות ממתינות לאישורך'+(r.tin?' · '+Math.round((r.tin+r.tout)/1000)+' אלף טוקנים':'')+'</div>'+
+    (r.errors.length?'<div class="note" style="color:var(--absent);margin-top:4px">'+esc(r.errors.join(' · '))+'</div>':'')+
+    '<div class="row" style="margin-top:8px;gap:6px">'+(r.props?'<button class="btn sm" data-v="primary" data-act="as-tab" data-t="inbox">לאישור ההצעות</button>':'')+'<button class="btn sm" data-v="ghost" data-act="as-auto-close">סגירה</button></div></div>';
 }
 function acViewInbox(){
   const A=S.as,P=(A.props||[]).filter(p=>p.state==='pending').sort((a,b)=>a.created-b.created);
@@ -3949,6 +4012,16 @@ async function acAction(a,el,id){
     A.lastPack=p;
     try{await navigator.clipboard.writeText(p.text);toast('הועתק: '+p.count+' הודעות. הדביקו בדף "מסכם וואטסאפ" ב-Claude');}catch(e){A.showPack=p.id;toast('ההעתקה האוטומטית נחסמה. סמנו את הטקסט והעתיקו ידנית');}
     return render();}
+  if(a==='as-auto'||a==='as-auto-all'){
+    const convs=(A.convs||[]).filter(c=>(c.count||0)>(c.analyzed||0));
+    const cids=a==='as-auto'?[id]:convs.map(c=>c.id);if(!cids.length)return toast('אין הודעות שממתינות לניתוח');
+    const n=a==='as-auto'?Math.max(0,(acConv(id).count||0)-(acConv(id).analyzed||0)):convs.reduce((k,c)=>k+(c.count||0)-(c.analyzed||0),0);
+    if(!confirm('לשלוח '+n+' הודעות'+(cids.length>1?' מ-'+cids.length+' שיחות':'')+' לניתוח אוטומטי ב-Claude?\nלפני השליחה השמות מוחלפים בכינויים, וטלפונים ומספרי זהות מוסתרים. הניתוח בתשלום לפי שימוש בחשבון ה-API שלך.'))return;
+    if(a==='as-auto')await acSaveMe(id).catch(()=>{});
+    A.autoRep=null;A.acRep=null;let r;
+    try{r=await acAuto(cids);}finally{A.busy='';}
+    A.autoRep=r;if(r.packs)logAct('ניתוח אוטומטי',r.msgs+' הודעות, '+r.props+' הצעות');window.scrollTo(0,0);return render();}
+  if(a==='as-auto-close'){A.autoRep=null;return render();}
   if(a==='as-pack-cancel'){await acCancelPack(id);toast('החבילה בוטלה');return render();}
   if(a==='as-res-check'){const t=(document.getElementById('acRes')||{}).value||'';if(!t.trim())return toast('הדביקו קודם את התוצאות');
     A.busy='בודק וקולט…';render();try{A.acRep=await acImportResult(t,'paste');}catch(e){A.acRep={ok:false,errors:[fbErr(e)]};}A.busy='';
@@ -3970,7 +4043,7 @@ async function acAction(a,el,id){
   if(a==='as-goto-msg'){A.tabA='chats';A.cur=el.dataset.c;A.day=el.dataset.d;A.q='';A.page=0;render();if(!(A.msgs&&A.msgs[A.cur]))await asLoadConv(A.cur);return render();}
 }
 
-const AC_ACTS=new Set(['as-tab','as-mem-f','as-an-open','as-an-close','as-pack-copy','as-pack-cancel','as-res-check','as-prop-ok','as-prop-okall','as-prop-no','as-goto-msg']);
+const AC_ACTS=new Set(['as-auto','as-auto-all','as-auto-close','as-tab','as-mem-f','as-an-open','as-an-close','as-pack-copy','as-pack-cancel','as-res-check','as-prop-ok','as-prop-okall','as-prop-no','as-goto-msg']);
 function viewAssist(){
   if(!isAdmin())return '<div class="empty">העוזר האישי זמין להנהלה בלבד.</div>';
   const A=S.as=S.as||{};
