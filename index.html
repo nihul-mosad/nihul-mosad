@@ -1119,7 +1119,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=51;
+const APP_VER=52;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -3783,6 +3783,8 @@ async function acApiCall(p){
 }
 async function acLoadUsage(){try{const d=await FS.doc(asBase()+'meta/usage').get();S.as.usage=d.exists?d.data():null;}catch(e){}}
 async function acSaveMe(cid){const me=(document.getElementById('acMe')||{}).value;if(me!==undefined&&me!==((acConv(cid).me||[])[0]||'')){await asRetry(()=>FS.doc(asBase()+'convs/'+cid).set({me:me?[me]:[]},{merge:true}));acConv(cid).me=me?[me]:[];}}
+/* אזהרה לפני רענון או סגירה באמצע ניתוח אוטומטי */
+window.addEventListener('beforeunload',function(e){if(S.as&&S.as.busy&&String(S.as.busy).indexOf('⚡')===0){e.preventDefault();e.returnValue='';}});
 /* מנתח שיחה אחת או את כולן, חבילה אחרי חבילה, עד שאין הודעות ממתינות או שיש שגיאה */
 async function acAuto(cids){
   const A=S.as,R={packs:0,msgs:0,props:0,tin:0,tout:0,errors:[],convs:0};A.autoStop=false;
