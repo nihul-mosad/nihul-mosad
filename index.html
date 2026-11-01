@@ -327,6 +327,20 @@ button,.btn,.chip,.link,a,label,[data-act],[data-tab]{touch-action:manipulation}
 .seg button[data-on="1"]:not([data-s]){background:var(--accent)}
 .chip[data-on="1"]{background:var(--accent);color:#fff;border-color:var(--accent)}
 .tt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.mpt{border-collapse:collapse;width:100%;min-width:720px}
+table.mpt th{font-size:12.5px;color:var(--muted);font-weight:700;padding:8px 6px;border-bottom:1px solid var(--line);text-align:right}
+table.mpt td{border-bottom:1px solid var(--line);padding:7px 6px;font-size:14px}
+table.mpt tbody tr{cursor:pointer}table.mpt tbody tr:hover td{background:var(--surface2)}table.mpt tr.sel td{background:var(--accent-soft)}
+.mplv{display:inline-block;border-radius:6px;padding:1px 7px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.mpdot{color:var(--accent);font-size:11px}
+.mpdoms{display:grid;gap:8px;margin:14px 0}
+.mpdom{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--surface2);padding-bottom:8px}
+.mpdom>span{font-weight:600;min-width:140px}
+.mpseg{display:flex;flex-wrap:wrap;gap:4px}.mpseg button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:13px;cursor:pointer}
+.mpseg button[data-on="1"]:not([style]){background:var(--surface2);font-weight:600}
+.mpc{border-right:3px solid var(--line);padding:6px 10px;margin:8px 0;background:var(--surface2);border-radius:6px}
+.mpc[data-k="object"]{border-right-color:var(--absent)}.mpc[data-k="add"]{border-right-color:var(--present)}
+@media print{table.mpt{min-width:0}table.mpt td,table.mpt th{font-size:11px;padding:3px}.mplv{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 table.dtt{border-collapse:collapse;width:100%;min-width:640px}
 table.dtt th{font-size:13px;color:var(--muted);font-weight:700;padding:8px 6px;border-bottom:1px solid var(--line);text-align:right}
 table.dtt td{border:1px solid var(--line);padding:6px;vertical-align:middle;background:var(--surface);font-size:14px}
@@ -588,7 +602,7 @@ async function reloadMembers(){
   if(!isAdmin()){S.config.users=[];return;}
   const q=await FS.collection('insts/'+S.inst+'/members').get();
   S.config.users=q.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.active!==false)
-    .map(m=>({id:m.id,user:m.user,role:m.role==='admin'?'admin':'teacher',cls:m.cls||'',teacher:m.teacher||'',_sync:JSON.stringify([(m.classes||[]).slice().sort(),(m.tclasses||[]).slice().sort(),(m.lclasses||[]).slice().sort(),m.tk||''])}));
+    .map(m=>({id:m.id,user:m.user,role:m.role==='admin'?'admin':'teacher',cls:m.cls||'',teacher:m.teacher||'',rem:!!m.rem,_sync:JSON.stringify([(m.classes||[]).slice().sort(),(m.tclasses||[]).slice().sort(),(m.lclasses||[]).slice().sort(),m.tk||''])}));
 }
 async function createInst(code,name,adminUid,adminUser,adminEmail,classes){
   const b=FS.batch();
@@ -605,7 +619,7 @@ function logAct(act,info){
 function enterSystem(user){
   S.inst=null;S.owner=true;S.instList=null;DB=null;
   S.config={name:'מסוף המערכת',classes:[],logo:'',users:[],domains:SEED_DOMAINS};
-  S.students=[];S.staff=[];S.att={};S.latt={};S.reviews=[];S.tasks=[];S.timetable=[];S.events=[];S.evRoster=[];S.meetings=[];S.mtEdit=null;S.duty=null;S.dutyEdit=null;S.exams=[];S.exEdit=null;S.rc=null;S.daylog={};S.dm={};S.dlDate='';S.as=null;LIDX=null;
+  S.students=[];S.staff=[];S.att={};S.latt={};S.reviews=[];S.tasks=[];S.timetable=[];S.events=[];S.evRoster=[];S.meetings=[];S.mtEdit=null;S.duty=null;S.dutyEdit=null;S.rem=null;S.remOpen=null;S.remDraft=null;S.remDirty=false;S.exams=[];S.exEdit=null;S.rc=null;S.daylog={};S.dm={};S.dlDate='';S.as=null;LIDX=null;
   S.me={id:user.uid,user:'בעל המערכת',role:'admin',cls:'',teacher:'',mustChange:false};
   S.tab='console';S.console=null;
   try{localStorage.setItem('tt:inst','system');localStorage.setItem('tt:instName','מסוף המערכת');}catch(e){}
@@ -640,7 +654,7 @@ async function enterInst(inst,user,typed){
   S.config=cfg;
   if(!S.config.domains||!S.config.domains.length)S.config.domains=SEED_DOMAINS;
   if(!S.config.classes)S.config.classes=[];
-  S.me={id:user.uid,user:m.user,role:m.role==='admin'?'admin':'teacher',cls:m.cls||'',teacher:m.teacher||'',mustChange:false};
+  S.me={id:user.uid,user:m.user,role:m.role==='admin'?'admin':'teacher',cls:m.cls||'',teacher:m.teacher||'',rem:!!m.rem,mustChange:false};
   await reloadMembers();
   S.timetable=await load(K.timetable,[]);
   const sec=await loadSec();
@@ -1001,7 +1015,7 @@ const S={tab:'dash',me:null,config:{name:'המוסד',classes:[],logo:'',users:[
   msgGroup:'all',msgText:'',msgTo:'both',importPreview:null,focus:null,
   repFrom:daysAgo(30),repTo:iso(new Date()),repCls:''};
 
-const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['mark','נוכחות'],['events','אירועים'],['grades','ציונים'],['schedule','מערכת שעות'],['duty','תורנויות'],['tasks','משימות'],['meetings','ישיבות צוות'],['daylog','יומן יומי'],['assist','עוזר אישי'],['reports','דוחות'],['analytics','ניתוחים'],['staff','צוות'],['settings','הגדרות']];
+const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['rem','מיפוי'],['mark','נוכחות'],['events','אירועים'],['grades','ציונים'],['schedule','מערכת שעות'],['duty','תורנויות'],['tasks','משימות'],['meetings','ישיבות צוות'],['daylog','יומן יומי'],['assist','עוזר אישי'],['reports','דוחות'],['analytics','ניתוחים'],['staff','צוות'],['settings','הגדרות']];
 const isAdmin=()=>S.me&&S.me.role==='admin';
 function homeroomOf(t){const h=S.config.homeroom||{};return S.config.classes.filter(c=>t&&h[c]===t);}
 const myClasses=()=>isAdmin()?S.config.classes:Array.from(new Set((S.me.cls?[S.me.cls]:[]).concat(homeroomOf(S.me.teacher))));
@@ -1023,7 +1037,7 @@ function tasksInView(){
 }
 function myLessonIds(){const o={};myLessonAll().forEach(l=>o[l.id]=1);return o;}
 function myLessonStudents(){const ok={};myLessonAll().forEach(l=>lessonStudents(l).list.forEach(s=>ok[s.id]=1));return S.students.filter(s=>ok[s.id]);}
-const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','students','mark','events','grades','schedule','duty','tasks','meetings','reports']:['mark','events','grades','schedule','duty','tasks','meetings','reports']).indexOf(t[0])>-1).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
+const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','students','rem','mark','events','grades','schedule','duty','tasks','meetings','reports']:['rem','mark','events','grades','schedule','duty','tasks','meetings','reports']).indexOf(t[0])>-1&&(t[0]!=='rem'||isRemT()||myClasses().length)).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
 const domains=()=>S.config.domains&&S.config.domains.length?S.config.domains:SEED_DOMAINS;
 
 /* ---- שליפות ---- */
@@ -1105,7 +1119,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=50;
+const APP_VER=51;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -1217,7 +1231,7 @@ let DATA_AT=0,DATA_BUSY=false;
 const LIVE_TABS={dash:1,analytics:1,reports:1,events:1,daylog:1,review:1,grades:1};
 async function refreshData(manual){
   if(DATA_BUSY||!S.me||!S.inst||S.legacy||!FS)return;
-  if(S.dirty||S.ldirty||S.evc||S.exEdit||S.mtEdit||S.remc||S.dutyEdit){if(manual)toast('יש שינויים שלא נשמרו. שמרו קודם ואז רעננו.');return;}
+  if(S.dirty||S.ldirty||S.evc||S.exEdit||S.mtEdit||S.remc||S.dutyEdit||S.remDirty){if(manual)toast('יש שינויים שלא נשמרו. שמרו קודם ואז רעננו.');return;}
   DATA_BUSY=true;if(manual)toast('מרענן…');
   try{S.timetable=await load(K.timetable,S.timetable);const ok=await loadSec();if(ok&&isAdmin())S.staff=await load(K.staff,S.staff);DATA_AT=Date.now();if(manual)toast('הנתונים עודכנו');render();}
   catch(e){if(manual)toast(fbErr(e));}
@@ -4266,6 +4280,177 @@ async function dutyAct(a,id){
   return false;
 }
 
+/* ================= מיפוי והוראה מתקנת =================
+   מידע רגיש על קשיי למידה של ילדים. נשמר ב-rem/{כיתה}: m.{תלמיד}.{שדה}.
+   מי רואה ועורך (נאכף גם בחוקי האבטחה בשרת): מנהל, משתמש שסומן "מורה מתקנת" (members.rem), ומחנך הכיתה (members.classes).
+   כל שדה נשמר בנפרד (l_<תחום>, fnd, rec...), והערות נשמרות כ-c_<מזהה> — כך שני אנשים שעורכים במקביל לא דורסים זה את זה.
+   לכל שינוי נרשם מי ומתי (h_<מזהה>), כדי שיהיה ברור מי כתב מה. */
+const REM_LV=[{v:1,n:'תקין',c:'#2F7A4F',bg:'#E3F1E8'},{v:2,n:'גבולי',c:'#8A6A12',bg:'#FBF1D3'},{v:3,n:'מתקשה',c:'#B5541C',bg:'#FCE6D6'},{v:4,n:'קושי משמעותי',c:'#AF3A2E',bg:'#F8DCD8'}];
+const REM_ST={wait:'ממתין למיפוי',mapped:'נמפה',treat:'בטיפול',done:'סיים טיפול'};
+const REM_CK={note:'הערה',object:'הסתייגות',add:'תוספת'};
+const REM_DEF=[['read','קריאה ופענוח'],['flu','שטף קריאה'],['comp','הבנת הנקרא'],['write','כתיבה ואיות'],['math','חשבון'],['lk','לשון הקודש / חומש'],['att','קשב והתארגנות']].map(x=>({id:x[0],name:x[1]}));
+const REM_HMAX=40;
+function remDomains(){return S.config.remDomains&&S.config.remDomains.length?S.config.remDomains:REM_DEF;}
+const isRemT=()=>!!(S.me&&S.me.rem);
+const canRemAll=()=>isAdmin()||isRemT();
+function remClasses(){return canRemAll()?S.config.classes.slice():myClasses();}
+function remStudents(){
+  const cls=remClasses(),seen={},out=[];
+  (S.students||[]).concat(canRemAll()&&!isAdmin()?(S.evRoster||[]):[]).forEach(s=>{if(s&&s.id&&!seen[s.id]&&cls.indexOf(s.cls)>-1){seen[s.id]=1;out.push(s);}});
+  return out.sort((a,b)=>cls.indexOf(a.cls)-cls.indexOf(b.cls)||String(a.name).localeCompare(String(b.name),'he'));
+}
+async function loadRem(force){
+  const R=S.rem=S.rem||{d:{},err:''};if(R.busy)return;if(R.at&&!force&&Date.now()-R.at<60000)return;
+  R.busy=true;R.err='';
+  try{
+    await inChunks(remClasses(),async function(c){const p='rem/'+ckOf(c);
+      try{const d=await fsGet(p);const m=nn(d&&d.m);LD[p]=clone(m);R.d[c]=m;}
+      catch(e){if(/permission/.test((e&&e.code)||''))R.err='perm';else throw e;}},6);
+    R.at=Date.now();
+  }catch(e){R.err=fbErr(e);}finally{R.busy=false;}
+}
+function remRec(s){return ((S.rem&&S.rem.d[s.cls])||{})[s.id]||{};}
+function remComments(r){return Object.keys(r).filter(k=>k.indexOf('c_')===0&&r[k]).map(k=>Object.assign({id:k},r[k])).sort((a,b)=>(a.t||0)-(b.t||0));}
+function remHist(r){return Object.keys(r).filter(k=>k.indexOf('h_')===0&&r[k]).map(k=>Object.assign({id:k},r[k])).sort((a,b)=>(b.t||0)-(a.t||0));}
+function remSeenGet(){try{return JSON.parse(localStorage.getItem('tt:remSeen:'+S.inst+':'+S.me.id)||'{}');}catch(e){return {};}}
+function remSeenSet(sid){const o=remSeenGet();o[sid]=Date.now();try{localStorage.setItem('tt:remSeen:'+S.inst+':'+S.me.id,JSON.stringify(o));}catch(e){}}
+function remNew(s,seen){const r=remRec(s),t=(seen||{})[s.id]||0;return remComments(r).some(c=>c.uid!==S.me.id&&(c.t||0)>t)||(r.u&&r.u.uid!==S.me.id&&(r.u.t||0)>t&&t>0);}
+/* כתיבה: מחילים את השינויים שלי על הגרסה העדכנית מהשרת, ושולחים רק את השדות ששיניתי */
+async function remWrite(s,changes,histLabel){
+  const c=s.cls,p='rem/'+ckOf(c),ref=FS.doc(IB()+p);
+  let fresh;try{const d=await fsGet(p);fresh=nn(d&&d.m);}catch(e){if(/permission/.test((e&&e.code)||'')){toast('אין הרשאה לשמור. צריך לעדכן את חוקי האבטחה ב-Firebase.');return false;}throw e;}
+  const r=Object.assign({},fresh[s.id]||{}),now=Date.now(),who=S.me.teacher||S.me.user||'',set={},del=[];
+  Object.keys(changes).forEach(k=>{if(changes[k]===null||changes[k]===''||changes[k]===undefined){if(r[k]!==undefined)del.push(k);delete r[k];}else{r[k]=changes[k];set[k]=changes[k];}});
+  r.u=set.u={by:who,uid:S.me.id,t:now};
+  if(histLabel&&histLabel.length){const hid='h_'+now.toString(36)+asIdShort();r[hid]=set[hid]={by:who,uid:S.me.id,t:now,x:histLabel.join(' · ').slice(0,300)};
+    remHist(r).slice(REM_HMAX).forEach(h=>{delete r[h.id];del.push(h.id);});}
+  // רק השדות שהשתנו נשלחים לשרת — שינויים של אחרים באותו זמן נשמרים
+  const args=[],FP=firebase.firestore.FieldPath,DEL=firebase.firestore.FieldValue.delete();
+  Object.keys(set).forEach(k=>{args.push(new FP('m',s.id,k));args.push(set[k]);});
+  del.forEach(k=>{args.push(new FP('m',s.id,k));args.push(DEL);});
+  try{
+    await queued(p,async function(){
+      try{await ref.update(...args);}
+      catch(e){if(e&&(e.code==='not-found'||e.code==='invalid_argument')){const full={m:{}};full.m[s.id]=r;await ref.set(full,{merge:true});}else throw e;}
+    });
+  }catch(e){if(/permission/.test((e&&e.code)||''))toast('אין הרשאה לשמור. צריך לעדכן את חוקי האבטחה ב-Firebase.');else saveFailed(e);return false;}
+  fresh[s.id]=r;S.rem.d[c]=fresh;LD[p]=clone(fresh);return true;
+}
+const asIdShort=()=>Math.random().toString(36).slice(2,6);
+function remLvCell(v){const L=REM_LV.find(x=>x.v===+v);return L?'<span class="mplv" style="background:'+L.bg+';color:'+L.c+'">'+L.n+'</span>':'<span class="note">—</span>';}
+function remCanSee(s){return remClasses().indexOf(s.cls)>-1;}
+/* ---------- תצוגה ---------- */
+function viewRem(){
+  const R=S.rem=S.rem||{d:{}};
+  if(!R.at&&!R.busy){loadRem().then(()=>{if(S.tab==='rem')render();});}
+  const F=S.remF=S.remF||{cls:'',dom:'',min:'',st:'',q:''};
+  const doms=remDomains(),cls=remClasses();
+  let list=remStudents();
+  if(F.cls)list=list.filter(s=>s.cls===F.cls);
+  if(F.q.trim())list=list.filter(s=>String(s.name).indexOf(F.q.trim())>-1);
+  if(F.st)list=list.filter(s=>(remRec(s).st||'wait')===F.st);
+  if(F.dom&&F.min)list=list.filter(s=>+(remRec(s)['l_'+F.dom]||0)>=+F.min);
+  else if(F.min)list=list.filter(s=>doms.some(d=>+(remRec(s)['l_'+d.id]||0)>=+F.min));
+  const all=remStudents(),seen=remSeenGet();
+  const who=isAdmin()?'אתה רואה את כל התלמידים':isRemT()?'כמורה מתקנת את רואה את כל התלמידים':'אתה רואה את התלמידים של '+cls.join(', ');
+  let h=printHead()+'<div class="head"><div><h2>מיפוי והוראה מתקנת</h2><div class="sub">'+who+' · מי שרואה תלמיד יכול גם לעדכן ולהוסיף הערות</div></div>'+
+    '<div class="row noprint"><button class="btn" data-v="ghost" data-act="mp-refresh">⟳ רענון</button><button class="btn" data-v="ghost" data-act="mp-print">🖨 הדפסה</button>'+(isAdmin()?'<button class="btn" data-v="ghost" data-act="mp-setup">הגדרות</button>':'')+'</div></div>';
+  h+='<div class="warn noprint" style="margin-bottom:12px">🔒 מידע רגיש על ילדים. גלוי רק למנהל, למורה המתקנת ולמחנך הכיתה. לא להעביר הלאה ולא להדפיס בלי צורך.</div>';
+  if(R.err==='perm')h+='<div class="warn">אין הרשאה לקרוא את נתוני המיפוי. צריך לעדכן את חוקי האבטחה ב-Firebase (החלק של "rem").</div>';
+  else if(R.err)h+='<div class="warn">'+esc(R.err)+'</div>';
+  if(S.remSetup&&isAdmin())h+=remSetupCard();
+  if(S.remOpen){const s=all.find(x=>x.id===S.remOpen);if(s)h+=remCard(s);}
+  // סיכום
+  const mapped=all.filter(s=>(remRec(s).st||'wait')!=='wait').length;
+  const hard=all.filter(s=>doms.some(d=>+(remRec(s)['l_'+d.id]||0)>=3)).length;
+  h+='<div class="grid g3 noprint" style="margin-bottom:14px">'+stat(mapped+'/'+all.length,'נמפו')+stat(all.filter(s=>remRec(s).st==='treat').length,'בטיפול','var(--late)')+stat(hard,'מתקשים בתחום אחד לפחות','var(--absent)')+'</div>';
+  const byDom=doms.map(d=>({d:d,n:all.filter(s=>+(remRec(s)['l_'+d.id]||0)>=3).length})).filter(x=>x.n);
+  if(byDom.length)h+='<div class="row noprint" style="gap:6px;margin-bottom:12px"><span class="note">מתקשים לפי תחום:</span>'+byDom.map(x=>'<button class="chip" data-act="mp-fdom" data-id="'+esc(x.d.id)+'"'+(F.dom===x.d.id&&F.min==='3'?' data-on="1"':'')+'>'+esc(x.d.name)+' · '+x.n+'</button>').join('')+'</div>';
+  // סינון
+  h+='<div class="card noprint"><div class="row" style="gap:8px">'+
+    (cls.length>1?'<select class="inp" data-remf="cls">'+opt('כל הכיתות','',F.cls)+cls.map(c=>opt(c,c,F.cls)).join('')+'</select>':'')+
+    '<select class="inp" data-remf="dom">'+opt('כל התחומים','',F.dom)+doms.map(d=>opt(d.name,d.id,F.dom)).join('')+'</select>'+
+    '<select class="inp" data-remf="min">'+opt('כל הרמות','',F.min)+opt('גבולי ומעלה','2',F.min)+opt('מתקשה ומעלה','3',F.min)+opt('קושי משמעותי','4',F.min)+'</select>'+
+    '<select class="inp" data-remf="st">'+opt('כל הסטטוסים','',F.st)+Object.keys(REM_ST).map(k=>opt(REM_ST[k],k,F.st)).join('')+'</select>'+
+    '<input class="inp" data-remf="q" id="remQ" placeholder="חיפוש שם" value="'+esc(F.q)+'" style="flex:1;min-width:120px"></div></div>';
+  // טבלה
+  if(!all.length)return h+'<div class="card"><div class="empty">'+(R.busy?'טוען…':'אין תלמידים להצגה.')+'</div></div>';
+  h+='<div class="card"><div class="tt-wrap"><table class="mpt"><thead><tr><th>תלמיד</th>'+(cls.length>1&&!F.cls?'<th>כיתה</th>':'')+doms.map(d=>'<th>'+esc(d.name)+'</th>').join('')+'<th>סטטוס</th><th class="noprint">הערות</th></tr></thead><tbody>'+
+    list.map(function(s){const r=remRec(s),nc=remComments(r).length,nw=remNew(s,seen);
+      return '<tr data-remopen="'+esc(s.id)+'"'+(S.remOpen===s.id?' class="sel"':'')+'><td><b>'+esc(s.name)+'</b>'+(nw?' <span class="mpdot" title="עדכון חדש">●</span>':'')+'</td>'+(cls.length>1&&!F.cls?'<td>'+esc(s.cls)+'</td>':'')+
+        doms.map(d=>'<td>'+remLvCell(r['l_'+d.id])+'</td>').join('')+'<td><span class="note">'+esc(REM_ST[r.st||'wait'])+'</span></td><td class="noprint">'+(nc?'💬 '+nc:'')+'</td></tr>';}).join('')+
+    '</tbody></table></div>'+(list.length<all.length?'<p class="note" style="margin-top:8px">מוצגים '+list.length+' מתוך '+all.length+'</p>':'')+
+    '<p class="note noprint" style="margin-top:8px">לחיצה על שורה פותחת את כרטיס המיפוי של התלמיד.</p></div>';
+  return h;
+}
+function remCard(s){
+  const r=remRec(s),doms=remDomains(),cm=remComments(r),hs=remHist(r),D=S.remDraft||{};
+  const val=k=>D[k]!==undefined?D[k]:(r[k]||'');
+  let h='<div class="card evc" id="remCard"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3 style="margin:0">'+esc(s.name)+'</h3><div class="note">'+esc(s.cls)+
+    (r.u?' · עודכן לאחרונה ע״י '+esc(r.u.by)+' · '+esc(tsLine(r.u.t)):'')+'</div></div><button class="btn sm" data-v="ghost" data-act="mp-close">סגירה</button></div>';
+  h+='<div class="grid g2" style="margin-top:12px"><label class="field"><span>סטטוס</span><select id="mp-st">'+Object.keys(REM_ST).map(k=>opt(REM_ST[k],k,val('st')||'wait')).join('')+'</select></label>'+
+    '<label class="field"><span>תאריך המיפוי</span><input type="date" id="mp-md" value="'+esc(val('md'))+'"></label></div>';
+  h+='<div class="mpdoms">'+doms.map(function(d){const v=+(val('l_'+d.id)||0);
+      return '<div class="mpdom"><span>'+esc(d.name)+'</span><div class="seg mpseg">'+REM_LV.map(L=>'<button type="button" data-mplv="'+d.id+'" data-v2="'+L.v+'"'+(v===L.v?' data-on="1" style="background:'+L.bg+';color:'+L.c+';border-color:'+L.c+'"':'')+'>'+L.n+'</button>').join('')+
+        '<button type="button" data-mplv="'+d.id+'" data-v2="0"'+(!v?' data-on="1"':'')+'>לא נבדק</button></div></div>';}).join('')+'</div>';
+  h+='<label class="field"><span>ממצאים</span><textarea id="mp-fnd" style="min-height:80px" placeholder="מה עלה במיפוי">'+esc(val('fnd'))+'</textarea></label>'+
+    '<label class="field"><span>המלצות</span><textarea id="mp-rec" style="min-height:70px" placeholder="מה מומלץ לעשות — בכיתה, בבית, בהוראה מתקנת">'+esc(val('rec'))+'</textarea></label>'+
+    '<label class="field"><span>שיבוץ להוראה מתקנת</span><input id="mp-grp" value="'+esc(val('grp'))+'" placeholder="למשל: קבוצת קריאה, פעמיים בשבוע"></label>'+
+    '<div class="row"><button class="btn" data-v="primary" data-act="mp-save" data-id="'+esc(s.id)+'">שמירה</button>'+(S.remDirty?'<span class="note" style="color:var(--late)">יש שינויים שלא נשמרו</span>':'')+'</div>';
+  // שרשור
+  h+='<h3 style="font-size:15px;margin-top:18px">הערות והתייחסויות ('+cm.length+')</h3>'+
+    (cm.length?cm.map(c=>'<div class="mpc" data-k="'+esc(c.k||'note')+'"><div class="note"><span class="tag" data-s="'+(c.k==='object'?'absent':c.k==='add'?'present':'excused')+'">'+esc(REM_CK[c.k]||'הערה')+'</span> <b>'+esc(c.by||'')+'</b> · '+esc(tsLine(c.t))+
+      (c.uid===S.me.id||isAdmin()?' <button class="link" data-act="mp-cdel" data-id="'+esc(s.id)+'" data-c="'+esc(c.id)+'">מחיקה</button>':'')+'</div><div style="white-space:pre-wrap">'+esc(c.x)+'</div></div>').join(''):'<p class="note">אין עדיין הערות. כאן אפשר להוסיף הערה, להסתייג מממצא או להוסיף מידע.</p>')+
+    '<div class="row" style="gap:8px;margin-top:8px;align-items:flex-start"><select class="inp" id="mp-ck">'+Object.keys(REM_CK).map(k=>opt(REM_CK[k],k,'note')).join('')+'</select>'+
+    '<textarea id="mp-cx" style="flex:1;min-width:200px;min-height:60px" placeholder="כתבו כאן…"></textarea><button class="btn" data-act="mp-cadd" data-id="'+esc(s.id)+'">הוספה</button></div>';
+  if(hs.length)h+='<details style="margin-top:14px"><summary class="note">היסטוריית שינויים ('+hs.length+')</summary>'+hs.map(x=>'<div class="note" style="margin-top:4px">'+esc(tsLine(x.t))+' · <b>'+esc(x.by)+'</b>: '+esc(x.x)+'</div>').join('')+'</details>';
+  return h+'</div>';
+}
+function remSetupCard(){
+  const doms=remDomains();
+  return '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">הגדרות המיפוי</h3><button class="btn sm" data-v="ghost" data-act="mp-setup">סגירה</button></div>'+
+    '<p class="note" style="margin:8px 0">תחומי המיפוי. מחיקת תחום לא מוחקת את מה שכבר נרשם בו.</p>'+
+    '<div class="row" style="margin-bottom:10px">'+doms.map(d=>'<span class="chip" style="cursor:default">'+esc(d.name)+'<button class="btn sm" data-v="ghost" style="padding:0 4px" data-act="mp-domdel" data-id="'+esc(d.id)+'">✕</button></span>').join('')+'</div>'+
+    '<div class="row"><input class="inp" id="remNewDom" placeholder="למשל: גמרא / משנה"><button class="btn" data-act="mp-domadd">הוספה</button></div>'+
+    '<p class="note" style="margin-top:12px">מי המורה המתקנת? בהגדרות ← משתמשים, בעריכת המשתמש שלה, מסמנים "מורה מתקנת".</p></div>';
+}
+function remCapture(s){
+  const D=S.remDraft=S.remDraft||{},r=remRec(s),q=id=>document.getElementById(id);
+  [['mp-st','st'],['mp-md','md'],['mp-fnd','fnd'],['mp-rec','rec'],['mp-grp','grp']].forEach(p=>{const el=q(p[0]);if(el){const v=el.value.trim?el.value:el.value;if(String(v)!==String(r[p[1]]||(p[1]==='st'?'wait':'')))D[p[1]]=v;else delete D[p[1]];}});
+  return D;
+}
+async function remAct(a,el,id){
+  const all=remStudents();
+  if(a==='mp-refresh'){await loadRem(true);toast('עודכן');return render();}
+  if(a==='mp-print'){window.print();return;}
+  if(a==='mp-setup'){if(!isAdmin())return;S.remSetup=!S.remSetup;return render();}
+  if(a==='mp-domadd'){if(!isAdmin())return;const v=(document.getElementById('remNewDom')||{}).value||'';if(!v.trim())return;
+    S.config.remDomains=remDomains().concat([{id:'d'+uid().slice(0,6),name:v.trim()}]);await save(K.config,S.config);return render();}
+  if(a==='mp-domdel'){if(!isAdmin())return;const d=remDomains().find(x=>x.id===id);if(!d||!confirm('להסיר את התחום "'+d.name+'" מהטבלה?'))return;
+    S.config.remDomains=remDomains().filter(x=>x.id!==id);await save(K.config,S.config);return render();}
+  if(a==='mp-fdom'){const F=S.remF;if(F.dom===id&&F.min==='3'){F.dom='';F.min='';}else{F.dom=id;F.min='3';}return render();}
+  if(a==='mp-close'){if(S.remDirty&&!confirm('יש שינויים שלא נשמרו. לסגור בלי לשמור?'))return;S.remOpen=null;S.remDraft=null;S.remDirty=false;return render();}
+  const s=all.find(x=>x.id===id);if(!s||!remCanSee(s))return;
+  if(a==='mp-save'){
+    const D=remCapture(s),r=remRec(s),doms=remDomains(),keys=Object.keys(D);
+    if(!keys.length){toast('אין שינויים');return;}
+    const lab=keys.map(function(k){const v=D[k];
+      if(k.indexOf('l_')===0){const d=doms.find(x=>'l_'+x.id===k),L=REM_LV.find(x=>x.v===+v);return (d?d.name:k)+': '+(L?L.n:'לא נבדק');}
+      if(k==='st')return 'סטטוס: '+REM_ST[v];if(k==='md')return 'תאריך מיפוי: '+(v||'—');
+      const nm={fnd:'ממצאים',rec:'המלצות',grp:'שיבוץ'}[k]||k;return nm+(String(v).trim()?' עודכנו':' נמחקו');});
+    const ch={};keys.forEach(k=>ch[k]=k.indexOf('l_')===0?(+D[k]||null):(String(D[k]).trim()||null));
+    if(await remWrite(s,ch,lab)){S.remDraft=null;S.remDirty=false;remSeenSet(s.id);logAct('עדכון מיפוי',s.name);toast('נשמר');}
+    return render();}
+  if(a==='mp-cadd'){
+    const x=((document.getElementById('mp-cx')||{}).value||'').trim(),k=(document.getElementById('mp-ck')||{}).value||'note';
+    if(!x)return toast('כתבו את ההערה');remCapture(s);
+    const cid='c_'+Date.now().toString(36)+asIdShort(),ch={};ch[cid]={by:S.me.teacher||S.me.user||'',uid:S.me.id,t:Date.now(),k:k,x:x.slice(0,4000)};
+    if(await remWrite(s,ch,null)){remSeenSet(s.id);logAct('הערה במיפוי',s.name);toast('ההערה נוספה');}
+    return render();}
+  if(a==='mp-cdel'){const c=el.dataset.c;const r=remRec(s);if(!r[c]||(r[c].uid!==S.me.id&&!isAdmin()))return;if(!confirm('למחוק את ההערה?'))return;
+    remCapture(s);const ch={};ch[c]=null;if(await remWrite(s,ch,['נמחקה הערה של '+(r[c].by||'')]))toast('נמחקה');return render();}
+}
+
 /* ================= ישיבות צוות ================= */
 // נשמר ב-store/meetings_{שנת לימודים}: כל הצוות קורא, רק ההנהלה כותבת
 const mtYear=d=>{const y=+String(d).slice(0,4),m=+String(d).slice(5,7);return m>=8?y:y-1;};
@@ -4727,7 +4912,7 @@ function viewSettings(){
   '<div class="card"><h3>משתמשים והרשאות</h3>'+
     '<p class="note" style="margin-bottom:12px">מנהל רואה את כל המוסד. מורה רואה את השיעורים שלו, ואם הוא מחנך גם את כל מה שקורה בכיתה שלו. מחנכים מגדירים בלשונית "מערכת שעות".</p>'+
     table(['שם משתמש','הרשאה','מורה במערכת',''],S.config.users.map(u=>
-      ['<b>'+esc(u.user)+'</b>','<span class="tag" data-s="'+u.role+'">'+(u.role==='admin'?'מנהל':'מורה')+'</span>',esc(u.role==='admin'?(u.teacher||'כל המוסד'):(u.teacher||'— לא קושר')),
+      ['<b>'+esc(u.user)+'</b>','<span class="tag" data-s="'+u.role+'">'+(u.role==='admin'?'מנהל':'מורה')+'</span>'+(u.rem?' <span class="tag" data-s="late">מורה מתקנת</span>':''),esc(u.role==='admin'?(u.teacher||'כל המוסד'):(u.teacher||'— לא קושר')),
        '<button class="btn sm" data-v="ghost" data-act="user-edit" data-id="'+u.id+'">עריכה</button>'+
        (u.id===S.me.id?'':'<button class="btn sm" data-v="ghost" data-act="user-pin" data-id="'+u.id+'">קוד חדש</button>')+
        (u.id===S.me.id?'':'<button class="btn sm" data-v="ghost" data-act="user-del" data-id="'+u.id+'">מחיקה</button>')]))+
@@ -4770,7 +4955,7 @@ function userForm(){
     '<label class="field"><span>סיסמה'+(e.id?' (ריק = ללא שינוי)':'')+'</span><input id="u-pass" type="text" value=""></label>'+
     '<label class="field"><span>הרשאה</span><select id="u-role">'+opt('מורה','teacher',e.role)+opt('מנהל — כל המוסד','admin',e.role)+'</select></label>'+
     '<label class="field"><span>המורה במערכת השעות</span><select id="u-tch">'+opt('—','',e.teacher)+teachersList().map(t=>opt(t,t,e.teacher)).join('')+'</select></label>'+
-  '</div><div class="row"><button class="btn" data-v="primary" data-act="user-save">שמירה</button>'+
+  '</div><label class="row" style="gap:8px;margin-bottom:12px;cursor:pointer"><input type="checkbox" id="u-rem"'+(e.rem?' checked':'')+'><span><b>מורה מתקנת</b> <span class="note">— רואה ועורכת את המיפוי של כל התלמידים (ורק את המיפוי)</span></span></label><div class="row"><button class="btn" data-v="primary" data-act="user-save">שמירה</button>'+
   '<button class="btn" data-v="ghost" data-act="user-cancel">ביטול</button></div></div>';
 }
 
@@ -4796,7 +4981,7 @@ function render(){
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
     '<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
-    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,duty:viewDuty,bdays:viewBirthdays,analytics:viewAnalytics,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,assist:viewAssist,account:viewAccount,import:viewImport,card:viewCard};
+    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,duty:viewDuty,rem:viewRem,bdays:viewBirthdays,analytics:viewAnalytics,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,assist:viewAssist,account:viewAccount,import:viewImport,card:viewCard};
   if(S.inst&&!isAdmin()&&['card','account','bdays','rcard'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
   if(S.tab==='tasks')dmMarkRead();
   const v=map[S.tab]||viewDash;
@@ -4817,6 +5002,7 @@ function goTab(t){
   if(S.tab!=='review'){S.revIdx=null;}
   if(S.tab==='mark'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;S.markLesson=null;S.ldirty=false;}
   S.scan=null;S.evc=null;S.evBack=null;S.mtEdit=null;S.remc=null;S.exEdit=null;S.dutyEdit=null;
+  if(S.tab!=='rem'){S.remOpen=null;S.remDraft=null;S.remDirty=false;}
   render();
 }
 document.getElementById('nav').addEventListener('click',function(e){
@@ -4845,6 +5031,14 @@ function saveRev(){
   return true;
 }
 
+document.getElementById('main').addEventListener('click',function(e){
+  const lv=e.target.closest('[data-mplv]');
+  if(lv&&S.remOpen){const s=remStudents().find(x=>x.id===S.remOpen);if(!s)return;remCapture(s);const k='l_'+lv.dataset.mplv,v=+lv.dataset.v2,cur=+(remRec(s)[k]||0);
+    if(v===cur)delete S.remDraft[k];else S.remDraft[k]=v;S.remDirty=Object.keys(S.remDraft).length>0;return render();}
+  const tr=e.target.closest('[data-remopen]');
+  if(tr){const id=tr.dataset.remopen;if(S.remOpen===id)return;if(S.remDirty&&!confirm('יש שינויים שלא נשמרו. לעבור בלי לשמור?'))return;
+    S.remOpen=id;S.remDraft=null;S.remDirty=false;remSeenSet(id);render();const c=document.getElementById('remCard');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});}
+});
 document.getElementById('main').addEventListener('click',async function(e){
   const el=e.target.closest('[data-act]');if(!el)return;
   const a=el.dataset.act,id=el.dataset.id;
@@ -4852,6 +5046,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a.indexOf('lm-')===0||a==='mark-view')return markAction(a,el);
   if(a.indexOf('scan-')===0)return scanAction(a,el);
   if(a.indexOf('duty-')===0){await dutyAct(a,id);return;}
+  if(a.indexOf('mp-')===0)return remAct(a,el,id);
   if(a.indexOf('ev-')===0||a.indexOf('evt-')===0||a==='goto-events')return evAction(a,el);
   if(a.indexOf('as-')===0)return AC_ACTS.has(a)?acAction(a,el,id):asAction(a,el,id);
   if(/^(bulk-|cred-|join-|jr-)/.test(a)||a==='user-pin')return userAction(a,el);
@@ -5098,14 +5293,14 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a==='user-cancel'){S.editUser=null;return render();}
   if(a==='user-save'){
     const g=i=>document.getElementById(i).value;
-    const name=g('u-user').trim(),pass=g('u-pass'),role=g('u-role'),cls='',tch=g('u-tch');
+    const name=g('u-user').trim(),pass=g('u-pass'),role=g('u-role'),cls='',tch=g('u-tch'),remF=!!(document.getElementById('u-rem')||{}).checked;
     if(!name)return toast('צריך שם משתמש');
     if(S.config.users.some(u=>ukey(u.user)===ukey(name)&&u.id!==S.editUser.id))return toast('שם המשתמש כבר קיים');
-    if(role==='teacher'&&!tch)return toast('למורה צריך לבחור את השם שלו ממערכת השעות');
+    if(role==='teacher'&&!tch&&!remF)return toast('למורה צריך לבחור את השם שלו ממערכת השעות');
     if(!S.editUser.id&&!pass)return toast('צריך סיסמה');
     if(pass&&pass.length<6)return toast('סיסמה של 6 תווים לפחות');
     if(S.editUser.id===S.me.id&&role!=='admin')return toast('אי אפשר להוריד לעצמך את הרשאת המנהל');
-    const base='insts/'+S.inst,data={user:name,role:role,cls:'',teacher:tch||'',active:true};
+    const base='insts/'+S.inst,data={user:name,role:role,cls:'',teacher:tch||'',active:true,rem:remF};
     toast('שומר…');
     try{
       if(!S.editUser.id){
@@ -5247,6 +5442,8 @@ document.getElementById('main').addEventListener('change',function(e){
 
 document.getElementById('main').addEventListener('input',function(e){
   const t=e.target;
+  if(t.dataset&&t.dataset.remf){S.remF[t.dataset.remf]=t.value;if(t.dataset.remf==='q')S.focus='remQ';return render();}
+  if(t.id&&t.id.indexOf('mp-')===0&&t.id!=='mp-cx'&&t.id!=='mp-ck'){S.remDirty=true;return;}
   if(t.dataset&&t.dataset.asq&&S.as){S.as.q=t.value;S.as.page=0;S.focus='asQ';return render();}
   if(t.dataset&&t.dataset.evq){evCapture();S.evc.q=t.value;S.focus='evq';return render();}
   if(t.dataset&&t.dataset.evf==='q'){S.evf.q=t.value;S.focus='evfq';return render();}
