@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner() { return signedIn() && request.auth.uid == 'OPqeXR8eV9fR5Js5TmaEwTyjlZ82'; }
+    function instPath(inst) { return /databases/$(database)/documents/insts/$(inst); }
+    function memberPath(inst) { return /databases/$(database)/documents/insts/$(inst)/members/$(request.auth.uid); }
+    function mem(inst) { return get(memberPath(inst)).data; }
+    function instActive(inst) { return !get(instPath(inst)).data.get('disabled', false); }
+    function isMember(inst) { return signedIn() && exists(memberPath(inst)) && mem(inst).active == true && instActive(inst); }
+    function isAdmin(inst) { return isMember(inst) && mem(inst).role == 'admin'; }
+    function full(inst) { return isOwner() || isAdmin(inst); }
+    function inCls(inst, c) { return isMember(inst) && c in mem(inst).get('classes', []); }
+    function teachesIn(inst, c) { return isMember(inst) && c in mem(inst).get('tclasses', []); }
+    function teaches(inst, c, t) { return teachesIn(inst, c) && t != '' && mem(inst).get('tk', '') == t; }
+    function teachesReal(inst, c, t) { return teaches(inst, c, t) && c in mem(inst).get('lclasses', []); }
+    function onlyEv() {
+      return resource == null
+        ? request.resource.data.keys().hasOnly(['ev'])
+        : request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ev']);
+    }
+    function joinPath(t) { return /databases/$(database)/documents/joins/$(t); }
+
+    match /logins/{loginId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if (isOwner() || isAdmin(request.resource.data.inst))
+        && loginId == request.resource.data.inst + '_' + request.resource.data.key;
+      allow delete: if isOwner() || isAdmin(resource.data.inst);
+    }
+
+    match /joins/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isOwner() || isAdmin(request.resource.data.inst);
+      allow delete: if isOwner() || isAdmin(resource.data.inst);
+    }
+
+    match /insts/{inst} {
+      allow get: if isOwner() || isMember(inst);
+      allow list: if isOwner();
+      allow create, delete: if isOwner();
+      allow update: if isOwner()
+        || (isAdmin(inst) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['disabled']));
+
+      match /members/{uid} {
+        allow get: if full(inst) || (signedIn() && request.auth.uid == uid);
+        allow list, write: if full(inst);
+      }
+      match /requests/{uid} {
+        allow create: if signedIn() && request.auth.uid == uid
+          && exists(joinPath(request.resource.data.token))
+          && get(joinPath(request.resource.data.token)).data.inst == inst
+          && get(joinPath(request.resource.data.token)).data.active == true;
+        allow get: if (signedIn() && request.auth.uid == uid) || full(inst);
+        allow list, delete: if full(inst);
+        allow update: if false;
+      }
+      match /log/{id} {
+        allow create: if (isMember(inst) || isOwner()) && request.resource.data.uid == request.auth.uid;
+        allow read: if full(inst);
+        allow update, delete: if false;
+      }
+      match /store/{docId} {
+        allow read: if full(inst) || (isMember(inst) && (docId in ['config', 'timetable'] || docId.matches('meetings_[0-9]{4}')));
+        allow write: if full(inst);
+      }
+      match /cls/{c} {
+        allow read: if full(inst) || inCls(inst, c);
+        allow write: if full(inst);
+      }
+      match /roster/{c} {
+        allow read: if full(inst) || inCls(inst, c) || teachesIn(inst, c);
+        allow write: if full(inst);
+      }
+      match /att/{docId} {
+        allow read: if full(inst)
+          || (docId.matches('[LD][0-9]{4}-[0-9]{2}_[^_]+_[^_]*')
+              && (inCls(inst, docId.split('_')[1]) || teaches(inst, docId.split('_')[1], docId.split('_')[2])));
+        allow write: if full(inst)
+          || (docId.matches('[LD][0-9]{4}-[0-9]{2}_[^_]+_[^_]*')
+              && (inCls(inst, docId.split('_')[1])
+                  || teachesReal(inst, docId.split('_')[1], docId.split('_')[2])
+                  || (teaches(inst, docId.split('_')[1], docId.split('_')[2]) && onlyEv())));
+      }
+      match /rev/{docId} {
+        allow read, write: if full(inst)
+          || (docId.matches('[0-9]{4}-[0-9]{2}_[^_]+') && inCls(inst, docId.split('_')[1]));
+      }
+      match /gr/{docId} {
+        allow read, write: if full(inst)
+          || (docId.matches('[0-9]{4}_[^_]+_[^_]*')
+              && (inCls(inst, docId.split('_')[1]) || teachesReal(inst, docId.split('_')[1], docId.split('_')[2])));
+      }
+      match /tasks/{uid} {
+        allow read, write: if full(inst) || (isMember(inst) && request.auth.uid == uid);
+      }
+      // מיפוי והוראה מתקנת: מנהל, מורה מתקנת (members.rem) ומחנך הכיתה (members.classes)
+      match /rem/{c} {
+        allow read, write: if full(inst)
+          || (isMember(inst) && (mem(inst).get('rem', false) == true || c in mem(inst).get('classes', [])));
+      }
+      match /assist/{uid}/{document=**} {
+        allow read, write: if signedIn() && request.auth.uid == uid && full(inst);
+      }
+    }
+  }
+}
