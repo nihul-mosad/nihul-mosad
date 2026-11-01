@@ -20,7 +20,7 @@ exports.assistAnalyze = onCall({
       getDoc: async p => { const s = await db.doc(p).get(); return s.exists ? s.data() : null; },
       setDoc: (p, d, merge) => db.doc(p).set(d, merge ? { merge: true } : undefined),
       fetch: fetch,
-      apiKey: ANTHROPIC_API_KEY.value(),
+      apiKey: String(ANTHROPIC_API_KEY.value() || '').trim(),
       model: AI_MODEL.value(),
       allowed: new Set(ASSIST_UIDS.value().split(',').map(s => s.trim()).filter(Boolean)),
       now: () => Date.now()
