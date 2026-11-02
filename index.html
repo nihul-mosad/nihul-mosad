@@ -1124,7 +1124,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=54;
+const APP_VER=55;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -2545,11 +2545,11 @@ function gapData(){
       if(d===today&&!(p.end&&p.end<=hm))return;          // שיעור שעוד לא הסתיים היום
       const mk=lessonMarked(d,l);if(!mk.n)return;           // שיעור בלי תלמידים
       const sk=gapSkipOf(d,l.id);
-      rows.push({l:l,mk:mk,sk:sk,st:sk?'skip':mk.done?'done':mk.m?'part':'none'});
+      rows.push({l:l,mk:mk,sk:sk,st:sk?'skip':mk.m?'done':'none'});
     });
     if(!rows.length)continue;
     rows.sort((a,b)=>a.l.period-b.l.period||String(a.l.subject).localeCompare(String(b.l.subject),'he'));
-    const miss=rows.filter(r=>r.st==='none'||r.st==='part').length,skip=rows.filter(r=>r.st==='skip').length;
+    const miss=rows.filter(r=>r.st==='none').length,skip=rows.filter(r=>r.st==='skip').length;
     days.push({d:d,rows:rows,tot:rows.length,done:rows.filter(r=>r.st==='done').length,miss:miss,skip:skip,dayOff:!!(gapSkips()[d]||{}).all});
   }
   return days;
@@ -2584,7 +2584,7 @@ function gapsView(){
             :'<div class="row" style="gap:6px;flex-wrap:nowrap">'+(r.st!=='done'?'<button class="btn sm" data-v="primary" data-act="gap-fill" data-d="'+x.d+'" data-id="'+l.id+'">מילוי נוכחות</button>':'<button class="btn sm" data-act="gap-fill" data-d="'+x.d+'" data-id="'+l.id+'">צפייה</button>')+
               (r.st!=='done'?'<button class="btn sm" data-act="gap-off" data-r="השיעור לא התקיים" data-d="'+x.d+'" data-id="'+l.id+'">לא התקיים</button><button class="btn sm" data-v="ghost" data-act="gap-off" data-r="" data-d="'+x.d+'" data-id="'+l.id+'">אחר…</button>':'')+'</div>';
           return '<tr><td>'+l.period+'</td><td><b>'+esc(l.subject||'(ללא מקצוע)')+'</b>'+(l.type==='private'?' <span class="note">פרטני</span>':'')+'</td><td class="note">'+esc((l.classes||[]).join(', '))+'</td><td>'+esc(l.teacher||'—')+'</td>'+
-            '<td>'+(r.st==='skip'?'<span class="tag" data-s="excused">לא בחישוב</span> <span class="note">'+esc(r.sk.r)+'</span>':stTag[r.st]+(r.st==='part'?' <span class="note">'+r.mk.m+'/'+r.mk.n+'</span>':''))+'</td><td>'+act+'</td></tr>';
+            '<td>'+(r.st==='skip'?'<span class="tag" data-s="excused">לא בחישוב</span> <span class="note">'+esc(r.sk.r)+'</span>':stTag[r.st]+(r.st==='done'&&!r.mk.done?' <span class="note">'+r.mk.m+'/'+r.mk.n+'</span>':''))+'</td><td>'+act+'</td></tr>';
         }).join('')+'</tbody></table></div></div></td></tr>';
     }
     return h;
