@@ -319,6 +319,11 @@ button,.btn,.chip,.link,a,label,[data-act],[data-tab]{touch-action:manipulation}
 /* ===== מערכת שעות ===== */
 .lrow{display:flex;width:100%;align-items:center;gap:10px;text-align:right;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;font:inherit;color:inherit}
 .lrow:hover{background:var(--surface2)}
+table.gaptab tr.gaprow{cursor:pointer}table.gaptab tr.gaprow:hover td,table.gaptab tr.gaprow[data-on="1"] td{background:var(--surface2)}
+.gapar{display:inline-block;width:12px;color:var(--muted)}
+tr.gapsub>td{padding:0 0 10px;background:var(--surface2)}
+.gapbox{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;margin:0 8px}
+table.evtab td{font-size:14px}
 .lrow[data-now="1"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .lrow .lr-main{flex:1;min-width:0}
 .lrow .lr-main b{display:block;font-size:15px}
@@ -1119,7 +1124,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=53;
+const APP_VER=54;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -2339,8 +2344,25 @@ function viewEvents(){
       '<select class="inp" data-evf="kind">'+opt('כל הסוגים','',f.kind)+opt('לשבח','pos',f.kind)+opt('לשיפור','neg',f.kind)+opt('ממתינים לטיפול','open',f.kind)+'</select>'+
       (clsOpts.length>1?'<select class="inp" data-evf="cls">'+opt('כל הכיתות','',f.cls)+clsOpts.map(c=>opt(c,c,f.cls)).join('')+'</select>':'')+
       '<select class="inp" data-evf="days">'+opt('השבוע','7',f.days)+opt('30 יום אחרונים','30',f.days)+opt('90 יום אחרונים','90',f.days)+opt('הכול','',f.days)+'</select>'+
-      '<input class="inp" id="evfq" data-evf="q" placeholder="חיפוש תלמיד" value="'+esc(f.q)+'" style="flex:1;min-width:120px"></div>'+
-      (list.length?list.map(e=>evItem(e,true)).join(''):'<div class="empty">אין אירועים להצגה.</div>')+'</div>';
+      '<input class="inp" id="evfq" data-evf="q" placeholder="חיפוש תלמיד" value="'+esc(f.q)+'" style="flex:1;min-width:120px">'+
+      '<div class="seg"><button data-act="ev-view" data-v="table" data-on="'+(evView()==='table'?1:0)+'">טבלה</button><button data-act="ev-view" data-v="cards" data-on="'+(evView()==='cards'?1:0)+'">כרטיסים</button></div></div>'+
+      (!list.length?'<div class="empty">אין אירועים להצגה.</div>':evView()==='table'?evTable(list):list.map(e=>evItem(e,true)).join(''))+'</div>';
+}
+/* תצוגת טבלה מרוכזת: שורה לכל אירוע */
+function evView(){if(!S.evView){try{S.evView=localStorage.getItem('tt:evView')||'';}catch(x){}}return S.evView||'table';}
+function evTable(list){
+  const td=s=>'<td style="padding:7px 8px;vertical-align:top">'+s+'</td>';
+  return '<div class="scroll"><table class="evtab"><thead><tr><th>תאריך</th><th>תלמיד</th><th>כיתה</th><th>קטגוריה</th><th>מה היה</th><th>מי דיווח</th></tr></thead><tbody>'+
+    list.map(function(e){
+      const t=evType(e.type)||{name:e.typeName||'אירוע'},nm=(studentById(e.sid)||{}).name||e.sname||'';
+      const open=e.kind==='neg'&&e.sev>=2&&!e.handled;
+      return '<tr>'+td('<span style="white-space:nowrap">'+esc(shortDate(e.date))+'</span>')+
+        td(S.students.some(s=>s.id===e.sid)?'<button class="link" data-act="card" data-id="'+e.sid+'">'+esc(nm)+'</button>':'<b>'+esc(nm)+'</b>')+
+        td('<span class="note" style="white-space:nowrap">'+esc(e.cls||'')+'</span>')+
+        td('<span class="tag" data-s="'+(e.kind==='pos'?'present':e.sev>=3?'absent':'late')+'">'+esc(t.name)+'</span>'+(open?' <span class="tag" data-s="absent">לטיפול</span>':''))+
+        td(e.note?esc(e.note):'<span class="note">—</span>')+
+        td('<span style="white-space:nowrap">'+esc(e.by||'')+'</span>')+'</tr>';
+    }).join('')+'</tbody></table></div>';
 }
 function evCardSection(s){
   const ev=S.events.filter(e=>e.sid===s.id).sort((a,b)=>(b.date+(b.time||''))>(a.date+(a.time||''))?1:-1);
@@ -2386,6 +2408,7 @@ async function evAction(a,el){
   const id=el.dataset.id;
   if(a==='goto-events'){S.evf={kind:'open',cls:'',days:'',q:''};return goTab('events');}
   if(a==='ev-new'){S.evc=evDefaults();window.scrollTo(0,0);return render();}
+  if(a==='ev-view'){S.evView=el.dataset.v;try{localStorage.setItem('tt:evView',S.evView);}catch(x){}return render();}
   if(a==='ev-for'){const st=studentById(id);S.evc=evDefaults({sids:[id],cls:st?st.cls:''});S.tab='events';window.scrollTo(0,0);return render();}
   if(a==='ev-lesson'){const l=S.timetable.find(x=>x.id===S.markLesson),st=studentById(id);
     const pp=l&&periods().find(x=>x.n===l.period),inNow=S.markDate===iso(new Date())&&pp&&pp.start<=nowHM()&&(!pp.end||nowHM()<pp.end);
@@ -2462,11 +2485,13 @@ function viewMarkLessons(){
     '<div class="card"><div class="grid g2">'+
       '<label class="field"><span>תאריך</span><input type="date" data-ch="markDate" value="'+date+'"></label>'+
       (clsOpts.length?'<label class="field"><span>כיתה</span><select data-ch="markCls">'+opt(isAdmin()?'כל הכיתות':'השיעורים שלי','',S.markCls)+clsOpts.map(c=>opt(c,c,S.markCls)).join('')+'</select></label>':'')+'</div>'+
-      (canDay?'<div class="seg" style="max-width:320px"><button data-act="mark-view" data-v="lessons" data-on="'+(S.markView!=='day'?1:0)+'">רשימת שיעורים</button>'+
-        '<button data-act="mark-view" data-v="day" data-on="'+(S.markView==='day'?1:0)+'">תמונת יום לכיתה</button></div>':'')+
+      (canDay?'<div class="seg" style="max-width:'+(isAdmin()?480:320)+'px"><button data-act="mark-view" data-v="lessons" data-on="'+(S.markView!=='day'?1:0)+'">רשימת שיעורים</button>'+
+        '<button data-act="mark-view" data-v="day" data-on="'+(S.markView==='day'?1:0)+'">תמונת יום לכיתה</button>'+
+        (isAdmin()?'<button data-act="mark-view" data-v="gaps" data-on="'+(S.markView==='gaps'?1:0)+'">שיעורים שלא דווחו</button>':'')+'</div>':'')+
       (canDay&&S.timetable.length?'<div class="row" style="margin-top:12px;gap:8px"><button class="btn" data-act="scan-print">הדפסת טופס נוכחות</button><button class="btn" data-act="scan-print-week">טפסים לכל השבוע</button>'+
         '<button class="btn" data-v="primary" data-act="scan-pick">קליטת טופס סרוק</button><input type="file" id="scanFile" accept="image/*,application/pdf" multiple style="display:none"></div>':'')+'</div>';
   if(S.scan)return top+scanView();
+  if(isAdmin()&&S.markView==='gaps')return top+gapsView();
   if(dow(date)>5)return top+'<div class="card"><div class="empty">שבת קודש — אין שיעורים.</div></div>';
   if(canDay&&S.markView==='day')return top+dayGrid(date);
   if(!ls.length)return top+'<div class="card"><div class="empty">'+(S.me.teacher||isAdmin()?'אין שיעורים ביום הזה.':'החשבון שלך עוד לא קושר למורה במערכת השעות. בקשו מהמנהל לקשר אותו בהגדרות.')+'</div></div>';
@@ -2498,6 +2523,88 @@ function viewMarkLesson(l){
       st.away.map(x=>'<div class="note">'+esc(x.s.name)+' · '+esc(x.l.subject||'')+(x.l.teacher?' אצל '+esc(x.l.teacher):'')+'</div>').join('')+'</div>':'')+'</div>'+
     (list.length?'<div class="savebar"><span class="note">'+(S.ldirty?'יש שינויים שלא נשמרו':'הכול שמור')+'</span>'+
       '<button class="btn" data-v="primary" data-act="lm-save" '+(S.ldirty?'':'disabled')+'>שמירת הנוכחות</button></div>':'');
+}
+/* ---- שיעורים שלא דווחו: מעקב חוסרים לפי יום, עם אפשרות להחריג מהחישוב ---- */
+function gapSkips(){return S.config.attSkip=S.config.attSkip||{};}
+function gapSkipOf(d,lid){const x=gapSkips()[d];if(!x)return null;if(x.all)return {r:x.all,day:1};return x.L&&x.L[lid]?{r:x.L[lid]}:null;}
+function gapDefFrom(){
+  if(S.config.gapFrom)return S.config.gapFrom;
+  const ds=Object.keys(S.latt).filter(d=>Object.keys(S.latt[d]||{}).length).sort(),m=daysAgo(30);
+  return ds.length&&ds[0]>m?ds[0]:m;
+}
+function gapData(){
+  const today=iso(new Date()),hm=nowHM(),from=S.gapFrom||(S.gapFrom=gapDefFrom()),to=S.gapTo&&S.gapTo<today?S.gapTo:today,cls=S.markCls;
+  const days=[];if(!from||from>to)return days;
+  const d0=new Date(from+'T12:00:00'),d1=new Date(to+'T12:00:00');
+  for(let t=d0;t<=d1;t.setDate(t.getDate()+1)){
+    const d=iso(t);if(dow(d)>5)continue;
+    let ls=lessonsOn(d);if(cls)ls=ls.filter(l=>(l.classes||[]).indexOf(cls)>-1);
+    const rows=[];
+    ls.forEach(function(l){
+      const p=periods().find(x=>x.n===l.period)||{};
+      if(d===today&&!(p.end&&p.end<=hm))return;          // שיעור שעוד לא הסתיים היום
+      const mk=lessonMarked(d,l);if(!mk.n)return;           // שיעור בלי תלמידים
+      const sk=gapSkipOf(d,l.id);
+      rows.push({l:l,mk:mk,sk:sk,st:sk?'skip':mk.done?'done':mk.m?'part':'none'});
+    });
+    if(!rows.length)continue;
+    rows.sort((a,b)=>a.l.period-b.l.period||String(a.l.subject).localeCompare(String(b.l.subject),'he'));
+    const miss=rows.filter(r=>r.st==='none'||r.st==='part').length,skip=rows.filter(r=>r.st==='skip').length;
+    days.push({d:d,rows:rows,tot:rows.length,done:rows.filter(r=>r.st==='done').length,miss:miss,skip:skip,dayOff:!!(gapSkips()[d]||{}).all});
+  }
+  return days;
+}
+function gapsView(){
+  const all=gapData(),showAll=S.gapAll==='1',days=showAll?all:all.filter(x=>x.miss||x.skip);
+  const miss=all.reduce((s,x)=>s+x.miss,0),skip=all.reduce((s,x)=>s+x.skip,0),tot=all.reduce((s,x)=>s+x.tot,0);
+  const missDays=all.filter(x=>x.miss).length,pct=tot-skip?Math.round((tot-skip-miss)/(tot-skip)*100):100;
+  const stTag={done:'<span class="tag" data-s="present">דווח</span>',part:'<span class="tag" data-s="late">חלקי</span>',none:'<span class="tag" data-s="absent">לא דווח</span>'};
+  const head='<div class="card"><div class="grid g2">'+
+      '<label class="field"><span>מתאריך</span><input type="date" data-ch="gapFrom" value="'+esc(S.gapFrom)+'"></label>'+
+      '<label class="field"><span>עד תאריך</span><input type="date" data-ch="gapTo" value="'+esc(S.gapTo||iso(new Date()))+'"></label></div>'+
+      '<label class="row" style="gap:8px;cursor:pointer;margin-top:4px"><input type="checkbox" data-gapall="1"'+(showAll?' checked':'')+'><span>להציג גם ימים שדווחו במלואם</span></label></div>'+
+    '<div class="grid g4" style="margin-bottom:14px">'+stat(missDays,'ימים עם חוסרים',missDays?'var(--absent)':'var(--present)')+stat(miss,'שיעורים שלא דווחו',miss?'var(--absent)':'var(--present)')+
+      stat(skip,'הוחרגו מהחישוב','')+stat(pct+'%','שיעורים שדווחו','')+'</div>';
+  if(!days.length)return head+'<div class="card"><div class="empty">'+(all.length?'כל השיעורים בטווח דווחו. 👏':'אין שיעורים בטווח שנבחר.')+'</div></div>';
+  const rows=days.map(function(x){
+    const open=S.gapOpen===x.d;
+    let h='<tr class="gaprow" data-act="gap-open" data-d="'+x.d+'"'+(open?' data-on="1"':'')+'>'+
+      '<td><span class="gapar">'+(open?'▾':'◂')+'</span> <b>'+esc(dual(x.d))+'</b> <span class="note">יום '+DAYS[dow(x.d)]+'</span></td>'+
+      '<td style="text-align:center">'+x.tot+'</td><td style="text-align:center;color:var(--present);font-weight:700">'+x.done+'</td>'+
+      '<td style="text-align:center;font-weight:700;color:'+(x.miss?'var(--absent)':'var(--muted)')+'">'+(x.miss||'—')+'</td>'+
+      '<td style="text-align:center;color:var(--muted)">'+(x.dayOff?'כל היום':x.skip||'—')+'</td></tr>';
+    if(open){
+      h+='<tr class="gapsub"><td colspan="5"><div class="gapbox">'+
+        '<div class="row" style="justify-content:space-between;margin-bottom:8px"><b>השיעורים ביום הזה</b>'+
+          (x.dayOff?'<span class="row" style="gap:6px"><span class="note">כל היום הוחרג: '+esc(gapSkips()[x.d].all)+'</span><button class="btn sm" data-act="gap-dayon" data-d="'+x.d+'">החזרת היום לחישוב</button></span>'
+            :'<button class="btn sm" data-act="gap-dayoff" data-d="'+x.d+'">כל היום לא היו לימודים…</button>')+'</div>'+
+        '<div class="scroll"><table><thead><tr><th>שיעור</th><th>מקצוע</th><th>כיתה</th><th>מורה</th><th>מצב</th><th></th></tr></thead><tbody>'+
+        x.rows.map(function(r){
+          const l=r.l,act=r.st==='skip'?(r.sk.day?'':'<button class="btn sm" data-act="gap-on" data-d="'+x.d+'" data-id="'+l.id+'">החזרה לחישוב</button>')
+            :'<div class="row" style="gap:6px;flex-wrap:nowrap">'+(r.st!=='done'?'<button class="btn sm" data-v="primary" data-act="gap-fill" data-d="'+x.d+'" data-id="'+l.id+'">מילוי נוכחות</button>':'<button class="btn sm" data-act="gap-fill" data-d="'+x.d+'" data-id="'+l.id+'">צפייה</button>')+
+              (r.st!=='done'?'<button class="btn sm" data-act="gap-off" data-r="השיעור לא התקיים" data-d="'+x.d+'" data-id="'+l.id+'">לא התקיים</button><button class="btn sm" data-v="ghost" data-act="gap-off" data-r="" data-d="'+x.d+'" data-id="'+l.id+'">אחר…</button>':'')+'</div>';
+          return '<tr><td>'+l.period+'</td><td><b>'+esc(l.subject||'(ללא מקצוע)')+'</b>'+(l.type==='private'?' <span class="note">פרטני</span>':'')+'</td><td class="note">'+esc((l.classes||[]).join(', '))+'</td><td>'+esc(l.teacher||'—')+'</td>'+
+            '<td>'+(r.st==='skip'?'<span class="tag" data-s="excused">לא בחישוב</span> <span class="note">'+esc(r.sk.r)+'</span>':stTag[r.st]+(r.st==='part'?' <span class="note">'+r.mk.m+'/'+r.mk.n+'</span>':''))+'</td><td>'+act+'</td></tr>';
+        }).join('')+'</tbody></table></div></div></td></tr>';
+    }
+    return h;
+  }).join('');
+  return head+'<div class="card"><h3>לפי יום</h3><p class="note" style="margin-bottom:8px">לחיצה על יום פותחת את השיעורים שלו: אפשר למלא נוכחות, או לסמן שהשיעור לא התקיים ואז הוא לא נספר.</p>'+
+    '<div class="scroll"><table class="gaptab"><thead><tr><th>יום</th><th style="text-align:center">שיעורים</th><th style="text-align:center">דווחו</th><th style="text-align:center">לא דווחו</th><th style="text-align:center">לא בחישוב</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+async function gapAction(a,el){
+  const d=el.dataset.d,lid=el.dataset.id,sk=gapSkips();
+  if(a==='gap-open'){S.gapOpen=S.gapOpen===d?null:d;return render();}
+  if(a==='gap-fill'){S.markDate=d;S.markLesson=lid;const day=S.latt[d]||{};S.ldraft={};
+    Object.keys(day).forEach(k=>{if(k.indexOf(lid+':')===0)S.ldraft[k.slice(lid.length+1)]=day[k];});
+    S.ldirty=false;S.gapOpen=d;window.scrollTo(0,0);return render();}
+  if(a==='gap-off'){
+    let r=el.dataset.r;if(!r){r=prompt('למה השיעור לא נספר? (למשל: טיול, מבחן, מורה מחליף)','');if(r===null)return;r=r.trim()||'אחר';}
+    const x=sk[d]=sk[d]||{};x.L=x.L||{};x.L[lid]=r;await save(K.config,S.config);toast('השיעור הוחרג מהחישוב');return render();}
+  if(a==='gap-on'){const x=sk[d];if(x&&x.L){delete x.L[lid];if(!Object.keys(x.L).length&&!x.all)delete sk[d];}await save(K.config,S.config);return render();}
+  if(a==='gap-dayoff'){const r=prompt('סיבה (למשל: חופשה, טיול שנתי, תענית)','חופשה');if(r===null)return;
+    sk[d]=Object.assign(sk[d]||{},{all:r.trim()||'אין לימודים'});await save(K.config,S.config);toast('היום הוחרג מהחישוב');return render();}
+  if(a==='gap-dayon'){const x=sk[d];if(x){delete x.all;if(!x.L||!Object.keys(x.L).length)delete sk[d];}await save(K.config,S.config);return render();}
 }
 function dayGrid(date){
   const clsOpts=isAdmin()?S.config.classes:myClasses();
@@ -5091,6 +5198,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   const a=el.dataset.act,id=el.dataset.id;
   if(a.indexOf('tt-')===0||a.indexOf('per-')===0)return ttAction(a,el);
   if(a.indexOf('lm-')===0||a==='mark-view')return markAction(a,el);
+  if(a.indexOf('gap-')===0)return gapAction(a,el);
   if(a.indexOf('scan-')===0)return scanAction(a,el);
   if(a.indexOf('duty-')===0){await dutyAct(a,id);return;}
   if(a.indexOf('mp-')===0)return remAct(a,el,id);
@@ -5432,6 +5540,7 @@ document.getElementById('main').addEventListener('change',function(e){
   if(el.id==='dutyFile'&&el.files&&el.files[0]){const f=el.files[0];el.value='';dutyCapture();return dutyFile(f);}
   if(el.id==='scanFile'&&el.files&&el.files.length){const fs=Array.from(el.files);el.value='';return handleScanFiles(fs);}
   if(el.dataset&&el.dataset.scn!==undefined)return;
+  if(el.dataset&&el.dataset.gapall){S.gapAll=el.checked?'1':'';return render();}
   if(el.dataset&&el.dataset.evf!==undefined){if(el.dataset.evf==='q')return;S.evf[el.dataset.evf]=el.value;return render();}
   if(el.id==='ev-time'&&S.evc){evCapture();const pn=perOfTime(S.evc.time);if(pn!==''){S.evc.period=pn;const sp=document.getElementById('ev-per');if(sp)sp.value=pn;}return;}
   if(el.id==='ev-date'||el.id==='ev-per'){evCapture();return;}
