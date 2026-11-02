@@ -1119,7 +1119,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=52;
+const APP_VER=53;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -4526,6 +4526,51 @@ function viewMarkDaily(){
 }
 
 /* ================= תלמידים ================= */
+
+/* ================= ייצוא רשימת תלמידים לאקסל =================
+   מייצא את מה שהמשתמש רואה בלשונית התלמידים (לפי הסינון), עם בחירת עמודות. קובץ xlsx אמיתי, מימין לשמאל. */
+const STX_BASE=[['name','שם התלמיד'],['cls','כיתה'],['father','שם האב'],['fatherPhone','טלפון האב'],['mother','שם האם'],['motherPhone','טלפון האם'],['notes','הערות']];
+function stxList(){const base=myStudents();return base.filter(s=>(!S.filter||s.cls===S.filter)&&(!S.q||(s.name+s.father+s.mother+s.fatherPhone+s.motherPhone).includes(S.q)));}
+function stxCols(list){
+  const out=STX_BASE.map(c=>({k:c[0],n:c[1]})).filter(c=>c.k==='name'||c.k==='cls'||list.some(s=>String(s[c.k]||'').trim()));
+  const ex=[];list.forEach(s=>Object.keys(s.extra||{}).forEach(k=>{if(ex.indexOf(k)<0)ex.push(k);}));
+  ex.forEach(k=>out.push({k:'x:'+k,n:k}));
+  out.push({k:'att30',n:'נוכחות ב-30 הימים האחרונים',off:true});
+  return out;
+}
+function stxCard(){
+  const list=stxList(),cols=stxCols(list),X=S.stx;
+  return '<div class="card evc"><div class="row" style="justify-content:space-between"><h3 style="margin:0">ייצוא רשימת תלמידים לאקסל</h3><button class="btn sm" data-v="ghost" data-act="stx-close">סגירה</button></div>'+
+    '<p class="note" style="margin:8px 0">ייוצאו <b>'+list.length+'</b> תלמידים'+(S.filter?' מ'+esc(S.filter):isAdmin()?' מכל הכיתות':'')+(S.q?' (לפי החיפוש)':'')+'. בחרו אילו פרטים לכלול:</p>'+
+    '<div class="row" style="gap:6px 14px;margin-bottom:10px">'+cols.map(c=>{const on=X.cols[c.k]!==undefined?X.cols[c.k]:!c.off;
+      return '<label class="row" style="gap:5px;cursor:pointer"><input type="checkbox" data-stx="'+esc(c.k)+'"'+(on?' checked':'')+(c.k==='name'?' disabled':'')+'><span>'+esc(c.n)+'</span></label>';}).join('')+'</div>'+
+    '<label class="row" style="gap:6px;margin-bottom:12px;cursor:pointer"><input type="checkbox" id="stxPer"'+(X.per?' checked':'')+'><span>גיליון נפרד לכל כיתה</span></label>'+
+    '<div class="row"><button class="btn" data-v="primary" data-act="stx-run">⬇ הורדת קובץ אקסל</button><span class="note">🔒 הקובץ כולל פרטים אישיים ומספרי טלפון. לשמור ולשלוח בזהירות.</span></div></div>';
+}
+async function stxRun(){
+  const list=stxList().slice(),X=S.stx,all=stxCols(list);
+  document.querySelectorAll('#main [data-stx]').forEach(i=>X.cols[i.dataset.stx]=i.checked);
+  X.per=!!(document.getElementById('stxPer')||{}).checked;
+  const cols=all.filter(c=>c.k==='name'||(X.cols[c.k]!==undefined?X.cols[c.k]:!c.off));
+  if(!list.length)return toast('אין תלמידים לייצוא');
+  const order=S.config.classes;list.sort((a,b)=>(order.indexOf(a.cls)+1||99)-(order.indexOf(b.cls)+1||99)||String(a.name).localeCompare(String(b.name),'he'));
+  const val=(s,c)=>{if(c.k==='att30'){const a=attStats(s.id,daysAgo(30),iso(new Date()));return a.pct!==null?a.pct+'%':'';}
+    if(c.k.indexOf('x:')===0){const v=(s.extra||{})[c.k.slice(2)];return v==null?'':String(v);}return String(s[c.k]==null?'':s[c.k]);};
+  let X2;try{X2=await loadSheetJS();}catch(e){return toast('לא הצלחתי לטעון את רכיב האקסל. בדקו את החיבור.');}
+  const wb=X2.utils.book_new();wb.Workbook={Views:[{RTL:true}]};
+  const mk=(rows,title)=>{const aoa=[cols.map(c=>c.n)].concat(rows.map(s=>cols.map(c=>val(s,c))));
+    const ws=X2.utils.aoa_to_sheet(aoa);ws['!cols']=cols.map((c,i)=>({wch:Math.min(40,Math.max(8,...aoa.map(r=>String(r[i]||'').length+2)))}));
+    ws['!autofilter']={ref:X2.utils.encode_range({s:{r:0,c:0},e:{r:aoa.length-1,c:cols.length-1}})};
+    ws['!views']=[{RTL:true}];
+    const safe=String(title).replace(/[\\\/\?\*\[\]:]/g,' ').slice(0,31)||'גיליון';let nm=safe,i=2;while(wb.SheetNames.indexOf(nm)>-1)nm=safe.slice(0,28)+' '+(i++);
+    X2.utils.book_append_sheet(wb,ws,nm);};
+  if(X.per){const by={};list.forEach(s=>{(by[s.cls||'ללא כיתה']=by[s.cls||'ללא כיתה']||[]).push(s);});Object.keys(by).forEach(k=>mk(by[k],k));}
+  else mk(list,'תלמידים');
+  const fn='תלמידים - '+(S.filter||(isAdmin()?'כל הכיתות':myClasses().join(', ')||'הכיתות שלי'))+' - '+iso(new Date())+'.xlsx';
+  X2.writeFile(wb,fn,{compression:true});
+  logAct('ייצוא רשימת תלמידים',list.length+' תלמידים'+(S.filter?' · '+S.filter:''));
+  toast('הקובץ ירד: '+list.length+' תלמידים');
+}
 function viewStudents(){
   const base=myStudents();
   const list=base.filter(s=>(!S.filter||s.cls===S.filter)&&(!S.q||(s.name+s.father+s.mother+s.fatherPhone+s.motherPhone).includes(S.q)));
@@ -4546,8 +4591,8 @@ function viewStudents(){
       (e.id?'<button class="btn" data-v="danger" style="margin-right:auto" data-act="student-del" data-id="'+e.id+'">הסרת התלמיד</button>':'')+'</div></div>';
   }
   return printHead()+'<div class="head"><div><h2>תלמידים</h2><div class="sub">'+base.length+' רשומים'+(isAdmin()?'':' · '+esc(myClasses().join(', ')||'התלמידים בשיעורים שלך'))+'</div></div>'+
-    '<div class="row"><button class="btn" data-act="goto-bdays">🎂 ימי הולדת</button>'+
-    (isAdmin()?'<button class="btn" data-act="goto-import">ייבוא מאקסל</button><button class="btn" data-v="primary" data-act="student-new">הוספת תלמיד</button>':'')+'</div></div>'+form+
+    '<div class="row"><button class="btn" data-act="goto-bdays">🎂 ימי הולדת</button>'+(base.length?'<button class="btn" data-act="stx-open">⬇ ייצוא לאקסל</button>':'')+
+    (isAdmin()?'<button class="btn" data-act="goto-import">ייבוא מאקסל</button><button class="btn" data-v="primary" data-act="student-new">הוספת תלמיד</button>':'')+'</div></div>'+(S.stx?stxCard():'')+form+
     '<div class="card"><div class="row" style="margin-bottom:12px">'+
       '<input class="inp" style="flex:1;min-width:160px" id="q" placeholder="חיפוש לפי שם או טלפון" value="'+esc(S.q)+'" data-in="q">'+
       (isAdmin()?'<select class="inp" data-ch="filter">'+opt('כל הכיתות','',S.filter)+S.config.classes.map(c=>opt(c,c,S.filter)).join('')+'</select>':'')+'</div>'+
@@ -5003,7 +5048,7 @@ function goTab(t){
   S.tab=t;S.editStudent=null;S.editStaff=null;S.editUser=null;S.importPreview=null;S.ttSlot=null;S.ttEdit=null;S.ttImport=null;
   if(S.tab!=='review'){S.revIdx=null;}
   if(S.tab==='mark'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;S.markLesson=null;S.ldirty=false;}
-  S.scan=null;S.evc=null;S.evBack=null;S.mtEdit=null;S.remc=null;S.exEdit=null;S.dutyEdit=null;
+  S.scan=null;S.evc=null;S.evBack=null;S.mtEdit=null;S.remc=null;S.exEdit=null;S.dutyEdit=null;S.stx=null;
   if(S.tab!=='rem'){S.remOpen=null;S.remDraft=null;S.remDirty=false;}
   render();
 }
@@ -5049,6 +5094,9 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a.indexOf('scan-')===0)return scanAction(a,el);
   if(a.indexOf('duty-')===0){await dutyAct(a,id);return;}
   if(a.indexOf('mp-')===0)return remAct(a,el,id);
+  if(a==='stx-open'){S.stx=S.stx||{cols:{},per:false};S.stxOn=true;return render();}
+  if(a==='stx-close'){S.stx=null;return render();}
+  if(a==='stx-run')return stxRun();
   if(a.indexOf('ev-')===0||a.indexOf('evt-')===0||a==='goto-events')return evAction(a,el);
   if(a.indexOf('as-')===0)return AC_ACTS.has(a)?acAction(a,el,id):asAction(a,el,id);
   if(/^(bulk-|cred-|join-|jr-)/.test(a)||a==='user-pin')return userAction(a,el);
