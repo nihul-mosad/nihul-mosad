@@ -1313,6 +1313,235 @@ html[data-theme="dark"] .s3-id h2{color:#fff}
 }
 @media print{body::before{display:none}.au-top,.au-banner{display:none}}
 </style>
+<style id="aura-students">
+/* מקור: aura-students-design.css (שכבת עיצוב בלבד למסך התלמידים) */
+/* AURA 3.1 / Students — presentation-only layer
+   Designed for the existing viewStudents() markup. No JS, HTML, data, or render changes.
+   The :has() scope avoids changing other pages. Tested conceptually for Chromium 105+.
+*/
+@media screen {
+  #main:has(input#q[data-in="q"]) {
+    --stu-blue: #4776fc;
+    --stu-indigo: #674ff5;
+    --stu-outline: rgba(104,124,208,.16);
+    --stu-shadow: 0 18px 42px -28px rgba(37,51,132,.36), 0 2px 9px rgba(37,51,132,.055);
+    --stu-focus: rgba(71,118,252,.20);
+    --stu-round: 22px;
+    min-width: 0;
+  }
+  /* Header: a clear, recognizable destination */
+  #main:has(input#q[data-in="q"]) > .head {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px 24px;
+    overflow: hidden;
+    padding: 28px 30px;
+    margin-bottom: 20px;
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,.80);
+    background: linear-gradient(112deg,rgba(240,244,255,.96) 8%,rgba(215,219,255,.88) 55%,rgba(221,232,255,.96) 100%);
+    box-shadow: 0 14px 34px -27px rgba(58,76,171,.52), inset 0 1px rgba(255,255,255,.82);
+  }
+  #main:has(input#q[data-in="q"]) > .head::before,
+  #main:has(input#q[data-in="q"]) > .head::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    width: 60%;height: 145px;
+    left: -6%;bottom: -111px;
+    border-top: 2px solid rgba(117,129,245,.28);
+    border-radius: 50% 55% 0 0;
+    transform: rotate(-6deg);
+    background: linear-gradient(180deg,rgba(125,142,255,.16),transparent);
+  }
+  #main:has(input#q[data-in="q"]) > .head::after {
+    left: 20%;bottom: -124px;width: 78%;
+    border-top-color: rgba(246,202,129,.6);
+    transform: rotate(3deg);
+    background: linear-gradient(180deg,rgba(160,156,250,.08),transparent);
+  }
+  #main:has(input#q[data-in="q"]) > .head h2 {
+    margin: 0 0 6px;
+    letter-spacing: -.035em;
+    font-size: clamp(25px,2.3vw,37px);
+    font-weight: 850;
+    line-height: 1.25;
+    color: var(--au-title,#101b58);
+  }
+  #main:has(input#q[data-in="q"]) > .head .sub {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--au-mute,#546198);
+  }
+  #main:has(input#q[data-in="q"]) > .head .row {
+    display: flex;gap: 9px;flex-wrap: wrap;align-items: center;
+  }
+  #main:has(input#q[data-in="q"]) > .head .btn {
+    min-height: 42px;
+    padding: 9px 15px;
+    background: rgba(255,255,255,.80);
+    border: 1px solid rgba(255,255,255,.85);
+    box-shadow: 0 6px 15px -10px rgba(63,82,160,.4);
+    color: #203276;
+    font-weight: 750;
+    transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+  #main:has(input#q[data-in="q"]) > .head .btn[data-v="primary"] {
+    background: linear-gradient(115deg,#4776fc,#6156ec);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 9px 18px -10px rgba(64,81,210,.8);
+  }
+  #main:has(input#q[data-in="q"]) > .head .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -13px rgba(64,81,210,.6);
+  }
+  /* Existing edit form and list card: rounded soft-glass panels */
+  #main:has(input#q[data-in="q"]) > .card {
+    min-width: 0;
+    overflow: hidden;
+    padding: clamp(15px,2.1vw,25px);
+    border-radius: var(--stu-round);
+    border: 1px solid var(--au-card-b,rgba(255,255,255,.95));
+    box-shadow: var(--stu-shadow);
+    background: var(--au-card,rgba(255,255,255,.86));
+  }
+  #main:has(input#q[data-in="q"]) > .card > .row:first-child {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 11px;
+    margin-bottom: 19px !important;
+    padding: 0 0 17px;
+    border-bottom: 1px solid var(--au-sep,#e6eaf7);
+  }
+  #main:has(input#q[data-in="q"]) input#q,
+  #main:has(input#q[data-in="q"]) select[data-ch="filter"] {
+    min-height: 46px;
+    border-radius: 14px;
+    border: 1px solid var(--au-ring,#dce2f6);
+    background-color: var(--surface,#fff);
+    color: var(--au-title,#101b58);
+    box-shadow: inset 0 1px 2px rgba(67,79,143,.025);
+    font-size: 14px;
+    transition: border-color .16s ease, box-shadow .16s ease;
+  }
+  #main:has(input#q[data-in="q"]) input#q {flex: 1 1 250px !important;min-width: 0 !important;padding-inline: 17px;}
+  #main:has(input#q[data-in="q"]) select[data-ch="filter"] {flex: 0 1 210px;max-width: 100%;padding-inline: 12px;}
+  #main:has(input#q[data-in="q"]) input#q:focus-visible,
+  #main:has(input#q[data-in="q"]) select[data-ch="filter"]:focus-visible {
+    outline: none;
+    border-color: #7891ff;
+    box-shadow: 0 0 0 4px var(--stu-focus);
+  }
+  #main:has(input#q[data-in="q"]) .scroll {
+    overflow-x: auto;
+    max-width: 100%;
+    border: 1px solid var(--au-sep,#e6eaf7);
+    border-radius: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: #a7b4e7 transparent;
+  }
+  #main:has(input#q[data-in="q"]) .scroll table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    text-align: right;
+    min-width: 750px;
+    font-variant-numeric: tabular-nums;
+  }
+  #main:has(input#q[data-in="q"]) .scroll thead th {
+    background: linear-gradient(180deg,rgba(237,241,255,.97),rgba(233,238,254,.9));
+    border-bottom: 1px solid var(--au-sep,#e6eaf7);
+    padding: 16px 17px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--au-mute,#546198);
+    white-space: nowrap;
+    letter-spacing: .005em;
+  }
+  #main:has(input#q[data-in="q"]) .scroll tbody td {
+    padding: 16px 17px;
+    vertical-align: middle;
+    font-size: 14px;
+    font-weight: 550;
+    color: var(--au-sub,#1a2350);
+    border-bottom: 1px solid var(--au-sep,#e6eaf7);
+    transition: background-color .15s ease;
+  }
+  #main:has(input#q[data-in="q"]) .scroll tbody tr:last-child td {border-bottom: 0;}
+  #main:has(input#q[data-in="q"]) .scroll tbody tr:nth-child(even) td {background: rgba(113,132,240,.025);}
+  #main:has(input#q[data-in="q"]) .scroll tbody tr:hover td {background: rgba(90,115,246,.085);}
+  #main:has(input#q[data-in="q"]) .scroll td:first-child .link {
+    font-size: 14px;font-weight: 800;letter-spacing: -.01em;
+    color: var(--au-title,#101b58);
+    text-decoration: none;
+    border-radius: 7px;
+  }
+  #main:has(input#q[data-in="q"]) .scroll td:first-child .link:hover {color: var(--stu-blue);text-decoration: underline;text-underline-offset: 4px;}
+  #main:has(input#q[data-in="q"]) .scroll td:nth-child(2) {font-weight: 750;color: var(--stu-indigo);}
+  #main:has(input#q[data-in="q"]) .scroll td:nth-child(4) {font-weight: 800;color: var(--au-title,#101b58);}
+  #main:has(input#q[data-in="q"]) .scroll .tag {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-weight: 750;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: nowrap;
+  }
+  #main:has(input#q[data-in="q"]) .scroll .ltr {direction:ltr;unicode-bidi:isolate;display:inline-block;white-space:nowrap;}
+  #main:has(input#q[data-in="q"]) .empty {padding: 35px 16px;color: var(--au-mute,#546198);text-align: center;}
+  /* Dark mode: no fixed white panels or bright text */
+  html[data-theme="dark"] #main:has(input#q[data-in="q"]) {
+    --stu-blue: #91a7ff;--stu-indigo: #b0a0ff;
+    --stu-outline: rgba(124,145,255,.18);
+    --stu-shadow: 0 12px 35px -24px rgba(0,0,0,.9);
+    --stu-focus: rgba(120,145,255,.23);
+  }
+  html[data-theme="dark"] #main:has(input#q[data-in="q"]) > .head {
+    background: linear-gradient(110deg,#17214e,#28326a 56%,#1c2857);
+    border-color: rgba(125,143,246,.23);
+    box-shadow: 0 12px 32px -26px rgba(0,0,0,.75);
+  }
+  html[data-theme="dark"] #main:has(input#q[data-in="q"]) > .head .btn:not([data-v="primary"]) {
+    color: #e3e8ff;background:rgba(36,48,105,.8);border-color:rgba(147,160,255,.19);
+  }
+  html[data-theme="dark"] #main:has(input#q[data-in="q"]) .scroll thead th {
+    background: linear-gradient(180deg,#222d64,#1b2657);
+  }
+  html[data-theme="dark"] #main:has(input#q[data-in="q"]) .scroll tbody tr:nth-child(even) td {background:rgba(127,140,255,.035);}
+  html[data-theme="dark"] #main:has(input#q[data-in="q"]) .scroll tbody tr:hover td {background:rgba(130,145,255,.13);}
+  /* Tablet and mobile: existing actions wrap; no data columns hidden */
+  @media (max-width: 900px) {
+    #main:has(input#q[data-in="q"]) > .head {padding: 22px;}
+    #main:has(input#q[data-in="q"]) > .head .row {width: 100%;}
+    #main:has(input#q[data-in="q"]) > .head .btn {flex: 1 1 auto;}
+  }
+  @media (max-width: 620px) {
+    #main:has(input#q[data-in="q"]) > .head {padding: 20px 16px;gap: 14px;margin-bottom: 12px;border-radius: 19px;}
+    #main:has(input#q[data-in="q"]) > .head h2 {font-size: 29px;}
+    #main:has(input#q[data-in="q"]) > .head .row {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+    #main:has(input#q[data-in="q"]) > .head .btn {font-size:12px;min-width:0;padding-inline:7px;min-height:43px;}
+    #main:has(input#q[data-in="q"]) > .card {padding: 12px;border-radius:18px;}
+    #main:has(input#q[data-in="q"]) > .card > .row:first-child {gap: 9px;padding-bottom:12px;}
+    #main:has(input#q[data-in="q"]) input#q,
+    #main:has(input#q[data-in="q"]) select[data-ch="filter"] {flex: 1 1 100%;width:100%;}
+    #main:has(input#q[data-in="q"]) .scroll thead th,
+    #main:has(input#q[data-in="q"]) .scroll tbody td {padding: 13px 12px;font-size:13px;}
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #main:has(input#q[data-in="q"]) *,
+    #main:has(input#q[data-in="q"]) *::before,
+    #main:has(input#q[data-in="q"]) *::after {transition-duration: 0.01ms !important;animation-duration:0.01ms !important;}
+  }
+}
+</style>
 <script>/* AURA 3.1: מצב בהיר/כהה ותפריט מקופל, נשמרים במכשיר */(function(){var t='light',c='0';try{t=localStorage.getItem('tt:theme')||'light';c=localStorage.getItem('tt:navc')||'0';}catch(e){}document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');if(c==='1')document.documentElement.classList.add('nav-c');})();
 </script>
 </head>
