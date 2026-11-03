@@ -55,17 +55,20 @@ test('אמולטור: שני מורים שומרים באותו רגע באות�
   await Promise.all([t1, t2, a].map(p => p.context().close()));
 });
 
-test('אמולטור: אותו מורה בשני מכשירים, שני ימים באותו חודש (אותו מסמך) — שום סימון לא נדרס', async () => {
+test('אמולטור: אותו מורה בשני מכשירים יוצרים באותו רגע את מסמך החודש — שום סימון לא נדרס (3 סבבים)', async () => {
   const [p1, p2] = await Promise.all([open('teacherA'), open('teacherA')]);
-  const [d1, d2] = pairSameMonth(3);
-  await Promise.all([markLesson(p1, d1, { s4: 'absent' }), markLesson(p2, d2, { s2: 'late' })]);
-  await Promise.all([waitShown(p1, 'הנוכחות נשמרה'), waitShown(p2, 'הנוכחות נשמרה')]);
-  // מכשיר 1 שומר שוב (בלי לדעת על מה שמכשיר 2 שמר)
-  const m3 = await markLesson(p1, d1, { s4: 'excused' });
-  await waitShown(p1, 'הנוכחות נשמרה');
-  const doc = await dbDoc(attPath(iso(d1), CLASSES[0], USERS.teacherA.teacher));
-  assert.equal(cell(doc, iso(d1), m3.lid + ':s4'), 'excused', 'העדכון של מכשיר 1 לא נשמר');
-  assert.equal(cell(doc, iso(d2), 'L0' + d2.getDay() + '1:s2'), 'late', 'הסימון של מכשיר 2 נדרס');
+  const [d1, d2] = pairSameMonth(3), path = attPath(iso(d1), CLASSES[0], USERS.teacherA.teacher);
+  const ST = ['absent', 'late', 'excused'];
+  for (let k = 0; k < 3; k++) {
+    // המצב הכי רגיש: המסמך של החודש לא קיים, ושני המכשירים יוצרים אותו באותו רגע
+    await env.withSecurityRulesDisabled(ctx => ctx.firestore().doc(path).delete());
+    await p1.evaluate(() => { window.__shown.length = 0; }); await p2.evaluate(() => { window.__shown.length = 0; });
+    const [m1, m2] = await Promise.all([markLesson(p1, d1, { s4: ST[k] }), markLesson(p2, d2, { s2: ST[(k + 1) % 3] })]);
+    await Promise.all([waitShown(p1, 'הנוכחות נשמרה'), waitShown(p2, 'הנוכחות נשמרה')]);
+    const doc = await dbDoc(path);
+    assert.equal(cell(doc, m1.date, m1.lid + ':s4'), ST[k], 'סבב ' + (k + 1) + ': הסימון של מכשיר 1 נדרס');
+    assert.equal(cell(doc, m2.date, m2.lid + ':s2'), ST[(k + 1) % 3], 'סבב ' + (k + 1) + ': הסימון של מכשיר 2 נדרס');
+  }
   await noErrors(p1); await noErrors(p2);
   await p1.context().close(); await p2.context().close();
 });

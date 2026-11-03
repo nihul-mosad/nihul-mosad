@@ -733,7 +733,7 @@ async function writeDoc(path,field,depth,newMap,order){
     if(ordCh){args.push(new firebase.firestore.FieldPath('o'));args.push(order);}
     try{await ref.update(...args);}
     catch(e){
-      if(e&&(e.code==='not-found'||e.code==='invalid_argument')){const full={};full[field]=newMap;if(order)full.o=order;await ref.set(full);}
+      if(e&&(e.code==='not-found'||e.code==='invalid_argument')){const full={};full[field]=newMap;if(order)full.o=order;await ref.set(full,{merge:true});} // merge: אם מכשיר אחר יצר את המסמך באותו רגע, לא דורסים את מה שהוא כתב
       else throw e;
     }
     LD[path]=clone(newMap);if(order)LD[path+'#o']=ordJ;
