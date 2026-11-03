@@ -114,7 +114,10 @@
   const y = today.getMonth() + 1 >= 8 ? today.getFullYear() : today.getFullYear() - 1;
   docs[B + 'store/meetings_' + y] = { m: { mt1: { id: 'mt1', title: 'ישיבת צוות שבועית', date: iso(days[Math.max(0, days.length - 4)]), items: [] } } };
 
-  window.__FAKE_SEED = { docs, users, seq: 1000, writes: 0 };
+  // גרסת נתוני הדמה: אם בלשונית נשמרו נתונים מגרסה קודמת של ההדגמה, מתחילים מחדש
+  const VER = 'aura-3.1-r3';
+  try { const old = sessionStorage.getItem('__fakefs__'); if (old && JSON.parse(old).ver !== VER) { sessionStorage.removeItem('__fakefs__'); sessionStorage.removeItem('__fakefs__user'); } } catch (e) {}
+  window.__FAKE_SEED = { ver: VER, docs, users, seq: 1000, writes: 0 };
   window.__DEMO_USERS = USERS;
   window.__DEMO_INST = INST;
 })();

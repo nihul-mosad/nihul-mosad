@@ -66,3 +66,23 @@ test('הדגמה: מתג בהיר/כהה ומעבר תפקיד (מורה מקצ�
   assert.deepEqual(page.errors, []);
   await page.context().close();
 });
+
+test('הדגמה: התפריט בצד ימין, מתקפל לאייקונים בלבד ונפתח שוב, וכל הגרפים מוצגים גם במסך מחשב קטן (1366)', async () => {
+  const page = await openDemo('light', { width: 1366, height: 768 });
+  const geo = () => page.evaluate(() => { const s = document.getElementById('side').getBoundingClientRect(), m = document.getElementById('main').getBoundingClientRect(); return { sx: s.x, sw: s.width, mx: m.x }; });
+  let g = await geo();
+  assert.ok(g.sx > g.mx, 'התפריט צריך להיות מימין לתוכן');
+  const wide = g.sw;
+  await page.click('[data-au="navc"]');
+  await page.waitForTimeout(500);
+  g = await geo();
+  assert.ok(g.sw < wide / 2, 'התפריט לא התקפל');
+  assert.equal(await page.$eval('#nav button[data-tab="dash"] span', e => getComputedStyle(e).display), 'none');
+  await page.click('[data-au="navc"]');
+  await page.waitForTimeout(500);
+  assert.ok((await geo()).sw >= wide - 1, 'התפריט לא נפתח שוב');
+  for (const sel of ['.au-month svg circle', '.au-types svg circle', '.au-trend svg rect', '.au-cls .tr i'])
+    assert.ok(await page.$eval(sel, e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom <= innerHeight + 2; }), 'גרף לא נראה במסך הראשון: ' + sel);
+  assert.deepEqual(page.errors, []);
+  await page.context().close();
+});
