@@ -671,7 +671,7 @@ async function enterInst(inst,user,typed){
   S.staff=isAdmin()?await load(K.staff,[]):[];S.markLesson=null;S.markView='lessons';S.ttInit=0;S.ttMode='class';S.ttTeacher='';
   try{localStorage.setItem('tt:inst',inst);localStorage.setItem('tt:instName',S.config.name||'');}catch(e){}
   S.tab=(isAdmin()||myClasses().length)?'dash':'mark';S.markCls=myClasses()[0]||'';S.revCls=myClasses()[0]||'';S.filter='';S.repCls='';S.revIdx=null;
-  S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;
+  S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=!!UNSAVED[K.att];
   document.getElementById('login').style.display='none';
   document.getElementById('shell').classList.add('on');
   render();startProbe();
@@ -701,7 +701,7 @@ async function dbSet(path,body){
 }
 function saveFailed(e){
   const c=e&&e.code;
-  toast(c==='quota_exceeded'?'המאגר מלא — לא נשמר':c==='revoked'||c==='not_granted'?'אין הרשאה לשמור':'השמירה נכשלה — בדקו את החיבור');
+  toast((c==='quota_exceeded'?'המאגר מלא — לא נשמר':c==='revoked'||c==='not_granted'||c==='permission-denied'?'אין הרשאה לשמור — השינוי לא נשמר':'השמירה נכשלה — בדקו את החיבור ונסו שוב'),1,7000);
 }
 
 /* ===== אחסון מופרד: כל מורה מקבל מהשרת רק את מה שמותר לו ===== */
@@ -749,12 +749,16 @@ async function saveStudentsSec(){
   for(const c of Object.keys(byC))await writeDoc('cls/'+c,'m',1,clone(byC[c]),ord[c]||[]);
   for(const c of Object.keys(rC))await writeDoc('roster/'+c,'m',1,rC[c]);
 }
+/* ממצא מ2: סימון שכבר שמור בשרת נשאר במסמך שבו נכתב (הכיתה שבה התלמיד היה באותו יום),
+   גם אם התלמיד עבר מאז כיתה או שאינו מופיע ברשימה של המורה. כך מעבר כיתה לא מוחק היסטוריה. */
 function attTargets(isL){
-  const src=isL?S.latt:S.att,out={},sc={},lt={};
+  const src=isL?S.latt:S.att,out={},sc={},lt={},at={};
   S.students.forEach(x=>sc[x.id]=x.cls);S.timetable.forEach(l=>lt[l.id]=l.teacher||'');
-  knownPaths('att/'+(isL?'L':'D')).forEach(p=>out[p]={});
+  knownPaths('att/'+(isL?'L':'D')).forEach(p=>{out[p]={};const d=LD[p]||{};Object.keys(d).forEach(date=>Object.keys(d[date]||{}).forEach(k=>{at[date+'|'+k]=p;}));});
   Object.keys(src).forEach(function(date){const day=src[date]||{};Object.keys(day).forEach(function(k){
-    const v=day[k];if(!v)return;let sid=k,tk='';
+    const v=day[k];if(!v)return;
+    const was=at[date+'|'+k];if(was){((out[was]=out[was]||{})[date]=out[was][date]||{})[k]=v;return;}
+    let sid=k,tk='';
     if(isL){const i=k.indexOf(':');if(i<0)return;sid=k.slice(i+1);tk=tkOf(lt[k.slice(0,i)]);}
     if(sc[sid]===undefined)return;
     const p='att/'+(isL?'L':'D')+month(date)+'_'+ckOf(sc[sid])+'_'+tk;
@@ -763,9 +767,14 @@ function attTargets(isL){
 }
 async function saveAttSec(isL){const t=attTargets(isL);for(const p of Object.keys(t))await writeDoc(p,'d',2,t[p]);}
 async function saveReviewsSec(){
-  const sc={},out={};S.students.forEach(x=>sc[x.id]=x.cls);
-  knownPaths('rev/').forEach(p=>out[p]={});
-  S.reviews.forEach(function(r){if(!r.id)r.id=uid();if(sc[r.studentId]===undefined)return;const p='rev/'+month(r.date)+'_'+ckOf(sc[r.studentId]);(out[p]=out[p]||{})[r.id]=r;});
+  const sc={},out={},at={};S.students.forEach(x=>sc[x.id]=x.cls);
+  // ממצא מ2: תמונת מצב שכבר שמורה נשארת במסמך של הכיתה שבה נכתבה (אלא אם התאריך שלה שונה לחודש אחר)
+  knownPaths('rev/').forEach(p=>{out[p]={};Object.keys(LD[p]||{}).forEach(id=>{at[id]=p;});});
+  S.reviews.forEach(function(r){if(!r.id)r.id=uid();const was=at[r.id];
+    if(was&&was.slice(4,11)===month(r.date)){(out[was]=out[was]||{})[r.id]=r;return;}
+    const c=sc[r.studentId]!==undefined?sc[r.studentId]:(was?null:undefined);
+    if(c===undefined)return;
+    const p=c===null?'rev/'+month(r.date)+was.slice(11):'rev/'+month(r.date)+'_'+ckOf(c);(out[p]=out[p]||{})[r.id]=r;});
   for(const p of Object.keys(out))await writeDoc(p,'r',1,clone(out[p]));
 }
 async function saveTasksSec(){
@@ -901,8 +910,21 @@ async function load(key,fb){
   try{ const v=localStorage.getItem(key); if(v) return JSON.parse(v); }catch(e){}
   return fb;
 }
-async function save(key,val){
-  if(DB&&SECKEYS[key]&&!S.legacy&&S.inst){try{await saveSec(key);}catch(e){saveFailed(e);}return;}
+/* ממצא מ1: הודעת "נשמר" מוצגת רק אחרי שהשרת אישר את השמירה.
+   save() מחזירה הבטחה ל-true/false. הודעה (toast) שנקראת מיד אחרי save() באותו טיפול בלחיצה
+   ממתינה לתוצאה: בהצלחה היא מוצגת, בכישלון מוצגת הודעת שגיאה במקומה. */
+const SAVE_TICK=[];let SAVE_PENDING=0;const UNSAVED={};
+function save(key,val){
+  SAVE_PENDING++;
+  const p=save0(key,val).then(ok=>ok!==false,e=>{saveFailed(e);return false;});
+  // אחרי כישלון: כפתור השמירה נשאר פעיל (גם כשפותחים שוב את השיעור) עד ששמירה מצליחה
+  p.then(ok=>{SAVE_PENDING--;UNSAVED[key]=!ok;});
+  if(!SAVE_TICK.length)setTimeout(()=>{SAVE_TICK.length=0;},0);
+  SAVE_TICK.push(p);return p;
+}
+window.addEventListener('beforeunload',function(e){if(SAVE_PENDING>0){e.preventDefault();e.returnValue='';}});
+async function save0(key,val){
+  if(DB&&SECKEYS[key]&&!S.legacy&&S.inst){try{await saveSec(key);}catch(e){saveFailed(e);return false;}return true;}
   if(DB){
     try{
       if(ARRKEYS[key]){
@@ -945,9 +967,11 @@ async function save(key,val){
         for(const mo of Object.keys(by))await dbMerge('rev/'+mo,{r:by[mo]});
         LAST[key]=L;return;
       }
-    }catch(e){saveFailed(e);return;}
+    }catch(e){saveFailed(e);return false;}
+    return true;
   }
-  try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){ toast('אין מקום לשמור בדפדפן'); }
+  try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){ toast('אין מקום לשמור בדפדפן',1); return false; }
+  return true;
 }
 const STATUSES=[['present','נוכח'],['late','איחור'],['absent','חיסור'],['excused','מאושר']];
 const LABEL=Object.fromEntries(STATUSES);
@@ -978,7 +1002,16 @@ function hebShort(s){const p=hebParts(s);return p&&p.d?gem(p.d)+' ב'+p.m:'';}
 function dual(s){return gregLabel(s)+' · '+hebLabel(s);}
 function shortDate(s){try{const g=new Intl.DateTimeFormat('he-IL',{day:'numeric',month:'numeric'}).format(new Date(s+'T12:00:00'));const h=hebShort(s);return g+(h?' · '+h:'');}catch(e){return s;}}
 let toastTimer;
-function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',2400);}
+function showToast(m,ms){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(toastTimer);if(ms!==0)toastTimer=setTimeout(()=>t.style.display='none',ms||2400);}
+function toast(m,now,ms){
+  if(!now&&SAVE_TICK.length){
+    const ps=SAVE_TICK.slice();let done=false;showToast('שומר…',0);
+    const slow=setTimeout(()=>{if(!done)showToast('השמירה מתעכבת — אין חיבור לשרת. אל תסגרו את הדף עד שיופיע "נשמר"',0);},6000);
+    Promise.all(ps).then(r=>{done=true;clearTimeout(slow);if(r.every(Boolean))showToast(m,ms);});
+    return;
+  }
+  showToast(m,ms);
+}
 function copy(txt,msg){navigator.clipboard&&navigator.clipboard.writeText(txt);toast(msg);}
 function download(name,content,type){
   const url=URL.createObjectURL(new Blob([content],{type:type}));
@@ -2630,7 +2663,7 @@ async function markAction(a,el){
   if(a==='mark-view'){S.markView=el.dataset.v;return render();}
   if(a==='lm-open'){S.markLesson=el.dataset.id;const day=S.latt[S.markDate]||{};S.ldraft={};
     Object.keys(day).forEach(k=>{if(k.indexOf(S.markLesson+':')===0)S.ldraft[k.slice(S.markLesson.length+1)]=day[k];});
-    S.ldirty=false;window.scrollTo(0,0);return render();}
+    S.ldirty=!!UNSAVED[K.latt];window.scrollTo(0,0);return render();}
   if(a==='lm-back'){if(S.ldirty&&!confirm('יש שינויים שלא נשמרו. לחזור בלי לשמור?'))return;S.markLesson=null;S.ldirty=false;return render();}
   if(a==='lm-set'){S.ldraft[el.dataset.id]=el.dataset.s;S.ldirty=true;return render();}
   if(a==='lm-all'){const l=S.timetable.find(x=>x.id===S.markLesson);lessonStudents(l).list.forEach(s=>{S.ldraft[s.id]='present';});S.ldirty=true;return render();}
@@ -5154,7 +5187,7 @@ function goTab(t){
   if(S.tab==='daylog'&&t!=='daylog'){dlCapture();saveDaylog();}
   S.tab=t;S.editStudent=null;S.editStaff=null;S.editUser=null;S.importPreview=null;S.ttSlot=null;S.ttEdit=null;S.ttImport=null;
   if(S.tab!=='review'){S.revIdx=null;}
-  if(S.tab==='mark'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;S.markLesson=null;S.ldirty=false;}
+  if(S.tab==='mark'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=!!UNSAVED[K.att];S.markLesson=null;S.ldirty=false;}
   S.scan=null;S.evc=null;S.evBack=null;S.mtEdit=null;S.remc=null;S.exEdit=null;S.dutyEdit=null;S.stx=null;
   if(S.tab!=='rem'){S.remOpen=null;S.remDraft=null;S.remDirty=false;}
   render();
@@ -5212,7 +5245,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a.indexOf('ac-')===0)return accountAction(a);
 
   if(a==='logout')return logout();
-  if(a==='goto-mark'){S.tab='mark';if(el.dataset.cls)S.markCls=el.dataset.cls;S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;return render();}
+  if(a==='goto-mark'){S.tab='mark';if(el.dataset.cls)S.markCls=el.dataset.cls;S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=!!UNSAVED[K.att];return render();}
   if(a==='goto-students'){S.tab='students';S.importPreview=null;return render();}
   if(a==='goto-import'){S.tab='import';S.importPreview=null;return render();}
   if(a==='goto-review'){S.tab='review';S.revIdx=null;return render();}
@@ -5594,7 +5627,7 @@ document.getElementById('main').addEventListener('change',function(e){
   if(k==='dlDate'){dlCapture();saveDaylog();}
   S[k]=el.value;
   if(k==='lgCls')S.lgStu='';
-  if(k==='markDate'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;S.markLesson=null;S.ldirty=false;}
+  if(k==='markDate'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=!!UNSAVED[K.att];S.markLesson=null;S.ldirty=false;}
   if(k==='revDate'&&S.revIdx!==null)loadRevDraft();
   render();
 });

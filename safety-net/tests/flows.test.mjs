@@ -104,20 +104,4 @@ test('תמונת מצב: מחנך ממלא רמזור, ציון והערה → �
   assert.match(card, /בדיקה אוטומטית: התקדמות יפה/);
   assert.deepEqual(page.errors, []);
 });
-
-// מאפיין את ההתנהגות הנוכחית של ממצא מ1. מסומן todo: ידווח, אבל לא יחסום, עד שנתקן בשלב 1.
-test('ממצא מ1: כששמירה נכשלת המשתמש לא רואה "נשמר"', { todo: 'יתוקן בשלב 1' }, async () => {
-  const page = await newPage(browser);
-  await login(page, server.url, 'teacherA');
-  const day = lastSchoolDay(), date = iso(day), lid = 'L0' + day.getDay() + '1';
-  await page.evaluate(d => { S.tab = 'mark'; S.markDate = d; S.markLesson = null; render(); }, date);
-  await click(page, `button.lrow[data-id="${lid}"]`);
-  await click(page, '[data-act="lm-all"]');
-  await page.evaluate(() => { window.__fakefs.failWrites = 'permission-denied'; });
-  const toasts = [];
-  await page.exposeFunction('__toast', t => toasts.push(t));
-  await page.evaluate(() => { const o = toast; window.toast = m => { window.__toast(m); o(m); }; });
-  await click(page, '[data-act="lm-save"]');
-  await page.waitForTimeout(500);
-  assert.ok(!toasts.includes('הנוכחות נשמרה'), 'הוצגה הודעת "נשמרה" למרות שהשמירה נכשלה. הודעות: ' + toasts.join(' | '));
-});
+// ממצאים מ1 ו-מ2: ראו tests/save-safety.test.mjs

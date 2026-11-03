@@ -2,7 +2,7 @@
 #
 # כדי שהקובץ הזה יפעל צריך שני שינויים בהגדרות של GitHub (לא נעשו — דורשים אישור):
 #   1. Settings → Pages → Source: "GitHub Actions" (במקום "Deploy from a branch").
-#   2. Settings → Environments → production → Required reviewers: המנהל.
+#   2. Settings → Environments → github-pages → Required reviewers: המנהל; Deployment branches: main בלבד.
 # עד שזה נעשה, האתר ממשיך להתפרסם כמו היום, והקובץ הזה לא משפיע עליו.
 name: deploy
 on:
@@ -21,7 +21,7 @@ jobs:
     needs: tests
     runs-on: ubuntu-latest
     environment:
-      name: production            # כאן העבודה נעצרת ומחכה ללחיצה על "Approve"
+      name: github-pages          # השם הקבוע של GitHub לפרסום אתרים. כאן העבודה נעצרת ומחכה ללחיצה על "Approve"
       url: ${{ steps.pages.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4

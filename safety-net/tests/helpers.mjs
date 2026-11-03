@@ -42,9 +42,9 @@ export async function newPage(browser, { seed = true, width = 1280, height = 900
   return page;
 }
 
-export async function login(page, base, who) {
+export async function login(page, base, who, file = 'staging-local.html') {
   const u = USERS[who];
-  await page.goto(base + 'staging-local.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(base + file, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#li', { state: 'visible' });
   await page.fill('#li', INST); await page.fill('#lu', u.user); await page.fill('#lp', u.password);
   await page.click('#loginBtn');
@@ -56,3 +56,37 @@ export const serverDoc = (page, p) => page.evaluate(p => window.__fakefs.getDoc(
 export const serverDump = page => page.evaluate(() => window.__fakefs.dump());
 // מחכה שכל הכתיבות בתור של המערכת יסתיימו
 export const settle = page => page.evaluate(async () => { await Promise.all(Object.values(WQ)); await new Promise(r => setTimeout(r, 50)); await Promise.all(Object.values(WQ)); });
+
+// מתעד את ההודעות שהמשתמש באמת רואה על המסך (לא רק קריאות לפונקציה)
+export async function watchToasts(page) {
+  await page.evaluate(() => {
+    window.__shown = [];
+    const t = document.getElementById('toast');
+    const rec = () => { if (t.style.display !== 'none' && t.textContent && window.__shown[window.__shown.length - 1] !== t.textContent) window.__shown.push(t.textContent); };
+    new MutationObserver(rec).observe(t, { childList: true, characterData: true, subtree: true, attributes: true });
+  });
+}
+export const shown = page => page.evaluate(() => window.__shown.slice());
+export const waitShown = (page, text, timeout = 15000) => page.waitForFunction(t => window.__shown.some(x => x.indexOf(t) > -1), text, { timeout });
+
+// תאריכים: ימי לימוד אחרונים (א–ה), ושני ימים באותו חודש
+export const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+export function schoolDays(n) { const out = []; const d = new Date(); while (out.length < n) { d.setDate(d.getDate() - 1); if (d.getDay() <= 4) out.push(new Date(d)); } return out; }
+export function twoDaysSameMonth() {
+  const ds = schoolDays(12);
+  for (let i = 0; i < ds.length - 1; i++) if (ds[i].getMonth() === ds[i + 1].getMonth()) return [ds[i], ds[i + 1]];
+  throw new Error('no two school days in the same month');
+}
+
+// מסמן שיעור דרך הממשק: פותח את השיעור, "כולם נוכחים", שינויים לפי statusFor, ושמירה.
+// lessonOf: 1 = השיעור של המחנך, 2 = שיעור החשבון (בכיתה א')
+export async function markLesson(page, day, statusFor, period = 1, wait = true) {
+  const date = iso(day), lid = 'L0' + day.getDay() + period;
+  await page.evaluate(d => { S.tab = 'mark'; S.markView = 'lessons'; S.markDate = d; S.markLesson = null; render(); }, date);
+  await page.click(`button.lrow[data-id="${lid}"]`);
+  await page.click('[data-act="lm-all"]');
+  for (const [sid, st] of Object.entries(statusFor || {})) await page.click(`[data-act="lm-set"][data-id="${sid}"][data-s="${st}"]`);
+  await page.click('[data-act="lm-save"]');
+  if (wait) await settle(page);
+  return { date, lid };
+}
