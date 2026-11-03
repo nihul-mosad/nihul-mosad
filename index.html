@@ -524,6 +524,230 @@ th{font-weight:600}
 @media(pointer:coarse){.evs,.evt{padding:10px 15px}}
 .evwhen{font-size:13.5px;margin-top:2px}.evwhen b{font-weight:700}
 </style>
+<style id="aura-3-1">
+/* =====================================================================
+   AURA 3.1 — שכבת עיצוב למערכת ניהול המוסד
+   ---------------------------------------------------------------------
+   שכבה אחת שנטענת אחרי העיצוב הקיים ודורסת אותו. לא משנה מבנה או פעולות.
+   מצב בהיר / כהה: html[data-theme="light"|"dark"].
+   ===================================================================== */
+:root{
+  --bg:#F3F5FB;--surface:#FFFFFF;--surface2:#F3F5FC;--ink:#121A3A;--muted:#5E6890;--line:#E4E8F4;
+  --accent:#3B4FD8;--accent-dark:#2C3BB0;--accent-soft:#ECEFFF;--gold:#F4B740;--violet:#7C5CFA;--sky:#38BDF8;--rose:#F43F5E;--mint:#10B981;
+  --side:#0E1641;--side2:#1A2463;
+  --present:#12A174;--late:#E09B12;--absent:#E5484D;--excused:#8A93B2;--green:#12A174;--yellow:#E0A512;--red:#E5484D;
+  --radius:20px;
+  --shadow:0 1px 2px rgba(18,26,58,.04),0 14px 34px -16px rgba(38,48,120,.24);
+  --shadow-hi:0 2px 4px rgba(18,26,58,.05),0 22px 44px -18px rgba(38,48,120,.32);
+  --glass:rgba(255,255,255,.74);
+  --blob1:rgba(56,189,248,.22);--blob2:rgba(124,92,250,.17);--blob3:rgba(244,183,64,.15);
+  --tag-g:#DFF5EC;--tag-g-ink:#0E7A57;--tag-y:#FCF0D6;--tag-y-ink:#8E5D05;--tag-r:#FDE4E5;--tag-r-ink:#B42F34;
+  color-scheme:light;
+}
+html[data-theme="dark"]{
+  --bg:#090E24;--surface:#121A3C;--surface2:#19224B;--ink:#E9EDFF;--muted:#9AA4CC;--line:#253064;
+  --accent:#8A98FF;--accent-dark:#A9B3FF;--accent-soft:rgba(138,152,255,.16);
+  --side:#060A1E;--side2:#141D52;
+  --present:#2CC48F;--late:#F2B33D;--absent:#FF6B70;--excused:#9AA4CC;--green:#2CC48F;--yellow:#F2B33D;--red:#FF6B70;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 18px 40px -20px rgba(0,0,0,.7);
+  --shadow-hi:0 2px 4px rgba(0,0,0,.35),0 26px 50px -20px rgba(0,0,0,.8);
+  --glass:rgba(18,26,60,.72);
+  --blob1:rgba(56,189,248,.13);--blob2:rgba(124,92,250,.16);--blob3:rgba(244,183,64,.07);
+  --tag-g:rgba(44,196,143,.16);--tag-g-ink:#5FE0B1;--tag-y:rgba(242,179,61,.16);--tag-y-ink:#FFCB6B;--tag-r:rgba(255,107,112,.16);--tag-r-ink:#FF9A9D;
+  color-scheme:dark;
+}
+
+/* ---------- רקע ---------- */
+body{background:var(--bg);color:var(--ink);font-feature-settings:'tnum' 1}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:
+  radial-gradient(900px 620px at 100% -8%,var(--blob1),transparent 62%),
+  radial-gradient(780px 600px at -6% 4%,var(--blob2),transparent 60%),
+  radial-gradient(760px 520px at 46% 112%,var(--blob3),transparent 62%)}
+.shell,#login,#boot{position:relative;z-index:1}
+#boot{background:transparent}
+
+/* ---------- תפריט צד ---------- */
+@media(min-width:821px){
+  .side{position:sticky;top:0;height:100vh;overflow-y:auto;width:252px;flex:0 0 252px;padding:20px 14px 14px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
+}
+.side{background:linear-gradient(180deg,#121C55 0%,#0D1442 52%,#170F42 100%);color:#C3CAEC;border:0}
+.side::after{content:'';position:absolute;inset:auto 0 0 0;height:220px;pointer-events:none;background:radial-gradient(260px 160px at 70% 100%,rgba(244,183,64,.16),transparent 70%)}
+html[data-theme="dark"] .side{background:linear-gradient(180deg,#0B1240 0%,#070B26 55%,#0E0A2C 100%);box-shadow:inset 1px 0 0 rgba(255,255,255,.04)}
+.brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:2px 6px 18px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.brand::before{content:'';flex:0 0 42px;height:42px;border-radius:14px;background:
+  radial-gradient(circle at 30% 25%,rgba(255,255,255,.55),transparent 42%),linear-gradient(135deg,var(--gold),#F07A4B 45%,var(--violet));
+  box-shadow:0 8px 18px -6px rgba(244,183,64,.55)}
+.brand img{order:-1}
+.brand h1{flex:1;min-width:0;color:#fff;font-size:17.5px;line-height:1.25;font-weight:700}
+.brand span{flex:0 0 100%;color:#8F99CE;font-size:12.5px;margin-top:2px;padding-inline-start:54px}
+.nav{gap:1px}
+.nav .nsec{font-size:11.5px;font-weight:600;letter-spacing:.04em;color:#6E78B0;padding:14px 12px 6px}
+.nav .nsec:first-child{padding-top:2px}
+.nav button{display:flex;align-items:center;gap:11px;color:#C3CAEC;border-radius:12px;padding:9px 12px;font-size:14.5px;font-weight:500;position:relative}
+.nav button svg{width:19px;height:19px;flex:0 0 19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.82}
+.nav button:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav button[data-on="1"]{background:linear-gradient(270deg,rgba(255,255,255,.16),rgba(255,255,255,.05));color:#fff;box-shadow:none}
+.nav button[data-on="1"]::before{content:'';position:absolute;inset-inline-start:-14px;top:9px;bottom:9px;width:4px;border-radius:0 4px 4px 0;background:var(--gold);box-shadow:0 0 12px rgba(244,183,64,.7)}
+.nav button[data-on="1"] svg{color:var(--gold);opacity:1}
+.who{border-top:1px solid rgba(255,255,255,.08);color:#8F99CE;padding:14px 6px 2px;margin-top:auto}
+.who .au-me{display:flex;align-items:center;gap:10px}
+.who .au-av{width:38px;height:38px;flex:0 0 38px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#121A3A;background:linear-gradient(135deg,#FCD679,var(--gold));box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+.who b{color:#fff;font-size:14px;display:block}
+.who .au-acts{display:flex;gap:6px;margin-top:12px}
+.who .btn{flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#DDE2FA;border-radius:10px;padding:7px 6px;font-size:12.5px;font-weight:500}
+.who .btn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2)}
+.side .appver{color:#5E679C}
+
+/* ---------- אזור התוכן ---------- */
+main{padding:28px 34px 90px;max-width:1480px}
+.head h2{font-size:28px;letter-spacing:-.015em}
+.card,.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+html[data-theme="light"] .card,html[data-theme="light"] .stat{border-color:rgba(228,232,244,.9)}
+.card{padding:22px}
+.card h3{font-size:17px;font-weight:700}
+.note,.sub{color:var(--muted)}
+.empty{color:var(--muted)}
+hr{border-color:var(--line)}
+
+/* כפתורים */
+.btn{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;font-weight:500}
+.btn:hover{background:var(--surface2);border-color:var(--line)}
+.btn[data-v="primary"]{background:linear-gradient(135deg,var(--accent),var(--violet));border-color:transparent;color:#fff;box-shadow:0 8px 18px -8px rgba(59,79,216,.6)}
+.btn[data-v="primary"]:hover{filter:brightness(1.07);background:linear-gradient(135deg,var(--accent),var(--violet))}
+.btn[data-v="ghost"]{background:transparent;border-color:transparent;color:var(--accent)}
+.btn[data-v="ghost"]:hover{background:var(--accent-soft)}
+.btn.sm{border-radius:10px}
+.chip{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.chip[data-on="1"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.link,a{color:var(--accent)}
+
+/* שדות */
+.field input,.field select,.field textarea,.inp,select,textarea,input[type=text],input[type=date],input[type=number],input[type=search]{background:var(--surface);color:var(--ink);border-color:var(--line)}
+html[data-theme="dark"] .field input,html[data-theme="dark"] .field select,html[data-theme="dark"] .field textarea,html[data-theme="dark"] .inp,html[data-theme="dark"] select,html[data-theme="dark"] textarea{background:var(--surface2)}
+.field span{color:var(--ink)}
+
+/* בורר מקטעים, תגיות, טבלאות */
+.seg{background:var(--surface2)}
+.seg button[data-on="1"]:not([data-s]){background:var(--surface);color:var(--accent)}
+.tag[data-s="present"],.tag[data-s="green"]{background:var(--tag-g);color:var(--tag-g-ink)}
+.tag[data-s="late"],.tag[data-s="yellow"]{background:var(--tag-y);color:var(--tag-y-ink)}
+.tag[data-s="absent"],.tag[data-s="red"]{background:var(--tag-r);color:var(--tag-r-ink)}
+.tag[data-s="admin"]{background:var(--accent-soft);color:var(--accent)}
+.tag[data-s="excused"]{background:var(--surface2);color:var(--muted)}
+td{border-bottom-color:var(--line)}
+tbody tr:hover td{background:var(--surface2)}
+.lsn{background:var(--accent-soft)}
+table.tt td{border-color:var(--line)}
+table.tt td.pc{background:var(--surface2)}
+.alert{border-bottom-color:var(--line)}
+.dcls{border-bottom-color:var(--line)}
+.lrow{background:var(--surface);border-color:var(--line)}
+.savebar{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#toast{background:linear-gradient(135deg,#1A2463,#2B1E6E);color:#fff}
+.bar{background:var(--surface2)}
+.bar i{background:linear-gradient(270deg,var(--mint),#34D3A0)}
+.bar i[data-low="1"]{background:linear-gradient(270deg,#E09B12,var(--gold))}
+.bar i[data-low="2"]{background:linear-gradient(270deg,#E5484D,#FF8A8E)}
+.warn{background:var(--tag-y);color:var(--tag-y-ink);border-color:transparent}
+
+/* ---------- לוח הבקרה ---------- */
+.au-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:1fr auto;gap:22px;align-items:center;
+  padding:26px 30px;border-radius:26px;margin-bottom:18px;color:#fff;
+  background:radial-gradient(420px 260px at 8% 120%,rgba(244,183,64,.38),transparent 60%),
+             radial-gradient(520px 300px at 100% -30%,rgba(56,189,248,.35),transparent 60%),
+             linear-gradient(125deg,#1B2470 0%,#2E2C93 48%,#5B36A3 100%);
+  box-shadow:0 26px 50px -24px rgba(46,44,147,.75)}
+.au-hero::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(115deg,rgba(255,255,255,.035) 0 2px,transparent 2px 22px)}
+.au-hero>*{position:relative;z-index:1}
+.au-hello{font-size:15px;color:#C9CFF6}
+.au-hero h2{font-size:30px;margin:4px 0 2px;color:#fff}
+.au-hero .hebdate{color:#FCD679;font-size:17px}
+.au-hero .dnow{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(8px)}
+.au-quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.au-quick .btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;border-radius:999px;padding:8px 16px;backdrop-filter:blur(8px)}
+.au-quick .btn:hover{background:rgba(255,255,255,.22)}
+.au-quick .btn[data-v="primary"]{background:var(--gold);border-color:var(--gold);color:#1B1F4A;font-weight:700;box-shadow:0 10px 22px -10px rgba(244,183,64,.9)}
+.au-ring{display:grid;place-items:center;text-align:center;min-width:150px}
+.au-ring svg{width:142px;height:142px;transform:rotate(-90deg)}
+.au-ring .trk{stroke:rgba(255,255,255,.16)}
+.au-ring .val{stroke:url(#auRingGrad);stroke-linecap:round;transition:stroke-dasharray .8s ease}
+.au-ring .lbl{position:absolute;inset:0;display:grid;place-content:center}
+.au-ring .lbl b{font-size:32px;line-height:1;font-weight:700;color:#fff}
+.au-ring .lbl span{font-size:12px;color:#C9CFF6;margin-top:4px}
+.au-ring>div{position:relative}
+.au-ring small{display:block;margin-top:8px;font-size:12.5px;color:#C9CFF6;max-width:180px}
+
+.au-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:18px}
+.au-kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 18px 16px;display:flex;gap:14px;align-items:flex-start;transition:transform .18s,box-shadow .18s;text-align:right;cursor:pointer;color:inherit;font:inherit}
+.au-kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-hi)}
+.au-ico{width:46px;height:46px;flex:0 0 46px;border-radius:15px;display:grid;place-items:center;color:#fff}
+.au-ico svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.au-kpi[data-t="sky"] .au-ico{background:linear-gradient(135deg,#38BDF8,#3B82F6);box-shadow:0 10px 20px -10px #38BDF8}
+.au-kpi[data-t="rose"] .au-ico{background:linear-gradient(135deg,#FB7185,#E11D48);box-shadow:0 10px 20px -10px #FB7185}
+.au-kpi[data-t="violet"] .au-ico{background:linear-gradient(135deg,#A78BFA,#7C3AED);box-shadow:0 10px 20px -10px #A78BFA}
+.au-kpi[data-t="gold"] .au-ico{background:linear-gradient(135deg,#FCD34D,#F59E0B);box-shadow:0 10px 20px -10px #FCD34D}
+.au-kpi b{display:block;font-size:30px;line-height:1.05;font-weight:700;letter-spacing:-.02em}
+.au-kpi .au-lbl{display:block;font-size:13px;color:var(--muted);margin-top:4px;line-height:1.35}
+.au-kpi em{display:inline-block;font-style:normal;font-size:12px;font-weight:600;margin-top:8px;padding:2px 9px;border-radius:99px;background:var(--surface2);color:var(--muted)}
+.au-kpi em[data-s="bad"]{background:var(--tag-r);color:var(--tag-r-ink)}
+.au-kpi em[data-s="good"]{background:var(--tag-g);color:var(--tag-g-ink)}
+
+.au-cols{columns:2 400px;column-gap:18px}
+.au-cols>.card{break-inside:avoid;display:inline-block;width:100%;margin:0 0 18px}
+.au-cardhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.au-cardhead h3{margin:0;display:flex;align-items:center;gap:9px}
+.au-cardhead h3 i{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+
+.au-att{margin-bottom:18px}
+.au-att .alert{align-items:center;padding:11px 12px;margin:0 -12px;border-radius:12px;border-bottom:0}
+.au-att .alert:hover{background:var(--surface2)}
+.au-att .alert+.alert{border-top:1px solid var(--line)}
+.au-dot{width:10px;height:10px;border-radius:50%;flex:0 0 10px;background:var(--accent)}
+.au-dot[data-t="red"]{background:var(--absent);box-shadow:0 0 0 4px var(--tag-r)}
+.au-dot[data-t="amber"]{background:var(--late);box-shadow:0 0 0 4px var(--tag-y)}
+.au-dot[data-t="blue"]{background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.au-att .au-tt{font-size:12.5px;font-weight:600;color:var(--muted);min-width:84px}
+.au-ok{display:flex;align-items:center;gap:12px;padding:6px 0;color:var(--muted)}
+.au-ok i{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--tag-g);color:var(--tag-g-ink);font-style:normal;font-weight:700}
+
+.dtrend{height:170px;gap:8px;padding:6px 2px 0;background:repeating-linear-gradient(0deg,transparent 0 33px,var(--line) 33px 34px)}
+.dtrend i{max-width:30px;border-radius:9px 9px 4px 4px;background:linear-gradient(180deg,var(--violet),var(--sky));box-shadow:0 6px 14px -8px var(--violet)}
+.dtrend i[data-low="1"]{background:linear-gradient(180deg,var(--gold),#F59E0B)}
+.dtrend i[data-low="2"]{background:linear-gradient(180deg,#FF8A8E,var(--absent))}
+.dtrend .note{font-weight:600;color:var(--ink);font-size:11px}
+.dcls{gap:14px;padding:10px 0}
+.dcls b{min-width:84px;font-weight:600}
+.dcls .bar{height:9px}
+
+/* ---------- נייד ---------- */
+@media(max-width:820px){
+  .topbar{background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+  .topbar .menu i,.topbar .menu i::before,.topbar .menu i::after{background:var(--ink)}
+  .side{padding-top:22px}
+  .bnav{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));border:1px solid var(--line);border-radius:22px;background:var(--glass);
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:var(--shadow-hi);padding:6px}
+  .bnav button{border-radius:16px}
+  .bnav button[data-on="1"]{background:linear-gradient(135deg,var(--accent),var(--violet));color:#fff}
+  main{padding:16px 14px calc(104px + env(safe-area-inset-bottom,0px))}
+  .au-hero{grid-template-columns:1fr;padding:22px 20px;border-radius:22px;gap:14px}
+  .au-hero h2{font-size:24px}
+  .au-ring{grid-row:1;justify-self:start;display:flex;align-items:center;gap:14px;text-align:right}
+  .au-ring svg{width:96px;height:96px}
+  .au-ring .lbl b{font-size:22px}
+  .au-ring .lbl span{display:none}
+  .au-ring small{margin:0}
+  .au-quick{margin-top:12px;flex-wrap:nowrap;overflow-x:auto;margin-inline:-20px;padding-inline:20px;scrollbar-width:none}
+  .au-quick .btn{flex:0 0 auto}
+  .au-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .au-kpi{flex-direction:column;gap:10px;padding:14px}
+  .au-kpi b{font-size:26px}
+  .au-ico{width:40px;height:40px;flex-basis:40px;border-radius:13px}
+  .au-cols{columns:1}
+}
+@media print{body::before{display:none}.au-hero{background:none;color:var(--ink);box-shadow:none}.au-quick{display:none}}
+@media(prefers-reduced-motion:reduce){.au-kpi,.au-ring .val{transition:none}}
+</style>
+<script>/* AURA 3.1: מצב בהיר/כהה, נשמר במכשיר */(function(){var t='light';try{t=localStorage.getItem('tt:theme')||'light';}catch(e){}document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');})();</script>
 </head>
 <body>
 
@@ -1408,7 +1632,7 @@ function viewDash(){
   const h=new Date().getHours(),greet=h<12?'בוקר טוב':h<17?'צהריים טובים':'ערב טוב';
   const nm=S.me.teacher||S.me.user||'';
   const stuLink=(id,name)=>S.students.some(s=>s.id===id)?'<button class="link" data-act="card" data-id="'+id+'">'+esc(name)+'</button>':'<b>'+esc(name)+'</b>';
-  const card=(title,body,more)=>'<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">'+title+'</h3>'+(more||'')+'</div>'+body+'</div>';
+  const card=(title,body,more)=>'<div class="card"><div class="au-cardhead"><h3><i></i>'+title+'</h3>'+(more||'')+'</div>'+body+'</div>';
 
   // נוכחות לפי כיתה היום
   const classes=myClasses().filter(cl=>list.some(s=>s.cls===cl));
@@ -1429,23 +1653,32 @@ function viewDash(){
 
   const trendBox=trend.length>1?'<div class="dtrend">'+trend.map(t=>'<div title="'+esc(dual(t.d))+': '+t.pct+'%"><span class="note">'+t.pct+'</span><i style="height:'+Math.max(4,t.pct)+'%" data-low="'+(t.pct<80?2:t.pct<90?1:0)+'"></i><em>'+esc((hebShort(t.d)||'').split(' ')[0]||t.d.slice(8))+'</em></div>').join('')+'</div>':'<p class="note">יוצג אחרי שיירשמו כמה ימי נוכחות.</p>';
 
+  // AURA 3.1: טבעת נוכחות, כרטיסי מדדים ורשימת "מה דורש התייחסות"
+  const R=42,CIRC=2*Math.PI*R,pv=pctToday===null?0:pctToday;
+  const ring='<div class="au-ring"><div><svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="auRingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FCD679"/><stop offset="1" stop-color="#38BDF8"/></linearGradient></defs>'+
+    '<circle class="trk" cx="50" cy="50" r="'+R+'" fill="none" stroke-width="9"/><circle class="val" cx="50" cy="50" r="'+R+'" fill="none" stroke-width="9" stroke-dasharray="'+(CIRC*pv/100).toFixed(1)+' '+CIRC.toFixed(1)+'"/></svg>'+
+    '<div class="lbl"><b>'+(pctToday===null?'—':pctToday+'%')+'</b><span>נוכחות היום</span></div></div>'+
+    '<small>'+(pctToday===null?'עוד לא סומנה נוכחות היום':(c.present+c.late)+' נוכחים מתוך '+list.length+(c.none&&marked?' · '+c.none+' טרם סומנו':''))+'</small></div>';
+  const kpi=(t,ico,v,l,em,emS,act)=>'<button class="au-kpi" data-t="'+t+'"'+(act?' data-act="'+act+'"':'')+'><span class="au-ico"><svg viewBox="0 0 24 24">'+ico+'</svg></span><div style="min-width:0"><b>'+v+'</b><span class="au-lbl">'+l+'</span>'+(em?'<em'+(emS?' data-s="'+emS+'"':'')+'>'+em+'</em>':'')+'</div></button>';
+  const dotT=t=>/חמור/.test(t)?'red':/נוכחות|משימות/.test(t)?'amber':'blue';
   return printHead()+
-   '<div class="dhero"><div><div class="note" style="font-size:15px">'+greet+(nm?', '+esc(nm):'')+'</div><h2 style="margin:2px 0">'+gregLabel(today)+'</h2><div class="hebdate">'+hebLabel(today)+'</div>'+
-     (S.timetable.length?'<div class="dnow">'+esc(dashNow())+'</div>':'')+'</div>'+
-     '<div class="row dquick"><button class="btn" data-v="primary" data-act="goto-mark">נוכחות</button><button class="btn" data-act="dash-ev">+ דיווח אירוע</button>'+
-     '<button class="btn" data-act="goto-review">תמונת מצב</button><button class="btn" data-act="goto-tasks">+ משימה</button>'+refreshBtn()+
-     (adm?'<button class="btn" data-act="rem-new">🔔 תזכורת למורה</button>':'')+'</div></div>'+
+   '<section class="au-hero"><div><div class="au-hello">'+greet+(nm?', '+esc(nm):'')+'</div><h2>'+gregLabel(today)+'</h2><div class="hebdate">'+hebLabel(today)+'</div>'+
+     (S.timetable.length?'<div class="dnow">'+esc(dashNow())+'</div>':'')+
+     '<div class="au-quick"><button class="btn" data-v="primary" data-act="goto-mark">✓ סימון נוכחות</button><button class="btn" data-act="dash-ev">+ דיווח אירוע</button>'+
+     '<button class="btn" data-act="goto-review">תמונת מצב</button><button class="btn" data-act="goto-tasks">+ משימה</button>'+
+     (adm?'<button class="btn" data-act="rem-new">🔔 תזכורת למורה</button>':'')+refreshBtn()+'</div></div>'+ring+'</section>'+
    (S.remc&&adm?remComposer():'')+
-   '<div class="grid g4" style="margin-bottom:14px">'+
-     stat(pctToday===null?'—':pctToday+'%','נוכחות היום: '+(c.present+c.late)+' נוכחים מתוך '+list.length+' תלמידים'+(c.none&&marked?' · '+c.none+' עדיין לא סומנו':''),pctToday!==null&&pctToday<85?'var(--late)':'var(--present)')+
-     stat(c.absent,'חיסורים היום'+(c.late?' · '+c.late+' איחורים':''),c.absent?'var(--absent)':'')+
-     stat('<span style="color:var(--present)">'+posW.length+'</span> / <span style="color:var(--late)">'+negW+'</span>','אירועים השבוע: לשבח / לשיפור','')+
-     stat(openTasks.length,'המשימות הפתוחות שלי'+(overdue.length?' · '+overdue.length+' באיחור':''),overdue.length?'var(--absent)':'')+'</div>'+
-   card('מה דורש התייחסות',alerts.length?alerts.slice(0,10).map(function(a){
-       return '<div class="alert"><b class="note" style="min-width:82px">'+a.t+'</b><span style="flex:1">'+esc(a.x)+'</span>'+
-       '<button class="btn sm" data-v="ghost" data-act="'+a.act+'"'+(a.id?' data-id="'+a.id+'"':'')+(a.cls?' data-cls="'+esc(a.cls)+'"':'')+'>פתיחה</button></div>';
-     }).join(''):'<div class="empty">הכול תקין. אין התראות פתוחות. 👍</div>')+
-   '<div class="grid g2">'+
+   '<div class="au-kpis">'+
+     kpi('sky',ICONS.mark,pctToday===null?'—':pctToday+'%','נוכחות היום',marked?marked+'/'+list.length+' סומנו':'טרם סומן',pctToday!==null&&pctToday<85?'bad':pctToday!==null?'good':'','goto-mark')+
+     kpi('rose',ICONS.absent,c.absent,'חיסורים היום',c.late?c.late+' איחורים':'אין איחורים',c.absent?'bad':'good','goto-mark')+
+     kpi('violet',ICONS.events,'<span style="color:var(--present)">'+posW.length+'</span><span style="color:var(--muted);font-weight:400"> / </span><span style="color:var(--late)">'+negW+'</span>','אירועים השבוע · לשבח / לשיפור',op.length?op.length+' ממתינים לטיפול':'הכול טופל',op.length?'bad':'good','goto-events')+
+     kpi('gold',ICONS.tasks,openTasks.length,'המשימות הפתוחות שלי',overdue.length?overdue.length+' באיחור':'אין באיחור',overdue.length?'bad':'good','goto-tasks')+'</div>'+
+   '<div class="card au-att"><div class="au-cardhead"><h3><i></i>מה דורש התייחסות</h3>'+(alerts.length?'<span class="tag" data-s="'+(alerts.some(a=>/חמור/.test(a.t))?'absent':'late')+'">'+alerts.length+'</span>':'')+'</div>'+
+     (alerts.length?alerts.slice(0,10).map(function(a){
+       return '<div class="alert"><span class="au-dot" data-t="'+dotT(a.t)+'"></span><span class="au-tt">'+a.t+'</span><span style="flex:1">'+esc(a.x)+'</span>'+
+       '<button class="btn sm" data-v="ghost" data-act="'+a.act+'"'+(a.id?' data-id="'+a.id+'"':'')+(a.cls?' data-cls="'+esc(a.cls)+'"':'')+'>פתיחה ←</button></div>';
+     }).join(''):'<div class="au-ok"><i>✓</i><span>הכול תקין. אין התראות פתוחות.</span></div>')+'</div>'+
+   '<div class="au-cols">'+
      (hasBD?card('ימי הולדת השבוע 🎂',bds.length?bds.map(x=>'<div class="alert"'+(x.i===0?' style="background:var(--accent-soft);border-radius:10px;padding:8px 10px"':'')+'>'+
          '<span style="flex:1">'+stuLink(x.s.id,x.s.name)+' <span class="note">'+esc(x.s.cls)+'</span></span>'+
          '<span><b>'+gem(x.b.d)+' ב'+esc(x.b.m)+'</b>'+(x.age?' <span class="note">· '+(x.s.gender==='f'?'בת ':'בן ')+x.age+'</span>':'')+'</span>'+
@@ -5164,9 +5397,11 @@ function render(){
   const bl=document.getElementById('brandLogo');
   if(S.config.logo){bl.src=S.config.logo;bl.style.display='block';}else bl.style.display='none';
   document.getElementById('brandSub').textContent=!S.inst?'בעל המערכת':isAdmin()?'ניהול המוסד':(myClasses().length?'מחנך '+myClasses().join(', '):'מורה');
-  document.getElementById('nav').innerHTML=tabsFor().map(t=>'<button data-tab="'+t[0]+'" data-on="'+(S.tab===t[0]?1:0)+'">'+t[1]+'</button>').join('');
-  document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
-    '<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
+  document.getElementById('nav').innerHTML=navHtml(tabsFor());
+  {const nm=S.me.teacher||S.me.user||'',ini=(nm.replace(/^(הרב|מר|גב׳|הגב׳)\s+/,'').trim().charAt(0)||'?'),role=isAdmin()?'מנהל':(myClasses().length?'מחנך '+myClasses().join(', '):'מורה');
+  document.getElementById('who').innerHTML='<div class="au-me"><span class="au-av">'+esc(ini)+'</span><div style="min-width:0"><b>'+esc(nm)+'</b>'+esc(role)+'</div></div>'+
+    '<div class="au-acts"><button class="btn sm" data-act="theme" title="מצב בהיר / כהה">'+(document.documentElement.getAttribute('data-theme')==='dark'?'☀︎ בהיר':'☾ כהה')+'</button>'+
+    (S.inst?'<button class="btn sm" data-act="go-account">סיסמה</button>':'')+'<button class="btn sm" data-act="logout">יציאה</button></div>';}
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
     reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,duty:viewDuty,rem:viewRem,bdays:viewBirthdays,analytics:viewAnalytics,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,assist:viewAssist,account:viewAccount,import:viewImport,card:viewCard};
   if(S.inst&&!isAdmin()&&['card','account','bdays','rcard'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
@@ -5196,7 +5431,7 @@ document.getElementById('nav').addEventListener('click',function(e){
   const b=e.target.closest('button[data-tab]');if(!b)return;
   closeDrawer(true);goTab(b.dataset.tab);window.scrollTo(0,0);
 });
-document.getElementById('who').addEventListener('click',function(e){if(e.target.closest('[data-act="logout"]'))logout();if(e.target.closest('[data-act="go-account"]')){closeDrawer(true);goTab('account');}});
+document.getElementById('who').addEventListener('click',function(e){if(e.target.closest('[data-act="theme"]')){setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');return render();}if(e.target.closest('[data-act="logout"]'))logout();if(e.target.closest('[data-act="go-account"]')){closeDrawer(true);goTab('account');}});
 
 function startReview(list){
   S.revList=list;S.revIdx=0;S.revDone=0;loadRevDraft();
@@ -5686,8 +5921,33 @@ const ICONS={
  students:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 5.2a3 3 0 010 5.6M18 14.4c1.8.9 3 2.9 3 5.6"/>',
  mark:'<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2.5v3M16 2.5v3M8 13l2.5 2.5L16 10"/>',
  tasks:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.3 1.3L7 5M3.5 12l1.3 1.3L7 11M3.5 18l1.3 1.3L7 17"/>',
- more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'
+ more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+ rem:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8"/>',
+ grades:'<path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.4 7.2 17.9l.9-5.4L4.2 8.7l5.4-.8z" transform="translate(0 1.5) scale(1 .92)"/><path d="M8 21h8"/>',
+ schedule:'<rect x="3.5" y="4.5" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M8 2.5v4M16 2.5v4M8 13.5h2M14 13.5h2M8 17h2"/>',
+ duty:'<circle cx="12" cy="13" r="7.5"/><path d="M12 9v4.5l3 2M9.5 2.5h5"/>',
+ meetings:'<circle cx="7" cy="8" r="2.6"/><circle cx="17" cy="8" r="2.6"/><path d="M2.5 19c0-2.6 2-4.5 4.5-4.5S11.5 16.4 11.5 19M12.5 19c0-2.6 2-4.5 4.5-4.5s4.5 1.9 4.5 4.5"/>',
+ daylog:'<path d="M5 4.5A1.5 1.5 0 016.5 3H19v15H6.5A1.5 1.5 0 005 19.5z"/><path d="M5 19.5A1.5 1.5 0 006.5 21H19M9 7.5h6M9 11h4"/>',
+ assist:'<path d="M12 3.5l1.7 4.3 4.3 1.7-4.3 1.7L12 15.5l-1.7-4.3L6 9.5l4.3-1.7z"/><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>',
+ reports:'<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 17v-3M12 17v-5M15 17v-2"/>',
+ analytics:'<path d="M3.5 20.5h17"/><path d="M6 16l4-5 3.5 3L19 7"/><path d="M15 7h4v4"/>',
+ staff:'<rect x="4" y="3.5" width="16" height="17" rx="2.5"/><circle cx="12" cy="10" r="2.8"/><path d="M7.5 17c.6-2 2.4-3.3 4.5-3.3s3.9 1.3 4.5 3.3"/>',
+ settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"/>',
+ console:'<rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15h4"/>',
+ warn:'<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.2v.3"/>',
+ absent:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16.5 8.5l4 4M20.5 8.5l-4 4"/>'
 };
+/* AURA 3.1: תפריט צד בקבוצות, עם אייקון לכל מסך */
+const NAV_SECTIONS=[['ראשי',['dash','mark','events','review','tasks']],['תלמידים ולמידה',['students','rem','grades','reports','analytics']],['צוות ומוסד',['schedule','duty','meetings','daylog','staff']],['כלים',['assist','settings','console']]];
+function navHtml(tabs){
+  const btn=t=>'<button data-tab="'+t[0]+'" data-on="'+(S.tab===t[0]?1:0)+'"><svg viewBox="0 0 24 24">'+(ICONS[t[0]]||ICONS.more)+'</svg><span>'+esc(t[1])+'</span></button>';
+  const used={};let h='';
+  NAV_SECTIONS.forEach(function(sec){const ts=tabs.filter(t=>sec[1].indexOf(t[0])>-1);if(!ts.length)return;ts.forEach(t=>used[t[0]]=1);
+    h+=(tabs.length>6?'<div class="nsec">'+sec[0]+'</div>':'')+ts.map(btn).join('');});
+  const rest=tabs.filter(t=>!used[t[0]]);
+  return h+rest.map(btn).join('');
+}
+function setTheme(t){document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');try{localStorage.setItem('tt:theme',t);}catch(e){}}
 const side=document.getElementById('side'),backdrop=document.getElementById('backdrop');
 function drawerOpen(){return side.classList.contains('open');}
 function openDrawer(){

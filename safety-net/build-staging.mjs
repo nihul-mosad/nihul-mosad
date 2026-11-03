@@ -85,5 +85,24 @@ function finalCheck(name, s) {
   finalCheck('preview.html', s);
   fs.copyFileSync(path.join(here, 'demo-data.js'), path.join(OUT, 'demo-data.js'));
 }
+// 4. הדגמת העיצוב AURA 3.1 — קובץ אחד, סגור הרמטית.
+//    * נתוני דמה מומצאים בלבד (demo-seed-rich.js), מאגר מדומה בזיכרון (fake-firebase.js), הכול מוטמע בקובץ.
+//    * Content-Security-Policy: אין שום חיבור רשת (connect-src 'none'), אין סקריפטים מבחוץ, אין Service Worker.
+//      רק גופני Google מותרים (קובצי גופן — לא נתונים).
+//    * כניסה אוטומטית למשתמש דמה, ומתג להחלפת תפקיד ומצב בהיר/כהה.
+{
+  const CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; " +
+    "img-src data: blob:; connect-src 'none'; worker-src 'none'; frame-src 'none'; manifest-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
+  const inline = f => '<script>\n' + fs.readFileSync(path.join(here, f), 'utf8').replace(/<\/script/gi, '<\\/script') + '\n</script>';
+  let s = base(stripGstatic(src));
+  s = s.replace('<title>ניסוי · ניהול המוסד</title>', '<title>הדגמה · AURA 3.1 · ניהול המוסד</title>');
+  s = s.replace('<head>', '<head>\n<meta http-equiv="Content-Security-Policy" content="' + CSP + '">\n' + GUARD + '\n' + inline('demo-seed-rich.js') + '\n' + inline('fake-firebase.js'));
+  s = config(s, { apiKey: 'aura-demo', authDomain: 'localhost', projectId: 'aura-demo', appId: 'aura-demo' });
+  s = s.replace(/<link rel="manifest"[^>]*>/, '');
+  s = beforeBodyEnd(s, inline('demo-controller.js'));
+  must(/connect-src 'none'/.test(s), 'CSP missing');
+  must(!/<script[^>]+src=/.test(s), 'aura-demo must not load any external or local script file');
+  finalCheck('aura-demo.html', s);
+}
 ['icons', 'manifest.webmanifest'].forEach(f => fs.cpSync(path.join(here, '..', f), path.join(OUT, f), { recursive: true }));
 console.log('index.html was read only — not modified.');

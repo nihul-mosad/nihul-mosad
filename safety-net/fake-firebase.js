@@ -18,6 +18,8 @@
   // ---------- אחסון ----------
   function loadStore() {
     try { const s = sessionStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) {}
+    // הדגמת העיצוב: נתוני דמה מומצאים שהוטמעו בעמוד (demo-seed-rich.js)
+    if (window.__FAKE_SEED) return clone(window.__FAKE_SEED);
     return { docs: {}, users: {}, seq: 1, writes: 0 };
   }
   let ST = loadStore();
