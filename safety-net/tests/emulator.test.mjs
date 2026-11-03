@@ -104,7 +104,8 @@ test('אמולטור (מ2): המנהל מעביר תלמיד בזמן שהמחנ
   // המחנך נכנס מחדש (s4 כבר לא בכיתה שלו) ושומר שוב
   await t.context().close();
   const t2 = await open('teacherA');
-  assert.ok(!(await t2.evaluate(() => S.students.some(s => s.id === 's4'))), 'הכנה: s4 עדיין מופיע אצל המחנך הקודם');
+  const ids = await t2.evaluate(() => S.students.map(s => s.id).sort());
+  assert.deepEqual(ids, ['s1', 's2', 's3'], 'רשימת התלמידים של המחנך אחרי המעבר');
   await markLesson(t2, DAYS[8], {});
   await waitShown(t2, 'הנוכחות נשמרה');
   const doc = await dbDoc(attPath(m1.date, CLASSES[0], USERS.teacherA.teacher));
@@ -113,4 +114,15 @@ test('אמולטור (מ2): המנהל מעביר תלמיד בזמן שהמחנ
   assert.ok(cls && cls.m && cls.m.s4, 'המעבר לכיתה ב׳ לא נשמר');
   await noErrors(t2); await noErrors(a);
   await t2.context().close(); await a.context().close();
+});
+
+test('אמולטור: כשהמנהל מחובר ועובד, ההרשאות של המחנך לא משתנות', async () => {
+  const a = await open('admin');
+  await a.evaluate(() => { S.tab = 'students'; render(); S.tab = 'dash'; render(); });
+  await a.waitForTimeout(1500);
+  const mem = await dbDoc(B + 'members/' + USERS.teacherA.uid);
+  if (mem) assert.ok((mem.classes || []).indexOf(keyify(CLASSES[0])) > -1, 'המחנך איבד את הגישה לכיתה שלו: ' + JSON.stringify(mem.classes));
+  const t = await open('teacherA');
+  assert.ok((await t.evaluate(() => S.students.length)) > 0, 'המחנך לא רואה את התלמידים שלו');
+  await a.context().close(); await t.context().close();
 });

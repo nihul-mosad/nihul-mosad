@@ -24,7 +24,9 @@ export function buildSeed() {
   const base = 'insts/' + INST + '/';
   docs['insts/' + INST] = { name: 'תלמוד תורה לבדיקות' };
   docs[base + 'store/config'] = { v: { name: 'תלמוד תורה לבדיקות', classes: CLASSES, logo: '',
-    domains: [{ id: 'd1', name: 'לימודים' }, { id: 'd2', name: 'ריכוז והתמדה' }, { id: 'd3', name: 'התנהגות' }] } };
+    domains: [{ id: 'd1', name: 'לימודים' }, { id: 'd2', name: 'ריכוז והתמדה' }, { id: 'd3', name: 'התנהגות' }],
+    // המחנך של כיתה א'. בלי זה, המסך של המנהל מעדכן את ההרשאות ומוריד למחנך את הגישה לכיתה (כמו במערכת האמיתית)
+    homeroom: { [CLASSES[0]]: USERS.teacherA.teacher } } };
 
   // תלמידים: 4 בכל כיתה
   const names = [['כהן', 'אברהם'], ['לוי', 'יצחק'], ['מזרחי', 'יעקב'], ['פרץ', 'משה'], ['ביטון', 'אהרן'], ['דהן', 'יוסף'],
