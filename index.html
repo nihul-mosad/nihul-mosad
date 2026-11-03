@@ -685,7 +685,7 @@ html[data-theme="dark"] .au-banner p{color:#D3D9F7}
 html[data-theme="dark"] .au-banner .au-book{background:radial-gradient(circle at 35% 30%,#2A3680,#1B2457)}
 
 .au-c{background:var(--au-card);border:1px solid var(--au-card-b);border-radius:var(--radius);box-shadow:var(--au-shadow);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);outline:1px solid var(--au-ring);outline-offset:-1px}
-.au-c>h3{font-size:22px;font-weight:800;color:var(--au-title);margin:0 0 14px;letter-spacing:-.01em}
+.au-c>h3{font-size:var(--au-fs-h3);font-weight:800;color:var(--au-title);margin:0 0 8px;line-height:1.3;letter-spacing:-.01em}
 .au-c>h3 small{font-size:17px;font-weight:500;color:var(--au-sub)}
 
 .au-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--au-gap)}
@@ -714,10 +714,10 @@ html[data-theme="dark"] .au-kpi[data-t="purple"] svg{stroke:#B49BFF}
 .au-row2>.au-c:hover,.au-row3>.au-c:hover,.au-kpi:hover{box-shadow:0 2px 4px rgba(40,50,120,.06),0 20px 38px -16px rgba(60,70,170,.38)}
 .au-kpi:hover{transform:translateY(-2px)}
 .au-kpi:focus-visible,.au-tasks .t:focus-visible,.au-evs .e:focus-visible,.au-bell:focus-visible,.au-mode:focus-visible,.au-prof:focus-visible,.au-navc:focus-visible,.nav button:focus-visible{outline:3px solid #8FB1FF;outline-offset:2px}
-.au-row2>.au-c,.au-row3>.au-c{height:250px;padding:20px 24px 16px;overflow:hidden}
+.au-row2>.au-c,.au-row3>.au-c{min-height:250px;padding:20px 24px 16px;overflow:hidden}
 
 /* משימות להיום */
-.au-tasks .t{display:flex;align-items:center;gap:14px;height:46px;border-bottom:1px solid var(--au-sep);font-size:17.5px;color:var(--au-sub);cursor:pointer;background:none;border-width:0 0 1px;width:100%;padding:0;font-family:inherit;text-align:right}
+.au-tasks .t{display:flex;align-items:center;gap:14px;height:44px;border-bottom:1px solid var(--au-sep);font-size:17.5px;color:var(--au-sub);cursor:pointer;background:none;border-width:0 0 1px;width:100%;padding:0;font-family:inherit;text-align:right}
 .au-tasks .t:last-child{border-bottom:0}
 .au-tasks .t i{width:28px;height:28px;flex:0 0 28px;border-radius:8px;border:2px solid #C5CDE8;background:#fff;display:grid;place-items:center}
 .au-tasks .t[data-done="1"] i{background:#22B04B;border-color:#22B04B}
@@ -726,7 +726,7 @@ html[data-theme="dark"] .au-kpi[data-t="purple"] svg{stroke:#B49BFF}
 html[data-theme="dark"] .au-tasks .t i{background:transparent;border-color:#4A5590}
 
 /* אירועים אחרונים */
-.au-evs .e{display:flex;align-items:center;gap:14px;height:63px;border-bottom:1px solid var(--au-sep);cursor:pointer;background:none;border-width:0 0 1px;width:100%;padding:0;font:inherit;text-align:right;color:inherit}
+.au-evs .e{display:flex;align-items:center;gap:14px;height:58px;border-bottom:1px solid var(--au-sep);cursor:pointer;background:none;border-width:0 0 1px;width:100%;padding:0;font:inherit;text-align:right;color:inherit}
 .au-evs .e:last-child{border-bottom:0}
 .au-evs .e div{flex:1;min-width:0}
 .au-evs .e b{display:block;font-size:17.5px;font-weight:800;color:var(--au-title);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -740,7 +740,7 @@ html[data-theme="dark"] .au-evs .e i[data-t="blue"]{background:rgba(29,116,242,.
 html[data-theme="dark"] .au-evs .e i[data-t="purple"]{background:rgba(106,47,216,.25)}
 
 /* תרשים טבעת */
-.au-donut{display:flex;align-items:center;justify-content:space-between;gap:16px;height:calc(100% - 46px)}
+.au-donut{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:170px}
 .au-donut .ring{position:relative;flex:0 0 auto}
 .au-donut .ring .c{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
 .au-donut .ring .c b{font-size:35px;font-weight:800;color:var(--au-title);line-height:1}
@@ -762,13 +762,13 @@ html[data-theme="dark"] .au-evs .e i[data-t="purple"]{background:rgba(106,47,216
 .au-types .ring .c b{font-size:40px}
 
 /* נוכחות לפי כיתות */
-.au-cls .r{display:flex;align-items:center;gap:16px;height:37px;font-size:17.5px}
+.au-cls .r{display:flex;align-items:center;gap:14px;height:35px;font-size:17px}
 .au-cls .r span{width:72px;color:var(--au-sub);white-space:nowrap;text-align:left}
 .au-cls .r .tr{flex:1;height:18px;border-radius:9px;background:var(--au-track);direction:ltr;overflow:hidden}
 .au-cls .r .tr i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#2A86FF,#0F74FC)}
 .au-cls .r:nth-child(4) .tr i{background:linear-gradient(90deg,#3F6CF2,#3557EA)}
 .au-cls .r:nth-child(5) .tr i,.au-cls .r:last-child .tr i{background:linear-gradient(90deg,#6A4BFB,#5340F4)}
-.au-cls .r b{width:44px;text-align:right;font-weight:700;color:var(--au-title)}
+.au-cls .r b{width:54px;flex:0 0 54px;white-space:nowrap;text-align:right;font-weight:700;color:var(--au-title)}
 
 /* מגמת נוכחות */
 .au-trend svg{display:block;width:100%;height:182px}
@@ -777,7 +777,7 @@ html[data-theme="dark"] .au-evs .e i[data-t="purple"]{background:rgba(106,47,216
 .au-trend .gl{stroke:var(--au-sep);stroke-width:1}
 
 /* תמונת מצב כללית */
-.au-stat{display:flex;align-items:center;gap:18px;height:calc(100% - 46px)}
+.au-stat{display:flex;align-items:center;gap:18px;min-height:170px}
 .au-stat ul{list-style:none;margin:0;padding:0;display:grid;gap:13px;flex:1}
 .au-stat li{display:flex;align-items:center;gap:14px;font-size:18px;color:var(--au-sub);white-space:nowrap}
 .au-stat ul{min-width:0}.au-stat li span{overflow:hidden;text-overflow:ellipsis}
@@ -829,6 +829,91 @@ table.tt td.pc{background:var(--surface2)}
 #toast{background:linear-gradient(270deg,#2B3E86,#193165);color:#fff}
 .dtrend i{background:linear-gradient(180deg,#8B8CF8,#B3B1FA)}
 
+/* ---------- כרטיס תלמיד חכם (Student 360) ---------- */
+.s360{display:grid;gap:var(--au-gap);padding:var(--au-gap);border-radius:var(--au-r-panel);background:var(--au-panel);border:1px solid var(--au-panel-b);box-shadow:0 30px 60px -40px rgba(60,70,170,.45),inset 0 1px 0 rgba(255,255,255,.7)}
+.s3-hero{height:auto;min-height:150px;padding:22px 28px;gap:24px;flex-wrap:wrap}
+.s3-av{width:96px;height:96px;flex:0 0 96px;border-radius:50%;display:grid;place-items:center;font-size:38px;font-weight:800;color:#fff;
+  background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.45),transparent 45%),linear-gradient(135deg,#4776FC,#6D3FE0);box-shadow:0 12px 26px -10px rgba(71,118,252,.75),0 0 0 5px rgba(255,255,255,.75)}
+.s3-id{flex:1;min-width:260px}
+.s3-id h2{font-size:38px;font-weight:800;color:var(--au-title);margin:0;line-height:1.15;letter-spacing:-.02em}
+.s3-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.s3-chips>span{padding:5px 12px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(255,255,255,.95);font-size:14.5px;font-weight:600;color:var(--au-sub)}
+.s3-chips .tag{padding:5px 12px;font-size:14px}
+.s3-par{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:14.5px;color:var(--au-sub)}
+.s3-par a{color:var(--accent);font-weight:600;text-decoration:none}
+.s3-acts{display:flex;flex-wrap:wrap;gap:8px;max-width:440px;justify-content:flex-end}
+.s3-acts .btn{border-radius:999px;padding:8px 16px;background:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.95);color:var(--au-title);font-weight:600;text-decoration:none}
+.s3-acts .btn[data-v="primary"]{background:linear-gradient(270deg,#617EF7,#4776FC);color:#fff;border-color:transparent}
+.s3-acts .btn[data-v="ghost"]{background:transparent;border-color:transparent;color:var(--au-title)}
+html[data-theme="dark"] .s3-chips>span,html[data-theme="dark"] .s3-acts .btn:not([data-v]){background:rgba(27,36,87,.85);border-color:rgba(120,140,255,.2);color:var(--au-sub)}
+html[data-theme="dark"] .s3-id h2{color:#fff}
+.s3-kpis .au-kpi{cursor:default}
+.s3-kpis .au-kpi em{display:inline-block;margin-top:6px;font-style:normal;font-size:13px;font-weight:600;padding:2px 10px;border-radius:99px;background:var(--surface2);color:var(--au-mute)}
+.s3-kpis .au-kpi em[data-s="good"]{background:var(--tag-g);color:var(--tag-g-ink)}
+.s3-kpis .au-kpi em[data-s="bad"]{background:var(--tag-r);color:var(--tag-r-ink)}
+.s3-kpis .au-kpi small{font-size:18px;color:var(--au-mute);font-weight:600}
+.s3-kpis .au-kpi{height:auto;min-height:104px;padding-block:12px}
+.s3-sl{color:var(--au-mute);font-weight:400}
+.s3-row{display:grid;grid-template-columns:5fr 4fr 5fr;gap:var(--au-gap)}
+.s3-row+.s3-row{grid-template-columns:5fr 4fr 5fr}
+.s3-row>.au-c{padding:20px 24px 18px;min-height:280px;overflow:hidden}
+.s3-row>.au-c>h3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s3-trend svg,.s3-evs svg{display:block;width:100%;height:190px}
+.s3-trend text,.s3-evs text{font-family:'Noto Sans Hebrew','Noto Sans',system-ui,sans-serif;fill:var(--au-sub);font-size:13px}
+.s3-evs text.v{font-weight:700;fill:var(--au-title)}
+.s3-trend .ax,.s3-evs .ax{stroke:#C9D0EA;stroke-width:1.3}
+.s3-trend .gl{stroke:var(--au-sep);stroke-width:1}
+.s3-mix .au-donut{min-height:200px}
+.s3-mix .au-leg{max-width:none}
+.s3-insl{display:grid;gap:10px;max-height:228px;overflow:auto;padding-inline-end:2px}
+.s3-in{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:14px;background:var(--surface2);border:1px solid var(--au-sep)}
+.s3-in>i{flex:0 0 10px;height:10px;margin-top:7px;border-radius:50%}
+.s3-in b{display:block;font-size:16px;color:var(--au-title)}
+.s3-in b span{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px;margin-inline-start:6px;vertical-align:2px}
+.s3-in p{margin:3px 0 0;font-size:14px;color:var(--au-sub);line-height:1.45}
+.s3-in p u{text-decoration:none;font-weight:700;color:var(--au-title)}
+.s3-in[data-lv="risk"]{background:var(--tag-r);border-color:transparent}.s3-in[data-lv="risk"]>i{background:var(--absent)}.s3-in[data-lv="risk"] b span{background:var(--absent);color:#fff}
+.s3-in[data-lv="warn"]{background:var(--tag-y);border-color:transparent}.s3-in[data-lv="warn"]>i{background:var(--late)}.s3-in[data-lv="warn"] b span{background:var(--late);color:#3B2A00}
+.s3-in[data-lv="good"]>i{background:var(--present)}.s3-in[data-lv="good"] b span{background:var(--tag-g);color:var(--tag-g-ink)}
+.s3-in[data-lv="info"]>i{background:var(--accent)}.s3-in[data-lv="info"] b span{background:var(--accent-soft);color:var(--accent)}
+.s3-evleg{display:flex;gap:16px;font-size:14px;color:var(--au-sub);margin:-4px 0 4px}
+.s3-evleg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px}
+.s3-types{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.s3-d{display:grid;grid-template-columns:92px 1fr 30px 22px 70px;align-items:center;gap:10px;height:38px;font-size:16px}
+.s3-d .n{color:var(--au-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s3-d .tr{height:14px;border-radius:7px;background:var(--au-track);overflow:hidden;direction:ltr}
+.s3-d .tr i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#6A4BFB,#2A86FF)}
+.s3-d b{font-weight:800;color:var(--au-title);text-align:center}
+.s3-d em{font-style:normal;font-weight:700;color:var(--au-mute);text-align:center}.s3-d em[data-s="good"]{color:var(--present)}.s3-d em[data-s="bad"]{color:var(--absent)}
+.s3-d .spk{width:70px;height:22px}
+.s3-note{margin:10px 0 0;font-size:14.5px;color:var(--au-sub);font-style:italic}
+.s3-lights{display:flex;align-items:center;gap:6px;margin-top:12px}
+.s3-lights i{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
+.s3-lights i[data-l="green"]{background:var(--present)}.s3-lights i[data-l="yellow"]{background:var(--late)}.s3-lights i[data-l="red"]{background:var(--absent)}
+.s3-lights .note{margin-inline-start:8px;font-size:13px}
+.s3-tll{display:grid;gap:2px;max-height:232px;overflow:auto;padding-inline-end:2px}
+.s3-t{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--au-sep)}
+.s3-t:last-child{border-bottom:0}
+.s3-t>i{flex:0 0 30px;height:30px;border-radius:10px;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:14px}
+.s3-t[data-k="pos"]>i{background:var(--tag-g);color:var(--tag-g-ink)}.s3-t[data-k="neg"]>i{background:var(--tag-y);color:var(--tag-y-ink)}
+.s3-t[data-k="sev"]>i{background:var(--tag-r);color:var(--tag-r-ink)}.s3-t[data-k="rev"]>i{background:var(--accent-soft);color:var(--accent)}.s3-t[data-k="abs"]>i{background:var(--tag-r);color:var(--tag-r-ink)}
+.s3-t b{display:block;font-size:15.5px;color:var(--au-title)}
+.s3-t small{display:block;font-size:13.5px;color:var(--au-mute);margin-top:1px}
+.s3-more .head,.s3-more .printhead{display:none}
+@media(max-width:1439px) and (min-width:821px){.s3-row,.s3-row+.s3-row{grid-template-columns:repeat(2,minmax(0,1fr))}.s3-row>.au-c:last-child{grid-column:1/-1}}
+@media(max-width:1179px) and (min-width:821px){.s3-acts{max-width:none;justify-content:flex-start}}
+@media(max-width:820px){
+  .s360{padding:10px;gap:12px}
+  .s3-hero{padding:18px;gap:14px}.s3-av{width:64px;height:64px;flex-basis:64px;font-size:26px}
+  .s3-id{min-width:0}.s3-id h2{font-size:27px}
+  .s3-acts{max-width:none;justify-content:flex-start}
+  .s3-row,.s3-row+.s3-row{grid-template-columns:1fr}
+  .s3-row>.au-c{min-height:0}
+  .s3-d{grid-template-columns:104px 1fr 22px 16px 46px;gap:7px;font-size:15px}.s3-d .spk{width:46px}
+  .s3-insl{max-height:none}.s3-tll{max-height:460px}
+  .s3-trend text,.s3-evs text{font-size:21px}.s3-evs text.v{font-size:22px}
+  .s3-trend svg,.s3-evs svg{height:auto;aspect-ratio:520/190}
+}
 /* ---------- נקודות שבירה ----------
    1440 ומעלה: פריסת המקור (4 / 4 / 3).  1180–1439: שורת התוכן 2×2, ומגמת הנוכחות לרוחב מלא.
    821–1179 (טאבלט): התפריט מקופל לאייקונים כברירת מחדל, ומדדים 2×2.  עד 820: נייד. */
@@ -878,8 +963,18 @@ table.tt td.pc{background:var(--surface2)}
   .au-row2>.au-c,.au-row3>.au-c{height:auto;min-height:0}
   .au-donut{height:auto}
   .au-leg,.au-month .au-leg{max-width:none}
-  .au-donut .ring{transform:scale(.9);transform-origin:center}
+  .au-month .au-donut,.au-types .au-donut{flex-direction:column;align-items:stretch;gap:14px}
+  .au-donut .ring{align-self:center}
+  .au-leg{max-width:none;width:100%}
+  .au-leg span{overflow:visible;white-space:normal}
+  .au-month .au-leg i{order:0}.au-month .au-leg b{order:2;text-align:left}
+  .bnav{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px))}
+  #toast{bottom:calc(98px + env(safe-area-inset-bottom,0px))}
+  .savebar{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+  .au-c>h3{font-size:20px}
   .au-stat .art{display:none}
+  .au-trend text{font-size:22px}
+  .au-trend svg{height:auto;aspect-ratio:500/182}
   .au-pop{width:auto;left:0;right:0}
 }
 @media print{body::before{display:none}.au-top,.au-banner{display:none}}
@@ -1850,7 +1945,7 @@ function viewDash(){
 
   return printHead()+
    '<div class="au-dash">'+
-   '<section class="au-banner">'+'<svg class="au-waves" viewBox="0 0 1400 150" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>'+'<linearGradient id="hwA" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw1)"/><stop offset=".45" style="stop-color:var(--hw2)"/><stop offset=".78" style="stop-color:var(--hw3)" stop-opacity=".35"/><stop offset="1" style="stop-color:var(--hw3)" stop-opacity="0"/></linearGradient>'+'<linearGradient id="hwB" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw4)"/><stop offset=".55" style="stop-color:var(--hw5)"/><stop offset="1" style="stop-color:var(--hw5)" stop-opacity=".15"/></linearGradient>'+'<linearGradient id="hwH" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw-hi)" stop-opacity=".1"/><stop offset=".4" style="stop-color:var(--hw-hi)" stop-opacity=".85"/><stop offset="1" style="stop-color:var(--hw-hi)" stop-opacity="0"/></linearGradient>'+'<linearGradient id="hwG" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw-gold)" stop-opacity="0"/><stop offset=".35" style="stop-color:var(--hw-gold)"/><stop offset=".65" style="stop-color:var(--hw-gold2)"/><stop offset="1" style="stop-color:var(--hw-gold)" stop-opacity="0"/></linearGradient>'+'<radialGradient id="hwR"><stop offset="0" style="stop-color:var(--hw-hi)" stop-opacity=".75"/><stop offset="1" style="stop-color:var(--hw-hi)" stop-opacity="0"/></radialGradient>'+'<radialGradient id="hwRg"><stop offset="0" style="stop-color:var(--hw-gold)" stop-opacity=".55"/><stop offset="1" style="stop-color:var(--hw-gold)" stop-opacity="0"/></radialGradient>'+'<filter id="hwBlur" x="-5%" y="-50%" width="110%" height="200%"><feGaussianBlur stdDeviation="2.6"/></filter></defs>'+'<ellipse cx="470" cy="58" rx="300" ry="62" fill="url(#hwR)"/><ellipse cx="330" cy="128" rx="230" ry="46" fill="url(#hwRg)"/>'+'<path d="M0 28 C130 8 250 58 380 70 S610 26 770 52 S1050 122 1180 86 S1340 60 1400 70 V150 H0Z" fill="url(#hwA)" opacity=".85"/>'+'<path d="M0 84 C160 54 285 116 455 96 S705 40 885 80 S1150 134 1400 102 V150 H0Z" fill="url(#hwB)" opacity=".82"/>'+'<path d="M0 124 C220 100 365 142 565 122 S905 94 1105 124 S1320 140 1400 128 V150 H0Z" style="fill:var(--hw6)" opacity=".42"/>'+'<path d="M0 28 C130 8 250 58 380 70 S610 26 770 52 S1050 122 1180 86" fill="none" stroke="url(#hwH)" stroke-width="5" filter="url(#hwBlur)" opacity=".8"/>'+'<path d="M0 28 C130 8 250 58 380 70 S610 26 770 52 S1050 122 1180 86" fill="none" stroke="url(#hwH)" stroke-width="1.4"/>'+'<path d="M0 84 C160 54 285 116 455 96 S705 40 885 80" fill="none" stroke="url(#hwG)" stroke-width="5" filter="url(#hwBlur)" opacity=".75"/>'+'<path d="M0 84 C160 54 285 116 455 96 S705 40 885 80" fill="none" stroke="url(#hwG)" stroke-width="1.8"/>'+'<path d="M420 141 C600 112 760 98 1000 121 S1250 139 1400 129" fill="none" stroke="url(#hwG)" stroke-width="1.3" opacity=".8"/>'+'</svg>'+'<span class="au-book">'+SVG('0 0 52 52','<defs><linearGradient id="bk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D6BF7"/><stop offset="1" stop-color="#7A4CF2"/></linearGradient></defs><g fill="none" stroke="url(#bk)" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"><path d="M26 14c-5-3.6-11.6-4.4-19-3.2v27.4c7.4-1.2 14-.4 19 3.2 5-3.6 11.6-4.4 19-3.2V10.8C37.6 9.6 31 10.4 26 14z"/><path d="M26 14v27.4M12 18.5c3.4-.4 6.6.1 9.4 1.4M12 25c3.4-.4 6.6.1 9.4 1.4M12 31.5c3.4-.4 6.6.1 9.4 1.4M40 18.5c-3.4-.4-6.6.1-9.4 1.4M40 25c-3.4-.4-6.6.1-9.4 1.4M40 31.5c-3.4-.4-6.6.1-9.4 1.4"/></g>')+'</span>'+
+   '<section class="au-banner">'+auWaves()+'<span class="au-book">'+SVG('0 0 52 52','<defs><linearGradient id="bk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D6BF7"/><stop offset="1" stop-color="#7A4CF2"/></linearGradient></defs><g fill="none" stroke="url(#bk)" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"><path d="M26 14c-5-3.6-11.6-4.4-19-3.2v27.4c7.4-1.2 14-.4 19 3.2 5-3.6 11.6-4.4 19-3.2V10.8C37.6 9.6 31 10.4 26 14z"/><path d="M26 14v27.4M12 18.5c3.4-.4 6.6.1 9.4 1.4M12 25c3.4-.4 6.6.1 9.4 1.4M12 31.5c3.4-.4 6.6.1 9.4 1.4M40 18.5c-3.4-.4-6.6.1-9.4 1.4M40 25c-3.4-.4-6.6.1-9.4 1.4M40 31.5c-3.4-.4-6.6.1-9.4 1.4"/></g>')+'</span>'+
      '<div><h2>'+greet+(fn?', '+esc(fn):'')+'</h2><p>סקירה יומית של המוסד</p></div></section>'+
    (S.remc&&adm?remComposer():'')+
    '<div class="au-kpis">'+
@@ -1997,7 +2092,132 @@ function reviewDone(){
 }
 
 /* ================= כרטיס תלמיד ================= */
+/* ===== AURA 3.1: כרטיס תלמיד חכם (Student 360) =====
+   משתמש רק במבנה הנתונים ובלוגיקה הקיימים: attStats, dayStatus, reviewsOf, domains, S.events, canSeeStudent/isAdmin.
+   כל התובנות נגזרות מכללים קבועים וגלויים (S360_RULES), וכל תובנה מסבירה מה גרם לה. */
+const S360_RULES={lowAtt:90,attDrop:5,lates14:3,neg14:3,pos14:2,staleDays:21,domDrop:2};
+function s360Insights(s,ctx){
+  const R=S360_RULES,out=[];const c=ctx;
+  if(c.a30.pct!==null&&c.a30.pct<R.lowAtt)out.push({lv:'risk',t:'נוכחות נמוכה',why:'נוכחות של '+c.a30.pct+'% ב-30 הימים האחרונים — מתחת לסף '+R.lowAtt+'%.'});
+  if(c.a30.pct!==null&&c.a30p.pct!==null&&c.a30p.pct-c.a30.pct>=R.attDrop)out.push({lv:'warn',t:'ירידה בנוכחות',why:c.a30.pct+'% ב-30 הימים האחרונים לעומת '+c.a30p.pct+'% ב-30 הימים שלפניהם (ירידה של '+(c.a30p.pct-c.a30.pct)+' נקודות; סף: '+R.attDrop+').'});
+  if(c.a14.late>=R.lates14)out.push({lv:'warn',t:'דפוס איחורים',why:c.a14.late+' איחורים לשיעורים ב-14 הימים האחרונים (סף: '+R.lates14+').'});
+  if(c.neg14>=R.neg14)out.push({lv:'risk',t:'ריבוי אירועים לשיפור',why:c.neg14+' אירועים לשיפור ב-14 הימים האחרונים (סף: '+R.neg14+').'});
+  if(c.sevOpen)out.push({lv:'risk',t:'אירוע חמור שלא טופל',why:c.sevOpen+' אירועים בחומרה גבוהה עדיין לא סומנו כמטופלים.'});
+  if(!c.last)out.push({lv:'info',t:'אין תמונת מצב',why:'עוד לא נרשמה תמונת מצב לתלמיד.'});
+  else{
+    const age=Math.round((new Date(iso(new Date())+'T12:00:00')-new Date(c.last.date+'T12:00:00'))/864e5);
+    if(age>R.staleDays)out.push({lv:'info',t:'תמונת מצב לא עדכנית',why:'תמונת המצב האחרונה נרשמה לפני '+age+' ימים (סף: '+R.staleDays+').'});
+    if(c.last.light==='red')out.push({lv:'risk',t:'רמזור אדום',why:'בתמונת המצב האחרונה ('+shortDate(c.last.date)+') סומן רמזור אדום.'});
+    if(c.prev)domains().forEach(function(d){const a=c.prev.scores&&c.prev.scores[d.id],b=c.last.scores&&c.last.scores[d.id];
+      if(a&&b&&a-b>=R.domDrop)out.push({lv:'warn',t:'ירידה ב'+d.name,why:'הציון ירד מ-'+a+' ל-'+b+' בין שתי תמונות המצב האחרונות (סף: ירידה של '+R.domDrop+').'});
+      if(a&&b&&b-a>=R.domDrop)out.push({lv:'good',t:'שיפור ב'+d.name,why:'הציון עלה מ-'+a+' ל-'+b+' בין שתי תמונות המצב האחרונות.'});});
+  }
+  if(c.pos14>=R.pos14)out.push({lv:'good',t:'מגמה חיובית',why:c.pos14+' אירועים לשבח ב-14 הימים האחרונים (סף: '+R.pos14+').'});
+  if(!out.some(x=>x.lv==='risk'||x.lv==='warn'))out.push({lv:'good',t:'אין חריגות',why:'נבדקו כללי נוכחות, איחורים, אירועים ותמונת מצב — לא נמצאה חריגה.'});
+  const ord={risk:0,warn:1,info:2,good:3};return out.sort((a,b)=>ord[a.lv]-ord[b.lv]);
+}
+function viewCard360(s){
+  const today=iso(new Date()),adm=isAdmin(),SVG=(vb,body)=>'<svg viewBox="'+vb+'" aria-hidden="true">'+body+'</svg>';
+  const revs=reviewsOf(s.id),last=revs[revs.length-1]||null,prev=revs[revs.length-2]||null;
+  const a30=attStats(s.id,daysAgo(29),today),a30p=attStats(s.id,daysAgo(59),daysAgo(30)),a14=attStats(s.id,daysAgo(13),today),aAll=attStats(s.id,'2000-01-01',today);
+  const ev=S.events.filter(e=>e.sid===s.id),ev30=ev.filter(e=>e.date>=daysAgo(29)),pos30=ev30.filter(e=>e.kind==='pos').length,neg30=ev30.length-pos30;
+  const pos14=ev.filter(e=>e.date>=daysAgo(13)&&e.kind==='pos').length,neg14=ev.filter(e=>e.date>=daysAgo(13)&&e.kind!=='pos').length;
+  const sevOpen=ev.filter(e=>e.kind!=='pos'&&e.sev>=3&&!e.handled).length;
+  const ins=s360Insights(s,{a30:a30,a30p:a30p,a14:a14,neg14:neg14,pos14:pos14,sevOpen:sevOpen,last:last,prev:prev});
+  const homeroom=(S.config.homeroom||{})[s.cls]||'';
+  const ini=(s.name||'?').split(/\s+/).slice(0,2).map(w=>w.charAt(0)).join('');
+  const avg=r=>{if(!r||!r.scores)return null;const v=domains().map(d=>r.scores[d.id]).filter(Boolean);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:null;};
+  const avgNow=avg(last),avgPrev=avg(prev);
+  const delta=(a,b,suf)=>a===null||b===null?'':a>b?'<em data-s="good">▲ '+(Math.round((a-b)*10)/10)+(suf||'')+'</em>':a<b?'<em data-s="bad">▼ '+(Math.round((b-a)*10)/10)+(suf||'')+'</em>':'<em>ללא שינוי</em>';
+  // ----- שבועות (8 אחרונים, מיום ראשון) -----
+  const w0=new Date(today+'T12:00:00');w0.setDate(w0.getDate()-w0.getDay());
+  const weeks=[];for(let w=7;w>=0;w--){const a=new Date(w0);a.setDate(a.getDate()-7*w);const b=new Date(a);b.setDate(b.getDate()+6);weeks.push([iso(a),iso(b)<today?iso(b):today]);}
+  const wAtt=weeks.map(w=>attStats(s.id,w[0],w[1]).pct);
+  const wEv=weeks.map(w=>{const x=ev.filter(e=>e.date>=w[0]&&e.date<=w[1]);return {p:x.filter(e=>e.kind==='pos').length,n:x.filter(e=>e.kind!=='pos').length};});
+  // ----- גרף מגמת נוכחות -----
+  const has=wAtt.filter(v=>v!==null),lo=has.length?Math.min.apply(null,has):90,step=[2,3,4,5,10,20].find(st=>100-5*st<=lo-1.5)||20,yMin=100-5*step;
+  const TW=520,TH=190,L=48,Rr=TW-8,T0=10,B0=TH-30,yv=v=>B0-(v-yMin)/(100-yMin)*(B0-T0),xs=i=>L+22+i*((Rr-L-44)/7);
+  let tg='<defs><linearGradient id="s3Bar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--ch-bar-a)"/><stop offset="1" style="stop-color:var(--ch-bar-b)"/></linearGradient></defs>';
+  for(let k=0;k<=5;k++){const v=yMin+step*k,y=yv(v);tg+='<line class="gl" x1="'+L+'" x2="'+Rr+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'"/><text x="'+(L-7)+'" y="'+(y+5).toFixed(1)+'" text-anchor="end">'+v+'%</text>';}
+  tg+='<line class="ax" x1="'+L+'" x2="'+L+'" y1="'+T0+'" y2="'+B0+'"/><line class="ax" x1="'+L+'" x2="'+Rr+'" y1="'+B0+'" y2="'+B0+'"/>';
+  const pts=[];wAtt.forEach(function(v,i){const x=xs(i);tg+='<text x="'+x.toFixed(1)+'" y="'+(TH-8)+'" text-anchor="middle">'+(i===7?'השבוע':'ש׳ '+(i+1))+'</text>';if(v===null)return;
+    const top=yv(Math.max(yMin,v));tg+='<rect x="'+(x-17).toFixed(1)+'" y="'+top.toFixed(1)+'" width="34" height="'+Math.max(2,B0-top).toFixed(1)+'" rx="4" fill="url(#s3Bar)"><title>'+v+'%</title></rect>';pts.push([x,top]);});
+  if(pts.length>1)tg+='<polyline points="'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+'" fill="none" style="stroke:var(--ch-line)" stroke-width="3" stroke-linejoin="round"/>';
+  pts.forEach(p=>{tg+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="5.5" style="fill:var(--surface);stroke:var(--ch-line)" stroke-width="3"/>';});
+  // ----- טבעת פילוח נוכחות (מתחילת השנה) -----
+  const tot=aAll.total,seg=[{k:'נוכח',v:aAll.present,c:'var(--ch-present)'},{k:'איחור',v:aAll.late,c:'var(--ch-late)'},{k:'חיסור',v:aAll.absent,c:'var(--ch-absent)'},{k:'מאושר',v:aAll.excused,c:'var(--ch-4)'}];
+  const RG=150,SW=20,rr=(RG-SW)/2,C=2*Math.PI*rr;let off=0,arcs='';
+  seg.filter(x=>x.v>0).forEach(function(x){const f=x.v/tot,len=Math.max(0,C*f-(f<1?2:0));arcs+='<circle cx="75" cy="75" r="'+rr+'" fill="none" style="stroke:'+x.c+'" stroke-width="'+SW+'" stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'" stroke-dashoffset="'+(-off).toFixed(2)+'"/>';off+=C*f;});
+  const pctAll=tot?Math.round((aAll.present+aAll.late)/tot*100):null;
+  // ----- אירועים לפי שבוע (עמודות מוערמות) -----
+  const EW=520,EH=190,eMax=Math.max(2,Math.max.apply(null,wEv.map(x=>x.p+x.n))),ey=v=>EH-30-v/eMax*(EH-48);
+  let eg='<line class="ax" x1="20" x2="'+(EW-8)+'" y1="'+(EH-30)+'" y2="'+(EH-30)+'"/>';
+  wEv.forEach(function(x,i){const cx=40+i*((EW-70)/7);eg+='<text x="'+cx.toFixed(1)+'" y="'+(EH-8)+'" text-anchor="middle">'+(i===7?'השבוע':'ש׳ '+(i+1))+'</text>';
+    if(x.n){const y=ey(x.n);eg+='<rect x="'+(cx-15).toFixed(1)+'" y="'+y.toFixed(1)+'" width="30" height="'+(EH-30-y).toFixed(1)+'" rx="4" style="fill:var(--ch-1)"><title>'+x.n+' לשיפור</title></rect>';}
+    if(x.p){const y0=ey(x.n),y=ey(x.n+x.p);eg+='<rect x="'+(cx-15).toFixed(1)+'" y="'+y.toFixed(1)+'" width="30" height="'+(y0-y-(x.n?2:0)).toFixed(1)+'" rx="4" style="fill:var(--ch-present)"><title>'+x.p+' לשבח</title></rect>';}
+    if(x.p+x.n)eg+='<text x="'+cx.toFixed(1)+'" y="'+(ey(x.n+x.p)-6).toFixed(1)+'" text-anchor="middle" class="v">'+(x.p+x.n)+'</text>';});
+  const byType={};ev30.forEach(e=>{const k=e.typeName||'אחר';byType[k]=byType[k]||{n:0,pos:e.kind==='pos'};byType[k].n++;});
+  const types=Object.keys(byType).sort((a,b)=>byType[b].n-byType[a].n).slice(0,4);
+  // ----- תמונת מצב לפי תחום -----
+  const doms=domains().map(function(d){const now=last&&last.scores?last.scores[d.id]:null,was=prev&&prev.scores?prev.scores[d.id]:null;
+    const hist=revs.slice(-6).map(r=>r.scores&&r.scores[d.id]).filter(Boolean);return {d:d,now:now,was:was,hist:hist};});
+  const spark=h=>{if(h.length<2)return '';const w=70,hh=22,xs2=i=>2+i*((w-4)/(h.length-1)),ys=v=>hh-2-(v-1)/4*(hh-4);
+    return '<svg class="spk" viewBox="0 0 '+w+' '+hh+'" aria-hidden="true"><polyline points="'+h.map((v,i)=>xs2(i).toFixed(1)+','+ys(v).toFixed(1)).join(' ')+'" fill="none" style="stroke:var(--ch-line)" stroke-width="2"/></svg>';};
+  // ----- ציר זמן -----
+  const tl=[];
+  ev.forEach(e=>tl.push({d:e.date,t:e.time||'',k:e.kind==='pos'?'pos':e.sev>=3?'sev':'neg',h:e.typeName||'אירוע',x:(e.by?'דווח ע״י '+e.by:'')+(e.note?' · '+e.note:'')}));
+  revs.forEach(r=>tl.push({d:r.date,t:'',k:'rev',h:'תמונת מצב · רמזור '+(LIGHTNAME[r.light]||''),x:(r.by?r.by:'')+(r.note?' · '+r.note:'')}));
+  for(let i=0;i<30;i++){const d=daysAgo(i),v=dayStatus(s.id,d);if(v==='absent')tl.push({d:d,t:'',k:'abs',h:'חיסור',x:'נרשם חיסור באחד השיעורים או יותר'});}
+  tl.sort((a,b)=>(b.d+b.t)>(a.d+a.t)?1:-1);
+  const TLI={pos:'★',neg:'!',sev:'▲',rev:'◉',abs:'✕'};
+  // ----- פעולות מהירות לפי הרשאות -----
+  const ph=s.fatherPhone||s.motherPhone||'';
+  const acts=[['ev-for','+ דיווח אירוע',1],['rev-one','תמונת מצב',1],['print','הדפסה',1],['student-edit','עריכת פרטים',adm]].filter(a=>a[2]);
+  const lvName={risk:'דורש טיפול',warn:'לתשומת לב',info:'מידע',good:'חיובי'};
+
+  return '<div class="s360">'+
+   '<section class="au-banner s3-hero">'+auWaves()+
+     '<span class="s3-av">'+esc(ini)+'</span>'+
+     '<div class="s3-id"><h2>'+esc(s.name)+'</h2><div class="s3-chips"><span>'+esc(s.cls||'')+'</span>'+(homeroom?'<span>מחנך: '+esc(homeroom)+'</span>':'')+
+       (last?'<span class="tag" data-s="'+last.light+'">רמזור '+LIGHTNAME[last.light]+' · '+shortDate(last.date)+'</span>':'<span>ללא תמונת מצב</span>')+'</div>'+
+       '<div class="s3-par">'+(s.father?'<span>אב: '+esc(s.father)+(s.fatherPhone?' · <a class="ltr" href="tel:'+esc(s.fatherPhone)+'">'+esc(s.fatherPhone)+'</a>':'')+'</span>':'')+
+         (s.mother?'<span>אם: '+esc(s.mother)+(s.motherPhone?' · <a class="ltr" href="tel:'+esc(s.motherPhone)+'">'+esc(s.motherPhone)+'</a>':'')+'</span>':'')+'</div></div>'+
+     '<div class="s3-acts">'+acts.map((a,i)=>'<button class="btn" '+(i===0?'data-v="primary" ':'')+'data-act="'+a[0]+'" data-id="'+s.id+'">'+a[1]+'</button>').join('')+
+       (ph?'<a class="btn" href="tel:'+esc(ph)+'">התקשרות להורה</a>':'')+'<button class="btn" data-v="ghost" data-act="goto-students">חזרה לתלמידים</button></div>'+
+   '</section>'+
+   '<div class="au-kpis s3-kpis">'+
+     '<div class="au-c au-kpi" data-t="green"><div><b>'+(a30.pct===null?'—':a30.pct+'%')+'</b><span class="au-lbl">נוכחות · 30 יום</span>'+delta(a30.pct,a30p.pct,'%')+'</div><span class="au-ki">'+SVG('0 0 24 24','<path d="M4.5 12.5l5 5L19.5 7"/>')+'</span></div>'+
+     '<div class="au-c au-kpi" data-t="red"><div><b>'+a30.absent+'</b><span class="au-lbl">חיסורים · 30 יום</span><em>'+a30.late+' איחורים</em></div><span class="au-ki">'+SVG('0 0 24 24','<path d="M12 3.2L22.3 21H1.7z"/><path d="M12 9.8v5" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/><circle cx="12" cy="17.9" r="1.35" fill="#fff"/>')+'</span></div>'+
+     '<div class="au-c au-kpi" data-t="purple"><div><b><span style="color:var(--present)">'+pos30+'</span><span class="s3-sl"> / </span><span style="color:var(--absent)">'+neg30+'</span></b><span class="au-lbl">לשבח / לשיפור</span><em>אירועים · 30 יום</em></div><span class="au-ki">'+SVG('0 0 24 24','<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>')+'</span></div>'+
+     '<div class="au-c au-kpi" data-t="blue"><div><b>'+(avgNow===null?'—':avgNow+'<small>/5</small>')+'</b><span class="au-lbl">ממוצע תמונת מצב</span>'+delta(avgNow,avgPrev)+'</div><span class="au-ki">'+SVG('0 0 24 24','<path d="M4 20V12M9.3 20V6M14.6 20V10M20 20V14"/>')+'</span></div>'+
+   '</div>'+
+   '<div class="s3-row">'+
+     '<div class="au-c s3-trend"><h3>מגמת נוכחות <small>– 8 שבועות</small></h3><div role="img" aria-label="'+esc('נוכחות שבועית: '+wAtt.map((v,i)=>(i===7?'השבוע':'לפני '+(7-i)+' שבועות')+' '+(v===null?'אין נתונים':v+'%')).join(', '))+'">'+SVG('0 0 '+TW+' '+TH,tg)+'</div></div>'+
+     '<div class="au-c s3-mix"><h3>פילוח נוכחות <small>– מתחילת השנה</small></h3><div class="au-donut"><div class="ring" role="img" aria-label="'+esc('נוכחות מתחילת השנה: '+seg.map(x=>x.k+' '+x.v).join(', '))+'" style="width:150px;height:150px">'+
+       SVG('0 0 150 150','<g transform="rotate(-90 75 75)"><circle cx="75" cy="75" r="'+rr+'" fill="none" stroke="var(--au-track)" stroke-width="'+SW+'"/>'+arcs+'</g>')+'<div class="c"><b>'+(pctAll===null?'—':pctAll+'%')+'</b><span>נוכחות</span></div></div>'+
+       '<div class="au-leg">'+seg.map(x=>'<div><i style="background:'+x.c+'"></i><span>'+x.k+'</span><b>'+x.v+'</b></div>').join('')+'<div class="note" style="font-size:13px">רישומי שיעור: '+tot+'</div></div></div></div>'+
+     '<div class="au-c s3-ins"><h3>תובנות <small>– לפי כללים</small></h3><div class="s3-insl">'+ins.map(x=>'<div class="s3-in" data-lv="'+x.lv+'"><i></i><div><b>'+esc(x.t)+' <span>'+lvName[x.lv]+'</span></b><p><u>למה?</u> '+esc(x.why)+'</p></div></div>').join('')+'</div></div>'+
+   '</div>'+
+   '<div class="s3-row">'+
+     '<div class="au-c s3-evs"><h3>אירועים לפי שבוע <small>– 8 שבועות</small></h3><div class="s3-evleg"><span><i style="background:var(--ch-present)"></i>לשבח</span><span><i style="background:var(--ch-1)"></i>לשיפור</span></div>'+
+       '<div role="img" aria-label="'+esc('אירועים לפי שבוע: '+wEv.map((x,i)=>(i===7?'השבוע':'לפני '+(7-i))+' '+x.p+' לשבח '+x.n+' לשיפור').join(', '))+'">'+SVG('0 0 '+EW+' '+EH,eg)+'</div>'+
+       (types.length?'<div class="s3-types">'+types.map(k=>'<span class="tag" data-s="'+(byType[k].pos?'present':'late')+'">'+esc(k)+' · '+byType[k].n+'</span>').join('')+'</div>':'')+'</div>'+
+     '<div class="au-c s3-dom"><h3>תמונת מצב אישית <small>'+(last?'– עודכן '+last.date.slice(8,10)+'.'+last.date.slice(5,7):'')+'</small></h3>'+
+       (last?doms.map(x=>'<div class="s3-d"><span class="n">'+esc(x.d.name)+'</span><div class="tr"><i style="width:'+((x.now||0)/5*100)+'%"></i></div><b>'+(x.now||'—')+'</b>'+
+         (x.now&&x.was?(x.now>x.was?'<em data-s="good">▲</em>':x.now<x.was?'<em data-s="bad">▼</em>':'<em>=</em>'):'<em></em>')+spark(x.hist)+'</div>').join('')+
+         (last.note?'<p class="s3-note">“'+esc(last.note)+'”</p>':''):'<div class="empty">עוד לא נרשמה תמונת מצב.</div>')+
+       '<div class="s3-lights">'+revs.slice(-8).map(r=>'<i data-l="'+r.light+'" title="'+esc(shortDate(r.date)+' · '+(LIGHTNAME[r.light]||''))+'"></i>').join('')+'<span class="note">'+revs.length+' תמונות מצב</span></div></div>'+
+     '<div class="au-c s3-tl"><h3>ציר זמן</h3><div class="s3-tll">'+(tl.length?tl.slice(0,14).map(x=>'<div class="s3-t" data-k="'+x.k+'"><i>'+TLI[x.k]+'</i><div><b>'+esc(x.h)+'</b><small>'+esc(shortDate(x.d)+(x.t?' · '+x.t:''))+(x.x?' · '+esc(x.x):'')+'</small></div></div>').join(''):'<div class="empty">אין עדיין רישומים.</div>')+'</div></div>'+
+   '</div>'+
+  '</div>';
+}
 function viewCard(){
+  const s=studentById(S.cardId);
+  if(!s)return '<div class="empty">התלמיד לא נמצא.</div>';
+  if(!canSeeStudent(s.id))return '<div class="empty">כרטיס התלמיד זמין רק למחנך הכיתה ולמנהל.</div>';
+  return printHead()+viewCard360(s)+'<details class="au-more s3-more"><summary>פירוט מלא: פרטי קשר, נוכחות לפי שיעור, קבוצות, ציונים, אירועים והיסטוריה</summary>'+viewCardClassic()+'</details>';
+}
+function viewCardClassic(){
   const s=studentById(S.cardId);
   if(!s)return '<div class="empty">התלמיד לא נמצא.</div>';
   if(!canSeeStudent(s.id))return '<div class="empty">כרטיס התלמיד זמין רק למחנך הכיתה ולמנהל.</div>';
@@ -6142,7 +6362,7 @@ const NAV_MAIN=['dash','students','mark','events','grades','schedule','duty','me
 const NAV_LBL={grades:'ציונים ומעקב'};
 function navHtml(tabs){
   const lbl=t=>t[0]==='daylog'&&isAdmin()?'יומן מנהל':(NAV_LBL[t[0]]||t[1]);
-  const btn=t=>'<button data-tab="'+t[0]+'" data-on="'+(S.tab===t[0]?1:0)+'" title="'+esc(lbl(t))+'"><svg viewBox="0 0 24 24">'+(ICONS[t[0]]||ICONS.more)+'</svg><span>'+esc(lbl(t))+'</span></button>';
+  const btn=t=>'<button data-tab="'+t[0]+'" data-on="'+(S.tab===t[0]||(S.tab==='card'&&t[0]==='students')?1:0)+'" title="'+esc(lbl(t))+'"><svg viewBox="0 0 24 24">'+(ICONS[t[0]]||ICONS.more)+'</svg><span>'+esc(lbl(t))+'</span></button>';
   const main=NAV_MAIN.map(k=>tabs.find(t=>t[0]===k)).filter(Boolean),rest=tabs.filter(t=>NAV_MAIN.indexOf(t[0])<0);
   if(!rest.length)return main.map(btn).join('');
   const open=S.navMore||rest.some(t=>t[0]===S.tab);
@@ -6186,6 +6406,8 @@ document.addEventListener('keydown',function(e){
   if(e.key!=='Enter'||!e.target||e.target.id!=='auQ')return;
   S.q=e.target.value.trim();S.tab='students';S.auPop=null;render();window.scrollTo(0,0);
 });
+/* AURA 3.1: שכבות הגלים של הבאנר (משותף ללוח הבקרה ולכרטיס התלמיד) */
+function auWaves(){return '<svg class="au-waves" viewBox="0 0 1400 150" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>'+'<linearGradient id="hwA" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw1)"/><stop offset=".45" style="stop-color:var(--hw2)"/><stop offset=".78" style="stop-color:var(--hw3)" stop-opacity=".35"/><stop offset="1" style="stop-color:var(--hw3)" stop-opacity="0"/></linearGradient>'+'<linearGradient id="hwB" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw4)"/><stop offset=".55" style="stop-color:var(--hw5)"/><stop offset="1" style="stop-color:var(--hw5)" stop-opacity=".15"/></linearGradient>'+'<linearGradient id="hwH" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw-hi)" stop-opacity=".1"/><stop offset=".4" style="stop-color:var(--hw-hi)" stop-opacity=".85"/><stop offset="1" style="stop-color:var(--hw-hi)" stop-opacity="0"/></linearGradient>'+'<linearGradient id="hwG" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw-gold)" stop-opacity="0"/><stop offset=".35" style="stop-color:var(--hw-gold)"/><stop offset=".65" style="stop-color:var(--hw-gold2)"/><stop offset="1" style="stop-color:var(--hw-gold)" stop-opacity="0"/></linearGradient>'+'<radialGradient id="hwR"><stop offset="0" style="stop-color:var(--hw-hi)" stop-opacity=".75"/><stop offset="1" style="stop-color:var(--hw-hi)" stop-opacity="0"/></radialGradient>'+'<radialGradient id="hwRg"><stop offset="0" style="stop-color:var(--hw-gold)" stop-opacity=".55"/><stop offset="1" style="stop-color:var(--hw-gold)" stop-opacity="0"/></radialGradient>'+'<filter id="hwBlur" x="-5%" y="-50%" width="110%" height="200%"><feGaussianBlur stdDeviation="2.6"/></filter></defs>'+'<ellipse cx="470" cy="58" rx="300" ry="62" fill="url(#hwR)"/><ellipse cx="330" cy="128" rx="230" ry="46" fill="url(#hwRg)"/>'+'<path d="M0 28 C130 8 250 58 380 70 S610 26 770 52 S1050 122 1180 86 S1340 60 1400 70 V150 H0Z" fill="url(#hwA)" opacity=".85"/>'+'<path d="M0 84 C160 54 285 116 455 96 S705 40 885 80 S1150 134 1400 102 V150 H0Z" fill="url(#hwB)" opacity=".82"/>'+'<path d="M0 124 C220 100 365 142 565 122 S905 94 1105 124 S1320 140 1400 128 V150 H0Z" style="fill:var(--hw6)" opacity=".42"/>'+'<path d="M0 28 C130 8 250 58 380 70 S610 26 770 52 S1050 122 1180 86" fill="none" stroke="url(#hwH)" stroke-width="5" filter="url(#hwBlur)" opacity=".8"/>'+'<path d="M0 28 C130 8 250 58 380 70 S610 26 770 52 S1050 122 1180 86" fill="none" stroke="url(#hwH)" stroke-width="1.4"/>'+'<path d="M0 84 C160 54 285 116 455 96 S705 40 885 80" fill="none" stroke="url(#hwG)" stroke-width="5" filter="url(#hwBlur)" opacity=".75"/>'+'<path d="M0 84 C160 54 285 116 455 96 S705 40 885 80" fill="none" stroke="url(#hwG)" stroke-width="1.8"/>'+'<path d="M420 141 C600 112 760 98 1000 121 S1250 139 1400 129" fill="none" stroke="url(#hwG)" stroke-width="1.3" opacity=".8"/>'+'</svg>';}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');try{localStorage.setItem('tt:theme',t);}catch(e){}}
 const side=document.getElementById('side'),backdrop=document.getElementById('backdrop');
 function drawerOpen(){return side.classList.contains('open');}

@@ -97,11 +97,28 @@
     [[last, '09:12', 'e6', 'אלימות פיזית', 'neg', 3, 's33'], [prev, '14:20', 'e1', 'הפרעה בשיעור', 'neg', 1, 's12'], [prev, '11:05', 'p5', 'התנהגות למופת', 'pos', 1, 's57']].forEach((x, k) => {
       const s = students.find(z => z.id === x[6]), date = iso(x[0]), ci = CLASSES.indexOf(s.cls), teacher = HOMEROOM[ci], tk = keyify(teacher), path = B + 'att/L' + mo(date) + '_' + keyify(s.cls) + '_' + tk, id = 'evr' + k;
       docs[path] = docs[path] || {}; (docs[path].ev = docs[path].ev || {})[id] = { id, sid: s.id, sname: s.name, cls: s.cls, type: x[2], typeName: x[3], kind: x[4], sev: x[5], date, time: x[1], period: 1, note: '', by: teacher, byUid: 'U_X', tk, ts: x[0].getTime(), handled: true }; }); }
-  // תמונות מצב: רוב הכיתה עודכנה בשבועיים האחרונים
+  // תמונות מצב: 4 לכל תלמיד לאורך כ-6 שבועות; האחרונה בשבועיים האחרונים.
+  // מגמה: תלמידים "במעקב" יורדים, חלק משתפרים, השאר יציבים.
+  const NOTES = ['משתתף יפה בשיעור', 'צריך חיזוק בקריאה', 'שיפור בהתמדה', 'עזר לחבר בהפסקה', 'קשה לו להתרכז אחרי ההפסקה', ''];
   students.forEach((s, i) => {
-    const d = days[days.length - 1 - Math.floor(rnd() * Math.min(9, days.length))], date = iso(d), path = B + 'rev/' + mo(date) + '_' + keyify(s.cls), id = 'rv' + s.id;
-    const light = weak[s.id] ? 'red' : rnd() < .2 ? 'yellow' : 'green', sc = () => 2 + Math.floor(rnd() * 4);
-    docs[path] = docs[path] || { r: {} }; docs[path].r[id] = { id, studentId: s.id, date, light, scores: { d1: sc(), d2: sc(), d3: sc(), d4: sc() }, note: '', by: homeroom[s.cls] }; });
+    const trend = weak[s.id] ? -1 : i % 4 === 1 ? 1 : 0, base = weak[s.id] ? 4 : 2 + Math.floor(rnd() * 3);
+    for (let k = 3; k >= 0; k--) {
+      const idx = Math.max(0, days.length - 1 - k * 7 - (k ? Math.floor(rnd() * 3) : Math.floor(rnd() * Math.min(9, days.length))));
+      const d = days[idx], date = iso(d), path = B + 'rev/' + mo(date) + '_' + keyify(s.cls), id = 'rv' + s.id + '_' + k;
+      const lvl = Math.max(1, Math.min(5, base + trend * (3 - k) * (weak[s.id] ? 0.8 : 0.5)));
+      const sc = () => Math.max(1, Math.min(5, Math.round(lvl + (rnd() - .5) * 1.2)));
+      const scores = { d1: sc(), d2: sc(), d3: sc(), d4: sc() }, avg = (scores.d1 + scores.d2 + scores.d3 + scores.d4) / 4;
+      const light = avg < 2.6 ? 'red' : avg < 3.4 ? 'yellow' : 'green';
+      docs[path] = docs[path] || { r: {} }; docs[path].r[id] = { id, studentId: s.id, date, light, scores, note: k === 0 ? NOTES[i % NOTES.length] : '', by: homeroom[s.cls], ts: d.getTime() + k };
+    }
+  });
+  // אירועים נוספים לתלמידים במעקב (כדי שכרטיס התלמיד יראה מגמה)
+  [['s22', ['e1', 'הפרעה בשיעור', 'neg', 1], [1, 3, 5, 8]], ['s22', ['e8', 'ללא שיעורי בית', 'neg', 1], [2, 9, 16]], ['s22', ['p3', 'השתתפות פעילה', 'pos', 1], [24, 30]],
+   ['s5', ['e9', 'ללא ציוד', 'neg', 1], [4, 11]], ['s5', ['p2', 'תפילה יפה', 'pos', 1], [1, 6, 13]], ['s40', ['e4', 'שפה לא נקייה', 'neg', 2], [3, 6]]].forEach(([sid, t, back], g) => {
+    const s = students.find(z => z.id === sid), ci = CLASSES.indexOf(s.cls);
+    back.forEach((b, k) => { const d = days[Math.max(0, days.length - 1 - b)], date = iso(d), teacher = HOMEROOM[ci], tk = keyify(teacher), path = B + 'att/L' + mo(date) + '_' + keyify(s.cls) + '_' + tk, id = 'evx' + g + '_' + k;
+      docs[path] = docs[path] || {}; (docs[path].ev = docs[path].ev || {})[id] = { id, sid: s.id, sname: s.name, cls: s.cls, type: t[0], typeName: t[1], kind: t[2], sev: t[3], date, time: PER[1 + (k % 5)], period: 1 + (k % 5), note: '', by: teacher, byUid: 'U_X', tk, ts: d.getTime(), handled: true }; });
+  });
 
   // משימות של המנהל
   const add = k => { const d = new Date(today); d.setDate(d.getDate() + k); return iso(d); };
