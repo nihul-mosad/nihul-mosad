@@ -3398,7 +3398,7 @@ async function dlSend(t){
   if(!confirm('לשלוח ל'+t+' את הסיכום?\n\n'+text))return;
   const id=uid(),now=Date.now(),o={n:{},dm:{}};o.n[id]={id:id,kind:'dm',text:text,from:S.me.user,ts:now};o.dm[id]={id:id,text:text,date:d,from:S.me.user,ts:now};
   try{await FS.doc(IB()+'tasks/'+u.id).set(o,{merge:true});}catch(e){return saveFailed(e);}
-  x.sent=x.sent||{};x.sent[t]=now;x.sid=x.sid||{};x.sid[t]=id;S.dmAll=S.dmAll||{};S.dmAll[u.id]=S.dmAll[u.id]||{};S.dmAll[u.id][id]={id:id,ts:now};await saveDaylog();logAct('שליחת סיכום יום',t+' · '+d);toast('הסיכום נשלח ל'+t);render();
+  x.sent=x.sent||{};x.sent[t]=now;x.sid=x.sid||{};x.sid[t]=id;S.dmAll=S.dmAll||{};S.dmAll[u.id]=S.dmAll[u.id]||{};S.dmAll[u.id][id]={id:id,ts:now};if(!(await saveDaylog()))return render();logAct('שליחת סיכום יום',t+' · '+d);toast('הסיכום נשלח ל'+t);render();
 }
 /* אצל המורה: סיכומים שקיבל מההנהלה (בלשונית משימות) */
 function dmCard(){
