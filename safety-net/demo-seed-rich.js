@@ -17,11 +17,11 @@
   const pick = a => a[Math.floor(rnd() * a.length)];
 
   const INST = 'demo';
-  const CLASSES = ['כיתה א' + GER, 'כיתה ב' + GER, 'כיתה ג' + GER, 'כיתה ד' + GER + '-ה' + GER];
-  const HOMEROOM = ['הרב ישראל ישראלי', 'הרב משה משולם', 'הרב דוד דודאי', 'הרב יוסף יוספי'];
+  const CLASSES = ['כיתה א' + GER, 'כיתה ב' + GER, 'כיתה ג' + GER, 'כיתה ד' + GER, 'כיתה ה' + GER];
+  const HOMEROOM = ['הרב ישראל ישראלי', 'הרב משה משולם', 'הרב דוד דודאי', 'הרב יוסף יוספי', 'הרב נחום נחומי'];
   const T_MATH = 'מר אהרן אהרוני', T_LANG = 'מר שמעון שמעוני';
   const USERS = {
-    admin: { user: 'admin', email: 'admin@demo.test', password: 'demo-admin', uid: 'U_ADMIN', role: 'admin', teacher: 'הרב מנחם (מנהל)', cls: '' },
+    admin: { user: 'admin', email: 'admin@demo.test', password: 'demo-admin', uid: 'U_ADMIN', role: 'admin', teacher: 'מנחם אדלר', cls: '' },
     teacher: { user: 'morea', email: 'morea@demo.test', password: 'demo-teacher', uid: 'U_TA', role: 'teacher', teacher: HOMEROOM[0], cls: CLASSES[0] },
     math: { user: 'math', email: 'math@demo.test', password: 'demo-math', uid: 'U_TM', role: 'teacher', teacher: T_MATH, cls: '' }
   };
@@ -32,7 +32,7 @@
   const today = new Date(); today.setHours(12, 0, 0, 0);
   const T = iso(today), mo = d => d.slice(0, 7);
   // ימי לימוד אחרונים (א–ה), כולל היום אם הוא יום לימודים
-  const days = []; { const d = new Date(today); if (d.getDay() > 4) d.setDate(d.getDate() - (d.getDay() === 5 ? 1 : 2)); while (days.length < 16) { if (d.getDay() <= 4) days.unshift(new Date(d)); d.setDate(d.getDate() - 1); } }
+  const days = []; { const d = new Date(today); if (d.getDay() > 4) d.setDate(d.getDate() - (d.getDay() === 5 ? 1 : 2)); while (days.length < 32) { if (d.getDay() <= 4) days.unshift(new Date(d)); d.setDate(d.getDate() - 1); } }
 
   const docs = {}, users = {}, B = 'insts/' + INST + '/';
   docs['insts/' + INST] = { name: 'תלמוד תורה "אור" · הדגמה' };
@@ -74,9 +74,9 @@
   days.forEach(d => { const date = iso(d), isToday = date === T;
     CLASSES.forEach((c, ci) => { const list = students.filter(s => s.cls === c);
       for (let p = 1; p <= 5; p++) { const l = tt['L' + ci + d.getDay() + p];
-        if (isToday && (PER[p] > hm || (ci === 1 && p === 2) || (ci === 3 && p === 4))) continue;
+        if (isToday && PER[p] > hm) continue;
         const path = B + 'att/L' + mo(date) + '_' + keyify(c) + '_' + keyify(l.teacher);
-        list.forEach(s => { const r = rnd(), w = sick[date] === s.id ? 3 : weak[s.id] || 0;
+        list.forEach(s => { const age = (days.length - 1 - days.indexOf(d)) / days.length, r = rnd() - age * 0.012, w = sick[date] === s.id ? 3 : weak[s.id] || 0;
           put(path, date, l.id + ':' + s.id, r < .006 + w / 3 ? 'absent' : r < .016 + w / 2 ? 'late' : r < .019 + w / 2 ? 'excused' : 'present'); }); } }); });
   Object.keys(att).forEach(p => { docs[p] = { d: att[p] }; });
 
@@ -84,24 +84,29 @@
   const EV = [['e1', 'הפרעה בשיעור', 'neg', 1], ['e3', 'חוצפה כלפי איש צוות', 'neg', 2], ['e8', 'ללא שיעורי בית', 'neg', 1], ['e9', 'ללא ציוד', 'neg', 1], ['e6', 'אלימות פיזית', 'neg', 3],
     ['p1', 'צל״ש', 'pos', 1], ['p2', 'תפילה יפה', 'pos', 1], ['p3', 'השתתפות פעילה', 'pos', 1], ['p4', 'עזרה לחבר', 'pos', 1], ['p6', 'התקדמות יפה בלימודים', 'pos', 1]];
   for (let i = 0; i < 34; i++) {
-    const s = pick(students), t = i === 3 ? EV[4] : pick(EV), d = days[days.length - 1 - Math.floor(rnd() * Math.min(10, days.length))], date = iso(d);
+    const s = pick(students), t = i === 3 ? EV[4] : pick(EV), d = days[days.length - 3 - Math.floor(rnd() * Math.min(18, days.length - 3))], date = iso(d);
     const ci = CLASSES.indexOf(s.cls), p = 1 + Math.floor(rnd() * 5), teacher = tt['L' + ci + d.getDay() + p].teacher, tk = keyify(teacher);
     const path = B + 'att/L' + mo(date) + '_' + keyify(s.cls) + '_' + tk, id = 'ev' + i;
     docs[path] = docs[path] || {}; (docs[path].ev = docs[path].ev || {})[id] = { id, sid: s.id, sname: s.name, cls: s.cls, type: t[0], typeName: t[1], kind: t[2], sev: t[3],
       date, time: PER[p], period: p, note: t[2] === 'pos' ? '' : 'תיאור לדוגמה', by: teacher, byUid: teacher === T_MATH ? 'U_TM' : teacher === HOMEROOM[0] ? 'U_TA' : 'U_X', tk, ts: d.getTime(),
-      handled: t[3] < 2 || rnd() < .4 };
+      handled: t[3] < 2 || t[3] === 3 || rnd() < .5 };
   }
 
+  { const last = days[days.length - 1], prev = days[days.length - 2];
+    [[last, '09:12', 'e6', 'אלימות פיזית', 'neg', 3, 's33'], [prev, '14:20', 'e2', 'יציאה מהשיעור ללא רשות', 'neg', 1, 's12'], [prev, '11:05', 'p5', 'התנהגות למופת', 'pos', 1, 's57']].forEach((x, k) => {
+      const s = students.find(z => z.id === x[6]), date = iso(x[0]), ci = CLASSES.indexOf(s.cls), teacher = HOMEROOM[ci], tk = keyify(teacher), path = B + 'att/L' + mo(date) + '_' + keyify(s.cls) + '_' + tk, id = 'evr' + k;
+      docs[path] = docs[path] || {}; (docs[path].ev = docs[path].ev || {})[id] = { id, sid: s.id, sname: s.name, cls: s.cls, type: x[2], typeName: x[3], kind: x[4], sev: x[5], date, time: x[1], period: 1, note: '', by: teacher, byUid: 'U_X', tk, ts: x[0].getTime(), handled: true }; }); }
   // תמונות מצב: רוב הכיתה עודכנה בשבועיים האחרונים
-  students.forEach((s, i) => { if (i % 5 === 4) return;
-    const d = days[Math.floor(rnd() * days.length)], date = iso(d), path = B + 'rev/' + mo(date) + '_' + keyify(s.cls), id = 'rv' + s.id;
+  students.forEach((s, i) => {
+    const d = days[days.length - 1 - Math.floor(rnd() * Math.min(9, days.length))], date = iso(d), path = B + 'rev/' + mo(date) + '_' + keyify(s.cls), id = 'rv' + s.id;
     const light = weak[s.id] ? 'red' : rnd() < .2 ? 'yellow' : 'green', sc = () => 2 + Math.floor(rnd() * 4);
     docs[path] = docs[path] || { r: {} }; docs[path].r[id] = { id, studentId: s.id, date, light, scores: { d1: sc(), d2: sc(), d3: sc(), d4: sc() }, note: '', by: homeroom[s.cls] }; });
 
   // משימות של המנהל
   const add = k => { const d = new Date(today); d.setDate(d.getDate() + k); return iso(d); };
-  const tasks = [['להכין סדר יום לישיבת הצוות', add(1)], ['לחזור להורים של תלמיד בכיתה ג׳', add(-1)], ['להזמין ספרי לימוד לכיתה א׳', add(4)],
-    ['לבדוק את מערכת השעות של יום ה׳', add(2)], ['תיאום סיור לימודי', add(9)]].map((x, i) => ({ id: 't' + i, text: x[0], due: x[1], status: 'open', uid: 'U_ADMIN' }));
+  const tasks = [['שיחת הורים – כיתה ה׳', add(0), 'open'], ['עדכון נוכחות יומית', add(0), 'done'], ['הכנת ישיבת צוות', add(0), 'open'],
+    ['מעקב אחר אירועים', add(0), 'open'], ['להזמין ספרי לימוד לכיתה א׳', add(0), 'open'], ['לבדוק את מערכת השעות של יום ה׳', add(0), 'open'], ['תיאום סיור לימודי', add(9), 'open']]
+    .map((x, i) => ({ id: 't' + i, text: x[0], due: x[1], status: x[2], uid: 'U_ADMIN' }));
   const tm = {}; tasks.forEach(t => tm[t.id] = t);
   docs[B + 'tasks/U_ADMIN'] = { m: tm, o: tasks.map(t => t.id) };
 

@@ -28,7 +28,7 @@ async function openDemo(theme, viewport) {
   // כל בקשה שאינה הקובץ עצמו נרשמת ונחסמת (גם גופנים — כאן לא צריך אותם)
   await page.route(/^(?!file:|data:|blob:)/, r => { page.external.push(r.request().url()); r.abort(); });
   await page.goto('file://' + FILE);
-  await page.waitForFunction(() => document.getElementById('shell').classList.contains('on') && document.querySelector('.au-hero'), null, { timeout: 15000 });
+  await page.waitForFunction(() => document.getElementById('shell').classList.contains('on') && document.querySelector('.au-banner'), null, { timeout: 15000 });
   return page;
 }
 
@@ -38,8 +38,12 @@ for (const theme of ['light', 'dark']) {
     assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), theme);
     assert.equal(await page.evaluate(() => window.__fakefs.projectId), 'aura-demo');
     assert.ok((await page.evaluate(() => S.students.length)) >= 60, 'נתוני הדמה לא נטענו');
+    assert.equal(await page.$$eval('#nav button[data-tab]', bs => bs.length), 11, 'בתפריט הראשי צריכים להיות 11 המסכים של תמונת המקור');
+    await page.click('#nav [data-navmore]');
     const tabs = await page.$$eval('#nav button[data-tab]', bs => bs.map(b => b.dataset.tab));
-    assert.equal(tabs.length, 17);
+    assert.equal(tabs.length, 17, 'אחרי "עוד" כל 17 המסכים זמינים');
+    for (const sel of ['.au-top', '.au-banner', '.au-kpis', '.au-tasks', '.au-evs', '.au-month svg circle', '.au-cls .tr i', '.au-trend svg rect', '.au-types svg circle', '.au-sum li'])
+      assert.ok(await page.$(sel), 'חסר רכיב במסך הבית: ' + sel);
     for (const t of tabs) {
       await page.click('#nav button[data-tab="' + t + '"]');
       await page.waitForTimeout(120);
