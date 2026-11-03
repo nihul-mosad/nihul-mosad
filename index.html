@@ -541,6 +541,13 @@ th{font-weight:600}
   --au-panel:rgba(255,255,255,.38);--au-panel-b:rgba(255,255,255,.85);
   --tag-g:#DFF5E6;--tag-g-ink:#13843A;--tag-y:#FFF3CC;--tag-y-ink:#8E6400;--tag-r:#FDE4E5;--tag-r-ink:#C2272C;
   --radius:18px;
+  /* טוקנים של AURA 3.1 */
+  --au-gap:16px;--au-r-card:18px;--au-r-hero:22px;--au-r-panel:26px;--au-side-w:232px;--au-side-c:84px;--au-top-h:92px;
+  --au-fs-hero:47px;--au-fs-h3:22px;--au-fs-kpi:34px;--au-fs-body:17.5px;
+  --ch-present:#3AC255;--ch-late:#FFCD0B;--ch-absent:#FC5B5D;--ch-1:#F04B4F;--ch-2:#F5C518;--ch-3:#3B82F6;--ch-4:#A78BFA;--ch-bar-a:#7C7AF6;--ch-bar-b:#ABA9FA;--ch-line:#6D28D9;
+  --hw-base:linear-gradient(90deg,#4D78E0 0%,#97A0EE 22%,#D3CEF7 46%,#ECE7FA 62%,#D6E2FD 84%,#ABC8FD 100%);
+  --hw1:#2F5ED6;--hw2:#7C84EC;--hw3:#C3BFF6;--hw4:#5B83EC;--hw5:#A79FF4;--hw6:#6C77E2;--hw-hi:#FFFFFF;--hw-gold:#FFCF86;--hw-gold2:#FFF0CF;
+  --hw-fade:linear-gradient(270deg,rgba(238,240,254,.94) 0%,rgba(238,240,254,.72) 24%,rgba(238,240,254,0) 55%);
   color-scheme:light;
 }
 html[data-theme="dark"]{
@@ -550,6 +557,10 @@ html[data-theme="dark"]{
   --au-card:rgba(22,30,74,.86);--au-card-b:rgba(120,140,255,.14);--au-ring:#2A356F;--au-title:#F1F3FF;--au-sub:#D3D9F7;--au-mute:#9AA4CE;
   --au-track:#26306A;--au-sep:#26306A;--au-shadow:0 1px 2px rgba(0,0,0,.3),0 18px 36px -18px rgba(0,0,0,.75);
   --au-panel:rgba(20,28,70,.35);--au-panel-b:rgba(120,140,255,.12);
+  --hw-base:linear-gradient(90deg,#1B2B78 0%,#26307E 30%,#2B2A72 55%,#1F2B6E 80%,#1A3080 100%);
+  --hw1:#2F49B8;--hw2:#4B3FA8;--hw3:#3A3A8E;--hw4:#3552B8;--hw5:#5A4AB8;--hw6:#2A3590;--hw-hi:#9FB2FF;--hw-gold:#F6C76B;--hw-gold2:#FFE2A6;
+  --hw-fade:linear-gradient(270deg,rgba(20,28,74,.9) 0%,rgba(20,28,74,.6) 26%,rgba(20,28,74,0) 56%);
+  --ch-bar-a:#7F7DF8;--ch-bar-b:#4E4BC8;--ch-line:#B79BFF;
   --tag-g:rgba(34,176,75,.18);--tag-g-ink:#6BE08E;--tag-y:rgba(245,184,0,.18);--tag-y-ink:#FFD25C;--tag-r:rgba(240,75,79,.18);--tag-r-ink:#FF9799;
   color-scheme:dark;
 }
@@ -573,7 +584,7 @@ html[data-theme="dark"] body::before{opacity:1;background:
 
 /* ---------- מבנה: תפריט משמאל, תוכן מימין ---------- */
 @media(min-width:821px){
-  .side{position:sticky;top:0;height:calc(100vh / var(--auz,1));overflow-y:auto;overflow-x:hidden;width:232px;flex:0 0 232px;padding:0 0 18px;scrollbar-width:none;transition:width .22s ease,flex-basis .22s ease}
+  .side{position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;width:232px;flex:0 0 232px;padding:0 0 18px;scrollbar-width:none;transition:width .22s ease,flex-basis .22s ease}
   /* תפריט מקופל: אייקונים בלבד */
   html.nav-c .side{width:84px;flex-basis:84px}
   html.nav-c .brand{grid-template-columns:52px;justify-content:center;padding:0}
@@ -658,18 +669,17 @@ html[data-theme="dark"] .au-bell svg{stroke:#EEF1FF}
 .au-topwrap{position:relative}
 
 /* ---------- לוח הבקרה ---------- */
-.au-dash{position:relative;border-radius:26px;padding:4px 0 0;display:grid;gap:16px}
-.au-banner{position:relative;height:148px;border-radius:22px;overflow:hidden;display:flex;align-items:center;gap:30px;padding:0 50px 0 0;
-  border:1px solid rgba(255,255,255,.85);box-shadow:0 14px 30px -18px rgba(60,80,190,.55);
-  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1400 150' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='b1' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%233F6FD6'/%3E%3Cstop offset='.35' stop-color='%238E96EE'/%3E%3Cstop offset='.6' stop-color='%23C8C6F4' stop-opacity='.4'/%3E%3Cstop offset='1' stop-color='%23B4C8FB' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='b2' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%235E86E6'/%3E%3Cstop offset='.5' stop-color='%23A9A4F2'/%3E%3Cstop offset='1' stop-color='%23C9CDF9' stop-opacity='.2'/%3E%3C/linearGradient%3E%3ClinearGradient id='gl' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%23FFD089' stop-opacity='.1'/%3E%3Cstop offset='.35' stop-color='%23FFD089'/%3E%3Cstop offset='.7' stop-color='%23FFE6B6'/%3E%3Cstop offset='1' stop-color='%23FFD089' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 40 C120 25 220 55 330 70 S560 40 700 60 S980 110 1100 80 S1300 70 1400 75 V150 H0Z' fill='url(%23b1)' opacity='.75'/%3E%3Cpath d='M0 95 C150 70 260 120 420 100 S640 50 820 85 S1080 130 1400 105 V150 H0Z' fill='url(%23b2)' opacity='.8'/%3E%3Cpath d='M0 128 C200 110 330 140 520 125 S860 100 1050 130 S1300 140 1400 132 V150 H0Z' fill='%237F88E8' opacity='.5'/%3E%3Cpath d='M0 92 C150 68 262 116 420 98 S640 48 820 83' stroke='url(%23gl)' stroke-width='2.2' fill='none'/%3E%3Cpath d='M420 140 C600 110 760 96 1000 120 S1250 138 1400 128' stroke='url(%23gl)' stroke-width='1.6' fill='none' opacity='.8'/%3E%3C/svg%3E") left/100% 100% no-repeat,
-  radial-gradient(260px 120px at 30% 70%,rgba(255,230,190,.55),transparent 70%),
-  linear-gradient(90deg,#9DB6F6 0%,#DCD8F7 45%,#EEE7F9 60%,#C3D4FD 85%,#A9C9FD 100%)}
+.au-dash{position:relative;border-radius:var(--au-r-panel);padding:var(--au-gap);display:grid;gap:var(--au-gap);background:var(--au-panel);border:1px solid var(--au-panel-b);
+  box-shadow:0 30px 60px -40px rgba(60,70,170,.45),inset 0 1px 0 rgba(255,255,255,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.au-banner{position:relative;isolation:isolate;height:148px;border-radius:var(--au-r-hero);overflow:hidden;display:flex;align-items:center;gap:30px;padding:0 50px 0 0;
+  border:1px solid rgba(255,255,255,.85);box-shadow:0 16px 34px -18px rgba(60,80,190,.55),inset 0 1px 0 rgba(255,255,255,.8);background:var(--hw-base)}
+.au-banner .au-waves{position:absolute;inset:0;width:100%;height:100%;z-index:-2;pointer-events:none}
+.au-banner::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:var(--hw-fade)}
 .au-banner .au-book{width:92px;height:92px;flex:0 0 92px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#EEF2FE);display:grid;place-items:center;box-shadow:0 10px 26px -10px rgba(60,80,200,.55),inset 0 0 0 1px rgba(255,255,255,.9)}
 .au-banner .au-book svg{width:52px;height:52px}
 .au-banner h2{font-size:47px;font-weight:800;color:#0C1556;margin:0;line-height:1.1;letter-spacing:-.02em}
 .au-banner p{margin:4px 0 0;font-size:26px;color:#141C4F;font-weight:500}
-html[data-theme="dark"] .au-banner{border-color:rgba(120,140,255,.18);background-color:#18225A;background-blend-mode:normal;filter:saturate(.95)}
-html[data-theme="dark"] .au-banner{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1400 150' preserveAspectRatio='none'%3E%3Cpath d='M0 40 C120 25 220 55 330 70 S560 40 700 60 S980 110 1100 80 S1300 70 1400 75 V150 H0Z' fill='%232E3FA3' opacity='.6'/%3E%3Cpath d='M0 95 C150 70 260 120 420 100 S640 50 820 85 S1080 130 1400 105 V150 H0Z' fill='%234A3FA8' opacity='.55'/%3E%3Cpath d='M0 92 C150 68 262 116 420 98 S640 48 820 83' stroke='%23F6C76B' stroke-opacity='.7' stroke-width='2' fill='none'/%3E%3C/svg%3E") left/100% 100% no-repeat,linear-gradient(90deg,#1A2A70,#1E2366 50%,#22316E)}
+html[data-theme="dark"] .au-banner{border-color:rgba(120,140,255,.2);box-shadow:0 18px 36px -18px rgba(0,0,0,.7)}
 html[data-theme="dark"] .au-banner h2{color:#fff}
 html[data-theme="dark"] .au-banner p{color:#D3D9F7}
 html[data-theme="dark"] .au-banner .au-book{background:radial-gradient(circle at 35% 30%,#2A3680,#1B2457)}
@@ -678,7 +688,7 @@ html[data-theme="dark"] .au-banner .au-book{background:radial-gradient(circle at
 .au-c>h3{font-size:22px;font-weight:800;color:var(--au-title);margin:0 0 14px;letter-spacing:-.01em}
 .au-c>h3 small{font-size:17px;font-weight:500;color:var(--au-sub)}
 
-.au-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.au-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--au-gap)}
 .au-kpi{height:95px;display:flex;align-items:center;justify-content:space-between;padding:0 28px 0 18px;cursor:pointer;color:inherit;font:inherit;text-align:right}
 .au-kpi:hover{transform:translateY(-1px)}
 .au-kpi b{display:block;font-size:34px;line-height:1.05;font-weight:800;color:#000039;letter-spacing:-.01em}
@@ -697,8 +707,13 @@ html[data-theme="dark"] .au-kpi[data-t="green"] .au-ki{background:rgba(34,176,75
 html[data-theme="dark"] .au-kpi[data-t="purple"] .au-ki{background:rgba(106,47,216,.25)}
 html[data-theme="dark"] .au-kpi[data-t="purple"] svg{stroke:#B49BFF}
 
-.au-row2{display:grid;grid-template-columns:300fr 317fr 375fr 355fr;gap:16px}
-.au-row3{display:grid;grid-template-columns:441fr 402fr 518fr;gap:16px}
+.au-row2{display:grid;grid-template-columns:300fr 317fr 375fr 355fr;gap:var(--au-gap)}
+.au-row3{display:grid;grid-template-columns:441fr 402fr 518fr;gap:var(--au-gap)}
+/* ריחוף ופוקוס */
+.au-c{transition:box-shadow .18s ease,transform .18s ease}
+.au-row2>.au-c:hover,.au-row3>.au-c:hover,.au-kpi:hover{box-shadow:0 2px 4px rgba(40,50,120,.06),0 20px 38px -16px rgba(60,70,170,.38)}
+.au-kpi:hover{transform:translateY(-2px)}
+.au-kpi:focus-visible,.au-tasks .t:focus-visible,.au-evs .e:focus-visible,.au-bell:focus-visible,.au-mode:focus-visible,.au-prof:focus-visible,.au-navc:focus-visible,.nav button:focus-visible{outline:3px solid #8FB1FF;outline-offset:2px}
 .au-row2>.au-c,.au-row3>.au-c{height:250px;padding:20px 24px 16px;overflow:hidden}
 
 /* משימות להיום */
@@ -814,12 +829,34 @@ table.tt td.pc{background:var(--surface2)}
 #toast{background:linear-gradient(270deg,#2B3E86,#193165);color:#fff}
 .dtrend i{background:linear-gradient(180deg,#8B8CF8,#B3B1FA)}
 
-/* מסכים בינוניים: אין פריסה נפרדת — המסך כולו מוקטן באופן אחיד (auZoom), כמו בעיצוב המקור */
+/* ---------- נקודות שבירה ----------
+   1440 ומעלה: פריסת המקור (4 / 4 / 3).  1180–1439: שורת התוכן 2×2, ומגמת הנוכחות לרוחב מלא.
+   821–1179 (טאבלט): התפריט מקופל לאייקונים כברירת מחדל, ומדדים 2×2.  עד 820: נייד. */
+@media(max-width:1439px) and (min-width:821px){
+  .au-row2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .au-row3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .au-row3>.au-trend{grid-column:1/-1}
+  .au-top{gap:20px}.au-search{width:clamp(200px,22vw,336px)}
+}
+@media(max-width:1179px) and (min-width:821px){
+  html:not(.nav-x) .side{width:var(--au-side-c);flex-basis:var(--au-side-c)}
+  html:not(.nav-x) .brand{grid-template-columns:52px;justify-content:center;padding:0}
+  html:not(.nav-x) .brand h1,html:not(.nav-x) .brand::after{display:none}
+  html:not(.nav-x) .nav{padding:0 14px}
+  html:not(.nav-x) .nav button{justify-content:center;padding:0;gap:0}
+  html:not(.nav-x) .nav button span{display:none}
+  .au-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .au-banner h2{font-size:38px}.au-banner p{font-size:21px}
+  .au-date{display:none}
+  main{padding:0 14px 50px 18px}
+}
 
 /* ---------- נייד ---------- */
 @media(max-width:820px){
   .au-top{display:none}
   .topbar{background:rgba(255,255,255,.72);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+  .topbar{color:var(--au-title)}.topbar .t b{color:var(--au-title)}.topbar .t span{color:var(--au-mute)}
+  .topbar .menu i,.topbar .menu i::before,.topbar .menu i::after{background:var(--au-title)}
   html[data-theme="dark"] .topbar{background:rgba(14,20,56,.8)}
   .side{padding-top:0}
   .brand{margin-bottom:14px}
@@ -848,9 +885,7 @@ table.tt td.pc{background:var(--surface2)}
 @media print{body::before{display:none}.au-top,.au-banner{display:none}}
 </style>
 <script>/* AURA 3.1: מצב בהיר/כהה ותפריט מקופל, נשמרים במכשיר */(function(){var t='light',c='0';try{t=localStorage.getItem('tt:theme')||'light';c=localStorage.getItem('tt:navc')||'0';}catch(e){}document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');if(c==='1')document.documentElement.classList.add('nav-c');})();
-/* AURA 3.1: המסך מתוכנן לרוחב 1600; במסכי מחשב קטנים יותר הוא מוקטן באופן אחיד, כדי שהפריסה תישאר כמו בעיצוב */
-function auZoom(){var sh=document.getElementById('shell');if(!sh)return;var w=window.innerWidth,z=1;if(w>=821&&w<1600)z=Math.max(.6,w/1600);sh.style.zoom=z===1?'':String(z);document.documentElement.style.setProperty('--auz',String(z));}
-window.addEventListener('resize',auZoom);document.addEventListener('DOMContentLoaded',auZoom);</script>
+</script>
 </head>
 <body>
 
@@ -1767,28 +1802,28 @@ function viewDash(){
   const mo=today.slice(0,7),mDates=Array.from(new Set(Object.keys(S.att).concat(Object.keys(S.latt)))).filter(d=>d.slice(0,7)===mo&&d<=today);
   const mc={p:0,l:0,a:0,n:0};mDates.forEach(d=>list.forEach(s=>{const v=dayStatus(s.id,d);if(!v)return;mc.n++;if(v==='present')mc.p++;else if(v==='late')mc.l++;else mc.a++;}));
   const mp=mc.n?Math.round(mc.p/mc.n*100):null,ml=mc.n?Math.round(mc.l/mc.n*100):null,ma=mc.n?Math.max(0,100-mp-ml):null;
-  const ring=(segs,size,sw,center)=>{const r=(size-sw)/2,C=2*Math.PI*r,gap=segs.filter(x=>x.v>0).length>1?2.2:0;let off=0;
-    const arcs=segs.filter(x=>x.v>0).map(x=>{const len=Math.max(0,C*x.v/100-gap);const a='<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+x.c+'" stroke-width="'+sw+'" stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'" stroke-dashoffset="'+(-off).toFixed(2)+'"/>';off+=C*x.v/100;return a;}).join('');
-    return '<div class="ring" style="width:'+size+'px;height:'+size+'px">'+SVG('0 0 '+size+' '+size,'<g transform="rotate(-90 '+size/2+' '+size/2+')"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="var(--au-track)" stroke-width="'+sw+'"/>'+arcs+'</g>')+'<div class="c">'+center+'</div></div>';};
+  const ring=(segs,size,sw,center,label)=>{const r=(size-sw)/2,C=2*Math.PI*r,gap=segs.filter(x=>x.v>0).length>1?2.2:0;let off=0;
+    const arcs=segs.filter(x=>x.v>0).map(x=>{const len=Math.max(0,C*x.v/100-gap);const a='<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" style="stroke:'+x.c+'" stroke-width="'+sw+'" stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'" stroke-dashoffset="'+(-off).toFixed(2)+'"/>';off+=C*x.v/100;return a;}).join('');
+    return '<div class="ring" role="img" aria-label="'+esc(label||'')+'" style="width:'+size+'px;height:'+size+'px">'+SVG('0 0 '+size+' '+size,'<g transform="rotate(-90 '+size/2+' '+size/2+')"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="var(--au-track)" stroke-width="'+sw+'"/>'+arcs+'</g>')+'<div class="c">'+center+'</div></div>';};
   // אירועים לפי סוג (30 ימים)
   const d30=daysAgo(30),evNeg=S.events.filter(e=>e.date>=d30&&e.kind!=='pos'),byT={};evNeg.forEach(e=>{const k=e.typeName||'אחר';byT[k]=(byT[k]||0)+1;});
   const tKeys=Object.keys(byT).sort((a,b)=>byT[b]-byT[a]),top3=tKeys.slice(0,3),other=tKeys.slice(3).reduce((n,k)=>n+byT[k],0);
-  const TCOL=['#F04B4F','#F5C518','#3B82F6','#A78BFA'],tList=top3.map((k,i)=>({k:k,n:byT[k],c:TCOL[i]})).concat(other?[{k:'אחר',n:other,c:TCOL[3]}]:[]);
+  const TCOL=['var(--ch-1)','var(--ch-2)','var(--ch-3)','var(--ch-4)'],tList=top3.map((k,i)=>({k:k,n:byT[k],c:TCOL[i]})).concat(other?[{k:'אחר',n:other,c:TCOL[3]}]:[]);
   const tTot=evNeg.length;
   // מגמת נוכחות — 6 השבועות האחרונים
   const wk0=new Date(today+'T12:00:00');wk0.setDate(wk0.getDate()-wk0.getDay());
   const weeks=[];for(let w=5;w>=0;w--){const a=new Date(wk0);a.setDate(a.getDate()-7*w);const b=new Date(a);b.setDate(b.getDate()+6);weeks.push([iso(a),iso(b)]);}
   const allD=Array.from(new Set(Object.keys(S.att).concat(Object.keys(S.latt)))).filter(d=>d<=today);
   const wv=weeks.map(function(w){let p=0,n=0;allD.filter(d=>d>=w[0]&&d<=w[1]).forEach(d=>list.forEach(s=>{const v=dayStatus(s.id,d);if(!v)return;n++;if(v==='present'||v==='late')p++;}));return n?Math.round(p/n*1000)/10:null;});
-  const wHas=wv.filter(v=>v!==null),wLo=wHas.length?Math.min.apply(null,wHas)-1.5:90,yStep=[2,4,6,10,20].find(st=>100-5*st<=wLo)||20,yMin=Math.max(0,100-5*yStep),yMax=100;
+  const wHas=wv.filter(v=>v!==null),wLo=wHas.length?Math.min.apply(null,wHas)-1.5:90,yStep=[2,3,4,5,10,20].find(st=>100-5*st<=wLo)||20,yMin=Math.max(0,100-5*yStep),yMax=100;
   const TW=500,TH=182,L=58,Rr=TW-10,T0=12,B0=TH-34,yv=v=>B0-(v-yMin)/(yMax-yMin)*(B0-T0),xs=i=>L+18+i*((Rr-L-36)/5);
   let tsvg='';for(let k=0;k<=5;k++){const v=yMin+(yMax-yMin)*k/5,y=yv(v);tsvg+='<line class="gl" x1="'+L+'" x2="'+Rr+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'"/><text x="'+(L-8)+'" y="'+(y+5).toFixed(1)+'" text-anchor="end" direction="ltr">'+Math.round(v)+'%</text>';}
-  tsvg+='<defs><linearGradient id="auBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7C7AF6"/><stop offset="1" stop-color="#ABA9FA"/></linearGradient></defs>';
+  tsvg+='<defs><linearGradient id="auBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--ch-bar-a)"/><stop offset="1" style="stop-color:var(--ch-bar-b)"/></linearGradient></defs>';
   tsvg+='<line class="ax" x1="'+L+'" x2="'+L+'" y1="'+T0+'" y2="'+B0+'"/><line class="ax" x1="'+L+'" x2="'+Rr+'" y1="'+B0+'" y2="'+B0+'"/>';
   const pts=[];wv.forEach(function(v,i){const x=xs(i);tsvg+='<text x="'+x.toFixed(1)+'" y="'+(TH-8)+'" text-anchor="middle">שבוע '+(i+1)+'</text>';if(v===null)return;
     const top=yv(Math.max(yMin,v-1.1));tsvg+='<rect x="'+(x-28).toFixed(1)+'" y="'+top.toFixed(1)+'" width="56" height="'+(B0-top).toFixed(1)+'" rx="4" fill="url(#auBar)"><title>'+v+'%</title></rect>';pts.push([x,yv(v)]);});
-  if(pts.length>1)tsvg+='<polyline points="'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+'" fill="none" stroke="#6D28D9" stroke-width="3" stroke-linejoin="round"/>';
-  pts.forEach(p=>{tsvg+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="6" fill="#fff" stroke="#6D28D9" stroke-width="3"/>';});
+  if(pts.length>1)tsvg+='<polyline points="'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+'" fill="none" style="stroke:var(--ch-line)" stroke-width="3" stroke-linejoin="round"/>';
+  pts.forEach(p=>{tsvg+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="6" style="fill:var(--surface);stroke:var(--ch-line)" stroke-width="3"/>';});
   // אירועים אחרונים ומשימות להיום
   const yest=daysAgo(1),when=e=>(e.date===today?'היום':e.date===yest?'אתמול':shortDate(e.date))+(e.time?', '+e.time:'');
   const EVI={red:'<path d="M12 3.5L22 20.5H2z" fill="#F04B4F"/><path d="M12 10v4.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17.4" r="1.3" fill="#fff"/>',
@@ -1815,7 +1850,7 @@ function viewDash(){
 
   return printHead()+
    '<div class="au-dash">'+
-   '<section class="au-banner"><span class="au-book">'+SVG('0 0 52 52','<defs><linearGradient id="bk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D6BF7"/><stop offset="1" stop-color="#7A4CF2"/></linearGradient></defs><g fill="none" stroke="url(#bk)" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"><path d="M26 14c-5-3.6-11.6-4.4-19-3.2v27.4c7.4-1.2 14-.4 19 3.2 5-3.6 11.6-4.4 19-3.2V10.8C37.6 9.6 31 10.4 26 14z"/><path d="M26 14v27.4M12 18.5c3.4-.4 6.6.1 9.4 1.4M12 25c3.4-.4 6.6.1 9.4 1.4M12 31.5c3.4-.4 6.6.1 9.4 1.4M40 18.5c-3.4-.4-6.6.1-9.4 1.4M40 25c-3.4-.4-6.6.1-9.4 1.4M40 31.5c-3.4-.4-6.6.1-9.4 1.4"/></g>')+'</span>'+
+   '<section class="au-banner">'+'<svg class="au-waves" viewBox="0 0 1400 150" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>'+'<linearGradient id="hwA" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw1)"/><stop offset=".45" style="stop-color:var(--hw2)"/><stop offset=".78" style="stop-color:var(--hw3)" stop-opacity=".35"/><stop offset="1" style="stop-color:var(--hw3)" stop-opacity="0"/></linearGradient>'+'<linearGradient id="hwB" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw4)"/><stop offset=".55" style="stop-color:var(--hw5)"/><stop offset="1" style="stop-color:var(--hw5)" stop-opacity=".15"/></linearGradient>'+'<linearGradient id="hwH" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw-hi)" stop-opacity=".1"/><stop offset=".4" style="stop-color:var(--hw-hi)" stop-opacity=".85"/><stop offset="1" style="stop-color:var(--hw-hi)" stop-opacity="0"/></linearGradient>'+'<linearGradient id="hwG" x1="0" x2="1"><stop offset="0" style="stop-color:var(--hw-gold)" stop-opacity="0"/><stop offset=".35" style="stop-color:var(--hw-gold)"/><stop offset=".65" style="stop-color:var(--hw-gold2)"/><stop offset="1" style="stop-color:var(--hw-gold)" stop-opacity="0"/></linearGradient>'+'<radialGradient id="hwR"><stop offset="0" style="stop-color:var(--hw-hi)" stop-opacity=".75"/><stop offset="1" style="stop-color:var(--hw-hi)" stop-opacity="0"/></radialGradient>'+'<radialGradient id="hwRg"><stop offset="0" style="stop-color:var(--hw-gold)" stop-opacity=".55"/><stop offset="1" style="stop-color:var(--hw-gold)" stop-opacity="0"/></radialGradient>'+'<filter id="hwBlur" x="-5%" y="-50%" width="110%" height="200%"><feGaussianBlur stdDeviation="2.6"/></filter></defs>'+'<ellipse cx="470" cy="58" rx="300" ry="62" fill="url(#hwR)"/><ellipse cx="330" cy="128" rx="230" ry="46" fill="url(#hwRg)"/>'+'<path d="M0 28 C130 8 250 58 380 70 S610 26 770 52 S1050 122 1180 86 S1340 60 1400 70 V150 H0Z" fill="url(#hwA)" opacity=".85"/>'+'<path d="M0 84 C160 54 285 116 455 96 S705 40 885 80 S1150 134 1400 102 V150 H0Z" fill="url(#hwB)" opacity=".82"/>'+'<path d="M0 124 C220 100 365 142 565 122 S905 94 1105 124 S1320 140 1400 128 V150 H0Z" style="fill:var(--hw6)" opacity=".42"/>'+'<path d="M0 28 C130 8 250 58 380 70 S610 26 770 52 S1050 122 1180 86" fill="none" stroke="url(#hwH)" stroke-width="5" filter="url(#hwBlur)" opacity=".8"/>'+'<path d="M0 28 C130 8 250 58 380 70 S610 26 770 52 S1050 122 1180 86" fill="none" stroke="url(#hwH)" stroke-width="1.4"/>'+'<path d="M0 84 C160 54 285 116 455 96 S705 40 885 80" fill="none" stroke="url(#hwG)" stroke-width="5" filter="url(#hwBlur)" opacity=".75"/>'+'<path d="M0 84 C160 54 285 116 455 96 S705 40 885 80" fill="none" stroke="url(#hwG)" stroke-width="1.8"/>'+'<path d="M420 141 C600 112 760 98 1000 121 S1250 139 1400 129" fill="none" stroke="url(#hwG)" stroke-width="1.3" opacity=".8"/>'+'</svg>'+'<span class="au-book">'+SVG('0 0 52 52','<defs><linearGradient id="bk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D6BF7"/><stop offset="1" stop-color="#7A4CF2"/></linearGradient></defs><g fill="none" stroke="url(#bk)" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"><path d="M26 14c-5-3.6-11.6-4.4-19-3.2v27.4c7.4-1.2 14-.4 19 3.2 5-3.6 11.6-4.4 19-3.2V10.8C37.6 9.6 31 10.4 26 14z"/><path d="M26 14v27.4M12 18.5c3.4-.4 6.6.1 9.4 1.4M12 25c3.4-.4 6.6.1 9.4 1.4M12 31.5c3.4-.4 6.6.1 9.4 1.4M40 18.5c-3.4-.4-6.6.1-9.4 1.4M40 25c-3.4-.4-6.6.1-9.4 1.4M40 31.5c-3.4-.4-6.6.1-9.4 1.4"/></g>')+'</span>'+
      '<div><h2>'+greet+(fn?', '+esc(fn):'')+'</h2><p>סקירה יומית של המוסד</p></div></section>'+
    (S.remc&&adm?remComposer():'')+
    '<div class="au-kpis">'+
@@ -1827,16 +1862,16 @@ function viewDash(){
      '<div class="au-c au-tasks"><h3>משימות להיום</h3>'+(tOrder.length?tOrder.map(t=>'<button class="t" data-act="task-toggle" data-id="'+t.id+'" data-done="'+(t.status==='done'?1:0)+'"><i>'+(t.status==='done'?SVG('0 0 24 24','<path d="M5 12.5l4.5 4.5L19 7.5"/>'):'')+'</i><span>'+esc(t.text)+'</span></button>').join(''):'<div class="empty">אין משימות להיום.</div>')+'</div>'+
      '<div class="au-c au-evs"><h3>אירועים אחרונים</h3>'+(evRecent.length?evRecent.map(e=>{const t=e.sev>=3?'red':e.kind==='pos'?'purple':'blue';return '<button class="e" data-act="card" data-id="'+e.sid+'"><i data-t="'+t+'">'+SVG('0 0 24 24',EVI[t])+'</i><div><b>'+esc(e.typeName||'')+'</b><small>'+esc(when(e))+(e.sname?' · '+esc(e.sname):'')+'</small></div></button>';}).join(''):'<div class="empty">לא דווחו אירועים.</div>')+'</div>'+
      '<div class="au-c au-month"><h3>סה״כ נוכחות חודשית</h3><div class="au-donut">'+
-       '<div class="au-leg"><div><i style="background:#3AC255"></i><span>נוכחות</span><b>'+pctS(mp)+'</b></div><div><i style="background:#FFCD0B"></i><span>איחורים</span><b>'+pctS(ml)+'</b></div><div><i style="background:#FC5B5D"></i><span>היעדרויות</span><b>'+pctS(ma)+'</b></div></div>'+
-       ring(mc.n?[{v:mp,c:'#3AC255'},{v:ml,c:'#FFCD0B'},{v:ma,c:'#FC5B5D'}]:[],156,19,'<b>'+pctS(mp)+'</b><span>נוכחות</span>')+'</div></div>'+
+       '<div class="au-leg"><div><i style="background:var(--ch-present)"></i><span>נוכחות</span><b>'+pctS(mp)+'</b></div><div><i style="background:var(--ch-late)"></i><span>איחורים</span><b>'+pctS(ml)+'</b></div><div><i style="background:var(--ch-absent)"></i><span>היעדרויות</span><b>'+pctS(ma)+'</b></div></div>'+
+       ring(mc.n?[{v:mp,c:'var(--ch-present)'},{v:ml,c:'var(--ch-late)'},{v:ma,c:'var(--ch-absent)'}]:[],156,19,'<b>'+pctS(mp)+'</b><span>נוכחות</span>','נוכחות חודשית: '+pctS(mp)+' נוכחות, '+pctS(ml)+' איחורים, '+pctS(ma)+' היעדרויות')+'</div></div>'+
      '<div class="au-c au-cls"><h3>נוכחות לפי כיתות</h3>'+(clsData.length?clsData.map(x=>'<div class="r"><b>'+pctS(x.pct)+'</b><div class="tr"><i style="width:'+(x.pct||0)+'%"></i></div><span>'+esc(x.cl.replace(/[׳']/g,'\''))+'</span></div>').join(''):'<div class="empty">אין כיתות.</div>')+'</div>'+
    '</div>'+
    '<div class="au-row3">'+
      '<div class="au-c au-sum"><h3>תמונת מצב כללית</h3><div class="au-stat"><ul>'+checks.map(c=>'<li data-ok="'+(c[0]?1:0)+'">'+CHK+'<span>'+esc(c[1])+'</span></li>').join('')+'</ul>'+art+'</div></div>'+
      '<div class="au-c au-types"><h3>אירועים לפי סוג</h3><div class="au-donut">'+
-       ring(tTot?tList.map(x=>({v:x.n/tTot*100,c:x.c})):[],148,24,'<b>'+tTot+'</b><span>סה״כ</span>')+
+       ring(tTot?tList.map(x=>({v:x.n/tTot*100,c:x.c})):[],148,24,'<b>'+tTot+'</b><span>סה״כ</span>','אירועים לפי סוג, סה״כ '+tTot+': '+tList.map(x=>x.k+' '+x.n).join(', '))+
        '<div class="au-leg">'+(tList.length?tList.map(x=>'<div><i style="background:'+x.c+'"></i><span>'+esc(x.k)+'</span><b>'+x.n+'</b></div>').join(''):'<div class="note">אין אירועים ב-30 הימים האחרונים</div>')+'</div></div></div>'+
-     '<div class="au-c au-trend"><h3>מגמת נוכחות <small>– 6 השבועות האחרונים</small></h3>'+SVG('0 0 '+TW+' '+TH,tsvg)+'</div>'+
+     '<div class="au-c au-trend"><h3>מגמת נוכחות <small>– 6 השבועות האחרונים</small></h3><div role="img" aria-label="'+esc('מגמת נוכחות שבועית: '+wv.map((v,i)=>'שבוע '+(i+1)+' '+(v===null?'אין נתונים':v+'%')).join(', '))+'">'+SVG('0 0 '+TW+' '+TH,tsvg)+'</div></div>'+
    '</div>'+
    '</div>'+
    '<details class="au-more"><summary>עוד בלוח הבקרה</summary>'+
@@ -6144,6 +6179,7 @@ document.addEventListener('click',function(e){
   if(a==='bell'||a==='prof'){S.auPop=S.auPop===a?null:a;return render();}
   if(a==='logout'){S.auPop=null;return logout();}
   if(a==='account'){S.auPop=null;return goTab('account');}
+  if(a==='navc'&&innerWidth<1180){document.documentElement.classList.toggle('nav-x');return render();}
   if(a==='navc'){const c=!document.documentElement.classList.contains('nav-c');document.documentElement.classList.toggle('nav-c',c);try{localStorage.setItem('tt:navc',c?'1':'0');}catch(e){}return render();}
 });
 document.addEventListener('keydown',function(e){

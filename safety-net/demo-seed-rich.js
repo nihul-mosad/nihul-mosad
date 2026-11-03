@@ -16,6 +16,7 @@
   let seed = 20261103; const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
   const pick = a => a[Math.floor(rnd() * a.length)];
 
+  try { localStorage.setItem('tt:theme', sessionStorage.getItem('aura-demo-theme') || 'light'); } catch (e) {}
   const INST = 'demo';
   const CLASSES = ['כיתה א' + GER, 'כיתה ב' + GER, 'כיתה ג' + GER, 'כיתה ד' + GER, 'כיתה ה' + GER];
   const HOMEROOM = ['הרב ישראל ישראלי', 'הרב משה משולם', 'הרב דוד דודאי', 'הרב יוסף יוספי', 'הרב נחום נחומי'];
@@ -68,7 +69,7 @@
   // נוכחות: שלושה שבועות אחורה, והיום — רק שיעורים שכבר התחילו, ושניים מהם בכוונה לא סומנו
   const PER = [null, '08:00', '09:00', '10:35', '11:25', '12:15'];
   const now = new Date(), hm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-  const weak = { s5: .25, s22: .2, s40: .3, s51: .18 }, sick = {};
+  const weak = { s5: .06, s22: .05, s40: .07, s51: .04 }, sick = {};
   days.forEach((d, i) => { if (i % 3 === 0) sick[iso(d)] = students[(i * 7) % students.length].id; });   // תלמידים "במעקב"
   const att = {}, put = (p, date, k, v) => { ((att[p] = att[p] || {})[date] = att[p][date] || {})[k] = v; };
   days.forEach(d => { const date = iso(d), isToday = date === T;
@@ -76,12 +77,12 @@
       for (let p = 1; p <= 5; p++) { const l = tt['L' + ci + d.getDay() + p];
         if (isToday && PER[p] > hm) continue;
         const path = B + 'att/L' + mo(date) + '_' + keyify(c) + '_' + keyify(l.teacher);
-        list.forEach(s => { const age = (days.length - 1 - days.indexOf(d)) / days.length, r = rnd() - age * 0.012, w = sick[date] === s.id ? 3 : weak[s.id] || 0;
-          put(path, date, l.id + ':' + s.id, r < .006 + w / 3 ? 'absent' : r < .016 + w / 2 ? 'late' : r < .019 + w / 2 ? 'excused' : 'present'); }); } }); });
+        list.forEach(s => { const age = (days.length - 1 - days.indexOf(d)) / days.length, r = rnd() - age * 0.007, w = sick[date] === s.id ? 3 : weak[s.id] || 0;
+          put(path, date, l.id + ':' + s.id, r < .003 + w / 3 ? 'absent' : r < .016 + w / 2 ? 'late' : r < .019 + w / 2 ? 'excused' : 'present'); }); } }); });
   Object.keys(att).forEach(p => { docs[p] = { d: att[p] }; });
 
   // אירועים
-  const EV = [['e1', 'הפרעה בשיעור', 'neg', 1], ['e3', 'חוצפה כלפי איש צוות', 'neg', 2], ['e8', 'ללא שיעורי בית', 'neg', 1], ['e9', 'ללא ציוד', 'neg', 1], ['e6', 'אלימות פיזית', 'neg', 3],
+  const EV = [['e1', 'הפרעה בשיעור', 'neg', 1], ['e4', 'שפה לא נקייה', 'neg', 2], ['e8', 'ללא שיעורי בית', 'neg', 1], ['e9', 'ללא ציוד', 'neg', 1], ['e6', 'אלימות פיזית', 'neg', 3],
     ['p1', 'צל״ש', 'pos', 1], ['p2', 'תפילה יפה', 'pos', 1], ['p3', 'השתתפות פעילה', 'pos', 1], ['p4', 'עזרה לחבר', 'pos', 1], ['p6', 'התקדמות יפה בלימודים', 'pos', 1]];
   for (let i = 0; i < 34; i++) {
     const s = pick(students), t = i === 3 ? EV[4] : pick(EV), d = days[days.length - 3 - Math.floor(rnd() * Math.min(18, days.length - 3))], date = iso(d);
@@ -93,7 +94,7 @@
   }
 
   { const last = days[days.length - 1], prev = days[days.length - 2];
-    [[last, '09:12', 'e6', 'אלימות פיזית', 'neg', 3, 's33'], [prev, '14:20', 'e2', 'יציאה מהשיעור ללא רשות', 'neg', 1, 's12'], [prev, '11:05', 'p5', 'התנהגות למופת', 'pos', 1, 's57']].forEach((x, k) => {
+    [[last, '09:12', 'e6', 'אלימות פיזית', 'neg', 3, 's33'], [prev, '14:20', 'e1', 'הפרעה בשיעור', 'neg', 1, 's12'], [prev, '11:05', 'p5', 'התנהגות למופת', 'pos', 1, 's57']].forEach((x, k) => {
       const s = students.find(z => z.id === x[6]), date = iso(x[0]), ci = CLASSES.indexOf(s.cls), teacher = HOMEROOM[ci], tk = keyify(teacher), path = B + 'att/L' + mo(date) + '_' + keyify(s.cls) + '_' + tk, id = 'evr' + k;
       docs[path] = docs[path] || {}; (docs[path].ev = docs[path].ev || {})[id] = { id, sid: s.id, sname: s.name, cls: s.cls, type: x[2], typeName: x[3], kind: x[4], sev: x[5], date, time: x[1], period: 1, note: '', by: teacher, byUid: 'U_X', tk, ts: x[0].getTime(), handled: true }; }); }
   // תמונות מצב: רוב הכיתה עודכנה בשבועיים האחרונים

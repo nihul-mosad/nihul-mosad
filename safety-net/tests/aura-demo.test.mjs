@@ -21,7 +21,7 @@ test('הדגמה: הקובץ סגור — מדיניות אבטחה בלי חי�
 
 async function openDemo(theme, viewport) {
   const ctx = await browser.newContext({ viewport });
-  await ctx.addInitScript(t => { try { localStorage.setItem('tt:theme', t); } catch (e) {} }, theme);
+  await ctx.addInitScript(t => { try { localStorage.setItem('tt:theme', t); sessionStorage.setItem('aura-demo-theme', t); } catch (e) {} }, theme);
   const page = await ctx.newPage();
   page.errors = []; page.external = [];
   page.on('pageerror', e => page.errors.push(e.message));
@@ -67,7 +67,7 @@ test('הדגמה: מתג בהיר/כהה ומעבר תפקיד (מורה מקצ�
   await page.context().close();
 });
 
-test('הדגמה: התפריט בצד ימין, מתקפל לאייקונים בלבד ונפתח שוב, וכל הגרפים מוצגים גם במסך מחשב קטן (1366)', async () => {
+test('הדגמה: התפריט בצד ימין, מתקפל לאייקונים בלבד ונפתח שוב, וכל הגרפים מוצגים גם במסך מחשב קטן (1366, פריסת 2×2)', async () => {
   const page = await openDemo('light', { width: 1366, height: 768 });
   const geo = () => page.evaluate(() => { const s = document.getElementById('side').getBoundingClientRect(), m = document.getElementById('main').getBoundingClientRect(); return { sx: s.x, sw: s.width, mx: m.x }; });
   let g = await geo();
@@ -82,7 +82,20 @@ test('הדגמה: התפריט בצד ימין, מתקפל לאייקונים ב
   await page.waitForTimeout(500);
   assert.ok((await geo()).sw >= wide - 1, 'התפריט לא נפתח שוב');
   for (const sel of ['.au-month svg circle', '.au-types svg circle', '.au-trend svg rect', '.au-cls .tr i'])
-    assert.ok(await page.$eval(sel, e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom <= innerHeight + 2; }), 'גרף לא נראה במסך הראשון: ' + sel);
+    assert.ok(await page.$eval(sel, e => { const r = e.getBoundingClientRect(); return r.width > 20 && r.height > 8 && getComputedStyle(e).visibility !== 'hidden'; }), 'גרף לא מוצג: ' + sel);
   assert.deepEqual(page.errors, []);
   await page.context().close();
+});
+
+test('הדגמה: נפתחת תמיד במצב בהיר, גם אם במכשיר נשמר קודם מצב כהה, ובלי הקטנה מלאכותית של המסך', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 900, height: 760 } });
+  await ctx.addInitScript(() => { try { if (!sessionStorage.getItem('x')) { localStorage.setItem('tt:theme', 'dark'); sessionStorage.setItem('x', '1'); } } catch (e) {} });
+  const page = await ctx.newPage();
+  await page.route(/^(?!file:|data:|blob:)/, r => r.abort());
+  await page.goto('file://' + FILE);
+  await page.waitForFunction(() => document.querySelector('.au-banner'), null, { timeout: 15000 });
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), 'light');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('shell')).zoom), '1', 'המסך מוקטן באופן מלאכותי');
+  assert.ok(!(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)), 'גלילה אופקית');
+  await ctx.close();
 });

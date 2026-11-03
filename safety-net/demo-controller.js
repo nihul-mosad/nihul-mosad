@@ -16,6 +16,9 @@
     clearInterval(t); document.getElementById('loginBtn').click();
   }, 200);
 
+  // שמירת מצב התצוגה רק בלשונית הזאת (ההדגמה נפתחת תמיד בהיר)
+  try { new MutationObserver(function () { try { sessionStorage.setItem('aura-demo-theme', document.documentElement.getAttribute('data-theme')); } catch (e) {} })
+    .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); } catch (e) {}
   var bar = document.createElement('div');
   bar.id = 'auraDemoBar';
   bar.innerHTML = '<span class="adb-dot"></span><b>הדגמה</b><span class="adb-txt">נתונים מומצאים · מנותק מהשרת</span>' +
