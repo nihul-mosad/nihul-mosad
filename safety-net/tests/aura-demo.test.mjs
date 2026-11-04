@@ -19,10 +19,12 @@ test('הדגמה: הקובץ סגור — מדיניות אבטחה בלי חי�
   assert.doesNotMatch(s, /serviceWorker\.register\('sw\.js'\)/, 'רישום Service Worker');
 });
 
-async function openDemo(theme, viewport) {
-  const ctx = await browser.newContext({ viewport });
+// at: שעון קבוע לבדיקה בלבד (אזור זמן ישראל), כדי שהתוצאה לא תלויה בשעת ההרצה או באזור הזמן של שרת הבדיקות
+async function openDemo(theme, viewport, at) {
+  const ctx = await browser.newContext(at ? { viewport, timezoneId: 'Asia/Jerusalem' } : { viewport });
   await ctx.addInitScript(t => { try { localStorage.setItem('tt:theme', t); sessionStorage.setItem('aura-demo-theme', t); } catch (e) {} }, theme);
   const page = await ctx.newPage();
+  if (at) await page.clock.setFixedTime(new Date(at));
   page.errors = []; page.external = [];
   page.on('pageerror', e => page.errors.push(e.message));
   // כל בקשה שאינה הקובץ עצמו נרשמת ונחסמת (גם גופנים — כאן לא צריך אותם)
@@ -67,8 +69,17 @@ test('הדגמה: מתג בהיר/כהה ומעבר תפקיד (מורה מקצ�
   await page.context().close();
 });
 
+// "נוכחות לפי כיתות" מציג את נוכחות היום, ונתוני הדמה רושמים נוכחות רק לשיעורים שכבר התחילו (מ-08:00).
+// לכן הבדיקה רצה בשעון קבוע: יום רביעי, 12:00 שעון ישראל.
+const MIDDAY = '2026-11-04T12:00:00+02:00';
+const EARLY = '2026-11-04T07:00:00+02:00';
+const clsBars = page => page.$$eval('.au-cls .r', rs => rs.map(r => {
+  const i = r.querySelector('.tr i'), tr = r.querySelector('.tr');
+  return { label: r.querySelector('b').textContent.trim(), style: i.style.width, w: i.getBoundingClientRect().width, tw: tr.getBoundingClientRect().width };
+}));
+
 test('הדגמה: התפריט בצד ימין, מתקפל לאייקונים בלבד ונפתח שוב, וכל הגרפים מוצגים גם במסך מחשב קטן (1366, פריסת 2×2)', async () => {
-  const page = await openDemo('light', { width: 1366, height: 768 });
+  const page = await openDemo('light', { width: 1366, height: 768 }, MIDDAY);
   const geo = () => page.evaluate(() => { const s = document.getElementById('side').getBoundingClientRect(), m = document.getElementById('main').getBoundingClientRect(); return { sx: s.x, sw: s.width, mx: m.x }; });
   let g = await geo();
   assert.ok(g.sx > g.mx, 'התפריט צריך להיות מימין לתוכן');
@@ -83,8 +94,24 @@ test('הדגמה: התפריט בצד ימין, מתקפל לאייקונים ב
   assert.ok((await geo()).sw >= wide - 1, 'התפריט לא נפתח שוב');
   for (const sel of ['.au-month svg circle', '.au-types svg circle', '.au-trend svg rect', '.au-cls .tr i'])
     assert.ok(await page.$eval(sel, e => { const r = e.getBoundingClientRect(); return r.width > 20 && r.height > 8 && getComputedStyle(e).visibility !== 'hidden'; }), 'גרף לא מוצג: ' + sel);
+  // נוכחות לפי כיתות: לכל כיתה אחוז מספרי, ואורך העמודה תואם את האחוז שמוצג לידה
+  const bars = await clsBars(page);
+  assert.equal(bars.length, await page.evaluate(() => S.config.classes.length), 'עמודה לכל כיתה');
+  for (const b of bars) {
+    assert.match(b.label, /^\d+%$/, 'בצהריים לכל כיתה צריך להיות אחוז נוכחות: ' + b.label);
+    assert.equal(b.style, b.label, 'אורך העמודה לא תואם את האחוז');
+    assert.ok(Math.abs(b.w / b.tw * 100 - parseInt(b.label, 10)) < 2, 'העמודה המצוירת לא תואמת את האחוז: ' + b.label);
+  }
   assert.deepEqual(page.errors, []);
   await page.context().close();
+
+  // לפני השיעור הראשון עוד אין נוכחות להיום: הגרף מציג "—" ועמודות ריקות, בלי שגיאות
+  const early = await openDemo('light', { width: 1366, height: 768 }, EARLY);
+  const eb = await clsBars(early);
+  assert.ok(eb.length > 0);
+  for (const b of eb) { assert.equal(b.label, '—'); assert.equal(b.style, '0%'); }
+  assert.deepEqual(early.errors, []);
+  await early.context().close();
 });
 
 test('הדגמה: נפתחת תמיד במצב בהיר, גם אם במכשיר נשמר קודם מצב כהה, ובלי הקטנה מלאכותית של המסך', async () => {
