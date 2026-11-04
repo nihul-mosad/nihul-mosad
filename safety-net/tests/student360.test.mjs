@@ -64,7 +64,7 @@ test('כרטיס תלמיד: הנתונים בכרטיס נגזרים מהמאג
 });
 
 test('כרטיס תלמיד: פעולות מהירות לפי ההרשאות הקיימות (מנהל / מחנך / מחנך אחר / מורה מקצועי)', async () => {
-  const cases = [['admin', 's22', ['ev-for', 'rev-one', 'print', 'student-edit']], ['teacher', 's5', ['ev-for', 'rev-one', 'print']], ['teacher', 's22', null], ['math', 's5', null]];
+  const cases = [['admin', 's22', ['ev-for', 'rev-one', 'print', 'student-edit', 'sum-open']], ['teacher', 's5', ['ev-for', 'rev-one', 'print']], ['teacher', 's22', null], ['math', 's5', null]];
   for (const [role, sid, want] of cases) {
     const page = await open(role, { width: 1400, height: 900 });
     await openCard(page, sid);

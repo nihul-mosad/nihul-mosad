@@ -96,7 +96,7 @@ function finalCheck(name, s) {
   const inline = f => '<script>\n' + fs.readFileSync(path.join(here, f), 'utf8').replace(/<\/script/gi, '<\\/script') + '\n</script>';
   let s = base(stripGstatic(src));
   s = s.replace('<title>ניסוי · ניהול המוסד</title>', '<title>הדגמה · AURA 3.1 · ניהול המוסד</title>');
-  s = s.replace('<head>', '<head>\n<meta http-equiv="Content-Security-Policy" content="' + CSP + '">\n' + GUARD + '\n' + inline('demo-seed-rich.js') + '\n' + inline('fake-firebase.js'));
+  s = s.replace('<head>', '<head>\n<meta http-equiv="Content-Security-Policy" content="' + CSP + '">\n' + GUARD + '\n' + inline('demo-seed-rich.js') + '\n' + inline('fake-firebase.js') + '\n' + inline('demo-summary-mock.js'));
   s = config(s, { apiKey: 'aura-demo', authDomain: 'localhost', projectId: 'aura-demo', appId: 'aura-demo' });
   s = s.replace(/<link rel="manifest"[^>]*>/, '');
   s = beforeBodyEnd(s, inline('demo-controller.js'));
