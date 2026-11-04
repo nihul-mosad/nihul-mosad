@@ -73,6 +73,50 @@ test('הדגמה: מתג בהיר/כהה ומעבר תפקיד (מורה מקצ�
 // לכן הבדיקה רצה בשעון קבוע: יום רביעי, 12:00 שעון ישראל.
 const MIDDAY = '2026-11-04T12:00:00+02:00';
 const EARLY = '2026-11-04T07:00:00+02:00';
+for (const theme of ['light', 'dark']) for (const width of [1648, 390]) {
+  test('אירועים AURA (' + theme + ', ' + width + '): סינון, תצוגות, טקסט ארוך ומצב ריק נשארים קריאים', async () => {
+    const page = await openDemo(theme, { width, height: 844 }, MIDDAY);
+    await page.evaluate(() => { S.tab = 'events'; S.evView = 'table'; render(); });
+    const stats = () => page.$$eval('#main > .grid .stat b', es => es.map(e => e.textContent));
+    const initial = await stats();
+    const rows = await page.$$eval('.evtab tbody tr', es => es.length);
+    assert.ok(rows > 0);
+    const layout = async () => {
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'גלילה אופקית של העמוד');
+      assert.ok(await page.$$eval('[data-evf]', es => es.every(e => {
+        const r = e.getBoundingClientRect();
+        return r.width > 100 && r.height >= 44 && r.left >= 0 && r.right <= innerWidth;
+      })), 'מסננים קטנים או גולשים');
+    };
+    await layout();
+    await page.click('[data-act="ev-view"][data-v="cards"]');
+    assert.equal((await page.$$('.evi')).length, rows);
+    assert.deepEqual(await stats(), initial, 'מעבר תצוגה שינה את המדדים');
+    await page.evaluate(() => {
+      const event = S.events.find(e => e.date >= daysAgo(30));
+      const student = studentById(event.sid);
+      student.name = 'אליהו יהונתן ישראל מאיר בן ציון הלוי';
+      event.note = 'תיאור בדיקה ארוך עם פרטי האירוע. '.repeat(12) + 'רצףארוךללאמרווח'.repeat(20);
+      render();
+    });
+    await layout();
+    assert.ok(await page.$$eval('.evi', es => es.every(e => e.scrollWidth <= e.clientWidth + 1)), 'תיאור ארוך גולש מהכרטיס');
+    await page.selectOption('[data-evf="kind"]', 'open');
+    assert.ok(await page.$$eval('.evi', es => es.length > 0 && es.every(e => e.dataset.open === '1')), 'הסינון לטיפול שגוי');
+    await page.selectOption('[data-evf="kind"]', '');
+    await page.click('[data-act="ev-new"]');
+    assert.ok(await page.isVisible('.evc'));
+    await layout();
+    await page.click('[data-act="ev-cancel"]');
+    await page.evaluate(() => { S.events = []; render(); });
+    assert.match(await page.textContent('.empty'), /אין אירועים להצגה/);
+    assert.deepEqual(await stats(), ['0', '0', '0']);
+    await layout();
+    assert.deepEqual(page.errors, []);
+    assert.ok(page.external.every(u => /^https:\/\/fonts\.(googleapis|gstatic)\.com\//.test(u)));
+    await page.context().close();
+  });
+}
 const clsBars = page => page.$$eval('.au-cls .r', rs => rs.map(r => {
   const i = r.querySelector('.tr i'), tr = r.querySelector('.tr');
   return { label: r.querySelector('b').textContent.trim(), style: i.style.width, w: i.getBoundingClientRect().width, tw: tr.getBoundingClientRect().width };
