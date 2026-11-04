@@ -1346,6 +1346,119 @@ html[data-theme="dark"] .s3-id h2{color:#fff}
   }
 }
 </style>
+<style id="aura-students-analytics">
+/* AURA 3.1 / Students analytics — עיצוב בלבד לאזור המדדים והגרפים שמעל רשימת התלמידים (saView).
+   לפי המפרט החזותי AURA-students-analytics-concept.html, בטוקנים של AURA 3.1. בלי !important. */
+#main .sa {
+  --sa-card: var(--stu-panel, rgba(255,255,255,.97));
+  --sa-line: var(--stu-line, #e1e6f5);
+  --sa-none: var(--ch-4, #A78BFA);
+  --sa-shadow: 0 14px 32px -24px rgba(60,72,170,.45), 0 1px 3px rgba(40,50,120,.05);
+  min-width: 0;
+  margin: 0 0 20px;
+}
+html[data-theme="dark"] #main .sa {
+  --sa-card: var(--stu-panel, rgba(19,26,66,.97));
+  --sa-line: var(--stu-line, #2f3a7a);
+  --sa-shadow: 0 14px 34px -22px rgba(0,0,0,.85);
+}
+#main .sa-sh { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin: 4px 4px 12px; }
+#main .sa-sh + .sa-kpis, #main .sa-sh + .sa-grid { margin-top: 0; }
+#main .sa-kpis + .sa-sh { margin-top: 22px; }
+#main .sa-sh h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.01em; color: var(--au-title); }
+#main .sa-sh span { font-size: 12.5px; font-weight: 600; color: var(--au-mute); }
+
+/* KPI cards */
+#main .sa-kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; }
+#main .sa-kpi { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 18px; border-radius: 20px; background: var(--sa-card); border: 1px solid var(--sa-line); box-shadow: var(--sa-shadow); }
+#main .sa-ic { flex: 0 0 52px; width: 52px; height: 52px; border-radius: 17px; display: grid; place-items: center; }
+#main .sa-ic svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+#main .sa-ic[data-t="blue"] { background: #e4ecff; color: #386ef6; }
+#main .sa-ic[data-t="green"], #main .sa-ic[data-t="up"] { background: #def8eb; color: #149a5f; }
+#main .sa-ic[data-t="amber"] { background: #fff0d7; color: #a8741f; }
+#main .sa-ic[data-t="down"] { background: #fde4e7; color: #c23a4b; }
+#main .sa-ic[data-t="flat"] { background: #eee6ff; color: #7a49dc; }
+html[data-theme="dark"] #main .sa-ic { background: #26356c; }
+html[data-theme="dark"] #main .sa-ic[data-t="blue"] { color: #9db6ff; }
+html[data-theme="dark"] #main .sa-ic[data-t="green"], html[data-theme="dark"] #main .sa-ic[data-t="up"] { color: #6be0a2; }
+html[data-theme="dark"] #main .sa-ic[data-t="amber"] { color: #ffcd73; }
+html[data-theme="dark"] #main .sa-ic[data-t="down"] { color: #ff9eab; }
+html[data-theme="dark"] #main .sa-ic[data-t="flat"] { color: #c6b3ff; }
+#main .sa-km { min-width: 0; }
+#main .sa-km strong { display: block; font-size: 29px; line-height: 1.05; font-weight: 800; letter-spacing: -.02em; color: var(--au-title); font-variant-numeric: tabular-nums; }
+#main .sa-km strong em { font-style: normal; font-size: 14px; font-weight: 700; margin-inline-start: 4px; color: var(--au-mute); letter-spacing: 0; }
+#main .sa-km .sa-na { display: block; font-size: 17px; line-height: 1.25; letter-spacing: 0; color: var(--au-sub); }
+#main .sa-km label { display: block; margin-top: 6px; font-size: 13px; font-weight: 700; color: var(--au-sub); }
+#main .sa-km small { display: block; margin-top: 4px; font-size: 11.5px; line-height: 1.45; color: var(--au-mute); }
+
+/* Panels */
+#main .sa-grid { display: grid; grid-template-columns: 1.12fr .95fr .95fr; gap: 14px; }
+#main .sa-panel { min-width: 0; padding: 20px 20px 16px; border-radius: 22px; background: var(--sa-card); border: 1px solid var(--sa-line); box-shadow: var(--sa-shadow); display: flex; flex-direction: column; }
+#main .sa-ph { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 16px; }
+#main .sa-ph h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--au-title); }
+#main .sa-ph span { font-size: 11.5px; color: var(--au-mute); white-space: nowrap; }
+#main .sa-pf { margin-top: auto; padding-top: 11px; border-top: 1px solid var(--sa-line); font-size: 11.5px; line-height: 1.5; color: var(--au-mute); }
+#main .sa-empty { padding: 30px 8px; text-align: center; font-size: 13px; color: var(--au-mute); }
+
+/* Attendance by class */
+#main .sa-cr { display: grid; grid-template-columns: 64px minmax(0,1fr) 42px; grid-template-rows: auto auto; align-items: center; column-gap: 10px; margin-bottom: 13px; font-size: 13px; color: var(--au-title); }
+#main .sa-cr b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#main .sa-cr em { font-style: normal; font-weight: 800; text-align: left; font-variant-numeric: tabular-nums; }
+#main .sa-cr small { grid-column: 2 / 4; margin-top: 3px; font-size: 11px; color: var(--au-mute); }
+#main .sa-bar { display: block; height: 10px; border-radius: 30px; background: var(--au-track); overflow: hidden; }
+#main .sa-bar i { display: block; height: 100%; border-radius: 30px; background: linear-gradient(90deg, #6b57f8, #287efa); }
+#main .sa-cr:nth-child(even) .sa-bar i { background: linear-gradient(90deg, #69a1ff, #2c7aff); }
+
+/* Snapshot donut */
+#main .sa-donut { display: flex; align-items: center; justify-content: center; gap: 20px; min-height: 180px; flex-wrap: wrap; }
+#main .sa-ring { position: relative; width: 150px; height: 150px; flex: 0 0 150px; }
+#main .sa-ring svg { display: block; width: 100%; height: 100%; }
+#main .sa-mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#main .sa-mid b { font-size: 30px; font-weight: 800; line-height: 1; color: var(--au-title); }
+#main .sa-mid small { margin-top: 4px; font-size: 12px; color: var(--au-mute); }
+#main .sa-leg { display: grid; gap: 10px; min-width: 0; font-size: 12.5px; color: var(--au-title); }
+#main .sa-leg div { display: grid; grid-template-columns: 10px auto 26px 38px; align-items: center; gap: 7px; white-space: nowrap; }
+#main .sa-leg i { width: 10px; height: 10px; border-radius: 50%; }
+#main .sa-leg strong { text-align: left; font-variant-numeric: tabular-nums; }
+#main .sa-leg em { font-style: normal; text-align: left; color: var(--au-mute); font-variant-numeric: tabular-nums; }
+
+/* Weekly trend */
+#main .sa-trend { display: block; width: 100%; height: auto; max-height: 240px; direction: ltr; }
+#main .sa-trend text { font-family: 'Noto Sans Hebrew','Noto Sans',system-ui,sans-serif; fill: var(--au-mute); font-size: 12px; }
+#main .sa-trend .yl { text-anchor: end; font-size: 11px; }
+#main .sa-trend .xl { text-anchor: middle; fill: var(--au-sub); font-weight: 700; }
+#main .sa-trend .xn { text-anchor: middle; font-size: 10.5px; }
+#main .sa-trend .pv { text-anchor: middle; font-size: 11px; font-weight: 700; fill: var(--au-title); }
+#main .sa-trend .gl { stroke: var(--sa-line); stroke-width: 1; }
+#main .sa-trend .cols rect { fill: var(--ch-bar-b, #aba9fa); opacity: .55; }
+#main .sa-trend .ln { fill: none; stroke: var(--ch-line, #6D28D9); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+#main .sa-trend .pt circle { fill: var(--sa-card); stroke: var(--ch-line, #6D28D9); stroke-width: 3; }
+
+/* Responsive: nothing wider than the screen */
+@media (max-width: 1100px) {
+  #main .sa-kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  #main .sa-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  #main .sa-panel.wide { grid-column: 1 / -1; }
+}
+@media (max-width: 650px) {
+  #main .sa { margin-bottom: 14px; }
+  #main .sa-kpis { gap: 9px; }
+  #main .sa-kpi { flex-direction: column; align-items: flex-start; gap: 9px; padding: 13px 12px; border-radius: 16px; }
+  #main .sa-ic { flex-basis: 38px; width: 38px; height: 38px; border-radius: 12px; }
+  #main .sa-ic svg { width: 21px; height: 21px; }
+  #main .sa-km strong { font-size: 25px; }
+  #main .sa-km .sa-na { font-size: 15px; }
+  #main .sa-km label { font-size: 12px; margin-top: 4px; }
+  #main .sa-km small { font-size: 10.5px; }
+  #main .sa-grid { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  #main .sa-panel.wide { grid-column: auto; }
+  #main .sa-panel { padding: 17px 14px 14px; border-radius: 20px; }
+  #main .sa-donut { justify-content: space-around; gap: 12px; }
+  #main .sa-ring { width: 136px; height: 136px; flex-basis: 136px; }
+  #main .sa-trend text { font-size: 13px; }
+  #main .sa-trend .xn { font-size: 11.5px; }
+}
+</style>
 <script>/* AURA 3.1: מצב בהיר/כהה ותפריט מקופל, נשמרים במכשיר */(function(){var t='light',c='0';try{t=localStorage.getItem('tt:theme')||'light';c=localStorage.getItem('tt:navc')||'0';}catch(e){}document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');if(c==='1')document.documentElement.classList.add('nav-c');})();
 </script>
 </head>
@@ -5730,6 +5843,91 @@ async function stxRun(){
   logAct('ייצוא רשימת תלמידים',list.length+' תלמידים'+(S.filter?' · '+S.filter:''));
   toast('הקובץ ירד: '+list.length+' תלמידים');
 }
+/* ===== AURA 3.1: פילוחים במסך התלמידים — חיבור לנתונים בלבד (העיצוב בשכבת <style id="aura-students-analytics">) =====
+   היקף: התלמידים שהמשתמש רשאי לראות (myStudents), אחרי סינון הכיתה (S.filter). החיפוש (S.q) מסנן את הטבלה בלבד ולא משנה את המדדים.
+   נוכחות: לפי attStats הקיים (נוכח + איחור מתוך כל הסימונים), מצטבר על כל הסימונים של כל התלמידים — לא ממוצע של אחוזי תלמידים.
+   אירועים: רק אירועים של התלמידים שבהיקף. תמונת מצב: האחרונה של כל תלמיד (lastReview); תלמיד בלי תמונת מצב נספר בנפרד. */
+const SA_RULES={days:30,cmpDays:14,minDays:3,minMarks:10,weeks:6};
+function saAgg(list,from,to){let ok=0,n=0;list.forEach(function(s){const a=attStats(s.id,from,to);ok+=a.present+a.late;n+=a.total;});return {ok:ok,n:n,pct:n?Math.round(ok/n*100):null,raw:n?ok/n*100:null};}
+function saMarkDays(list,from,to){const days={},L=lidx();
+  list.forEach(function(s){(L[s.id]||[]).forEach(function(e){if(e.d>=from&&e.d<=to)days[e.d]=1;});});
+  Object.keys(S.att).forEach(function(d){if(d<from||d>to||days[d])return;const day=S.att[d]||{};if(list.some(s=>day[s.id]))days[d]=1;});
+  return Object.keys(days).length;}
+function saData(base){
+  const R=SA_RULES,today=iso(new Date()),from=daysAgo(R.days);
+  const list=S.filter?base.filter(s=>s.cls===S.filter):base,ids={};list.forEach(s=>{ids[s.id]=1;});
+  const att=saAgg(list,from,today);
+  const evs=S.events.filter(e=>ids[e.sid]&&e.date>=from&&e.date<=today),pos=evs.filter(e=>e.kind==='pos').length;
+  // שינוי במגמה: 14 הימים האחרונים מול 14 הימים שלפניהם
+  const c0=daysAgo(R.cmpDays-1),p0=daysAgo(2*R.cmpDays-1),p1=daysAgo(R.cmpDays);
+  const cur=saAgg(list,c0,today),prev=saAgg(list,p0,p1),curD=saMarkDays(list,c0,today),prevD=saMarkDays(list,p0,p1);
+  const enough=cur.n>=R.minMarks&&prev.n>=R.minMarks&&curD>=R.minDays&&prevD>=R.minDays;
+  const cmp={enough:enough,cur:cur,prev:prev,curD:curD,prevD:prevD,from:p0,mid:c0,to:today,delta:enough?Math.round((cur.raw-prev.raw)*10)/10:null};
+  // נוכחות לפי כיתות (הכיתות הנגישות שיש בהן תלמידים בהיקף; תלמידים בלי כיתה מוכרת — בשורה נפרדת)
+  const cls=myClasses().filter(c=>list.some(s=>s.cls===c)),rest=list.filter(s=>cls.indexOf(s.cls)<0);
+  const byCls=cls.map(c=>{const st=list.filter(s=>s.cls===c);return Object.assign({cl:c,students:st.length},saAgg(st,from,today));})
+    .concat(rest.length?[Object.assign({cl:'ללא שיוך',students:rest.length},saAgg(rest,from,today))]:[]);
+  // תמונת המצב האחרונה של כל תלמיד
+  const lights={green:0,yellow:0,red:0,none:0};
+  list.forEach(s=>{const r=lastReview(s.id);lights[r&&LIGHTNAME[r.light]?r.light:'none']++;});
+  // מגמה שבועית (שבוע מיום ראשון עד שבת), 6 השבועות האחרונים
+  const w0=new Date(today+'T12:00:00');w0.setDate(w0.getDate()-w0.getDay());
+  const weeks=[];for(let i=R.weeks-1;i>=0;i--){const a=new Date(w0);a.setDate(a.getDate()-7*i);const b=new Date(a);b.setDate(b.getDate()+6);
+    const f=iso(a),t=iso(b)<today?iso(b):today;weeks.push(Object.assign({from:f,to:t,days:saMarkDays(list,f,t)},saAgg(list,f,t)));}
+  return {today:today,from:from,list:list,total:base.length,classesN:new Set(list.map(s=>s.cls).filter(Boolean)).size,att:att,evs:evs.length,pos:pos,neg:evs.length-pos,cmp:cmp,byCls:byCls,lights:lights,weeks:weeks};
+}
+function saView(base){
+  const D=saData(base),n=D.list.length,dm=d=>Number(d.slice(8,10))+'.'+Number(d.slice(5,7));
+  const ico={users:'<path d="M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19"/><circle cx="10" cy="7.5" r="3.5"/><path d="M20 19v-1.4a3.2 3.2 0 0 0-2.4-3.1M15.5 4.3a3.4 3.4 0 0 1 0 6.4"/>',
+    check:'<circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.2 2.6 2.6 5-5.3"/>',flag:'<path d="M5 21V4.5M5 4.5h11.5l-2 4 2 4H5"/>',trend:'<path d="M3.5 17 9 11.5l3.5 3.5L20 7.5"/><path d="M14.5 7.5H20V13"/>'};
+  const svg=k=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+ico[k]+'</svg>';
+  const kpi=(k,tone,val,label,sub,attr)=>'<div class="sa-kpi"'+(attr||'')+'><span class="sa-ic" data-t="'+tone+'">'+svg(k)+'</span><div class="sa-km"><strong>'+val+'</strong><label>'+label+'</label><small>'+sub+'</small></div></div>';
+  const scope=S.filter?esc(S.filter):(isAdmin()?'כל הכיתות':esc(myClasses().join(', ')||'התלמידים שלך'));
+  const c=D.cmp,dTxt=c.enough?(c.delta>0?'+'+c.delta:c.delta<0?'−'+Math.abs(c.delta):'0'):'';
+  const k4=c.enough
+    ?kpi('trend',c.delta>0?'up':c.delta<0?'down':'flat',dTxt+'<em>נק׳</em>','שינוי במגמת הנוכחות',c.cur.pct+'% ב-14 הימים האחרונים מול '+c.prev.pct+'% ב-14 שלפניהם',' data-sa="trend" data-delta="'+c.delta+'"')
+    :kpi('trend','flat','<span class="sa-na">אין מספיק נתונים</span>','שינוי במגמת הנוכחות','נדרשים לפחות '+SA_RULES.minDays+' ימי נוכחות ו-'+SA_RULES.minMarks+' סימונים בכל אחת משתי התקופות (14 ימים)',' data-sa="trend" data-delta=""');
+  const kpis='<div class="sa-kpis">'+
+    kpi('users','blue',n,'תלמידים',S.filter?'מתוך '+D.total+' שאתה רשאי לראות':(D.classesN?D.classesN+' כיתות':'—'),' data-sa="count"')+
+    kpi('check','green',D.att.pct===null?'—':D.att.pct+'%','נוכחות · 30 הימים האחרונים',D.att.n?D.att.ok+' מתוך '+D.att.n+' סימונים (נוכח או איחור)':'אין רישומי נוכחות בתקופה',' data-sa="att" data-ok="'+D.att.ok+'" data-n="'+D.att.n+'"')+
+    kpi('flag','amber',D.evs,'אירועים · 30 הימים האחרונים',D.evs?D.pos+' לשבח · '+D.neg+' לשיפור':'לא דווחו אירועים',' data-sa="events"')+k4+'</div>';
+  // נוכחות לפי כיתות
+  const clsP=D.byCls.length?D.byCls.map(r=>'<div class="sa-cr" data-cls="'+esc(r.cl)+'" data-n="'+r.n+'"><b>'+esc(r.cl)+'</b><span class="sa-bar" role="img" aria-label="'+esc(r.cl)+': '+(r.pct===null?'אין נתונים':r.pct+'% נוכחות מתוך '+r.n+' סימונים')+'"><i style="width:'+(r.pct||0)+'%"></i></span><em>'+(r.pct===null?'—':r.pct+'%')+'</em><small>'+r.students+' תלמידים · '+r.n+' סימונים</small></div>').join(''):'<div class="sa-empty">אין כיתות להצגה.</div>';
+  // תרשים טבעת
+  const LS=[['green','ירוק','var(--ch-present)'],['yellow','צהוב','var(--ch-late)'],['red','אדום','var(--ch-absent)'],['none','ללא תמונת מצב','var(--sa-none)']];
+  const pc=v=>n?Math.round(v/n*100):0,size=150,sw=20,r=(size-sw)/2,C=2*Math.PI*r,segs=LS.filter(x=>D.lights[x[0]]>0),gap=segs.length>1?2.4:0;let off=0;
+  const arcs=segs.map(x=>{const len=Math.max(0,C*D.lights[x[0]]/n-gap),a='<circle data-k="'+x[0]+'" cx="75" cy="75" r="'+r+'" fill="none" style="stroke:'+x[2]+'" stroke-width="'+sw+'" stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'" stroke-dashoffset="'+(-off).toFixed(2)+'"/>';off+=C*D.lights[x[0]]/n;return a;}).join('');
+  const donutLbl='תמונת המצב האחרונה של '+n+' תלמידים: '+LS.map(x=>x[1]+' '+D.lights[x[0]]).join(', ');
+  const donut='<div class="sa-donut"><div class="sa-ring" role="img" aria-label="'+esc(donutLbl)+'"><svg viewBox="0 0 150 150" aria-hidden="true"><g transform="rotate(-90 75 75)"><circle cx="75" cy="75" r="'+r+'" fill="none" stroke="var(--au-track)" stroke-width="'+sw+'"/>'+arcs+'</g></svg><div class="sa-mid"><b>'+n+'</b><small>תלמידים</small></div></div>'+
+    '<div class="sa-leg">'+LS.map(x=>'<div data-k="'+x[0]+'"><i style="background:'+x[2]+'"></i><span>'+x[1]+'</span><strong>'+D.lights[x[0]]+'</strong><em>'+pc(D.lights[x[0]])+'%</em></div>').join('')+'</div></div>';
+  // מגמה שבועית
+  const W=D.weeks,has=W.filter(w=>w.n),vals=has.map(w=>w.raw);
+  let trend='<div class="sa-empty">אין עדיין רישומי נוכחות לשבועות האחרונים.</div>';
+  if(has.length){
+    let lo=Math.max(0,Math.floor((Math.min.apply(null,vals)-3)/5)*5);if(lo>90)lo=90;const hi=100;
+    const X0=46,X1=410,Y0=18,Y1=150,step=(X1-X0)/W.length,y=v=>Y1-(v-lo)/(hi-lo)*(Y1-Y0),xs=i=>X0+step*(i+.5);
+    const tst=(hi-lo)<=20?5:(hi-lo)<=50?10:25,ticks=[];for(let t=lo;t<=hi;t+=tst)ticks.push(t);
+    let g=ticks.map(t=>'<line class="gl" x1="'+X0+'" x2="'+X1+'" y1="'+y(t).toFixed(1)+'" y2="'+y(t).toFixed(1)+'"/><text class="yl" x="'+(X0-8)+'" y="'+(y(t)+4).toFixed(1)+'">'+t+'%</text>').join('');
+    let path='',pts='',cols='';
+    W.forEach(function(w,i){const x=xs(i);
+      g+='<text class="xl" x="'+x.toFixed(1)+'" y="172">'+dm(w.from)+'</text><text class="xn" x="'+x.toFixed(1)+'" y="188">'+(w.n?w.n:'—')+'</text>';
+      if(!w.n){path+=' ';return;}
+      const yy=y(w.raw);cols+='<rect x="'+(x-13).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="26" height="'+Math.max(0,Y1-yy).toFixed(1)+'" rx="5"/>';
+      path+=(path.trim()&&!/ $/.test(path)?' L':' M')+x.toFixed(1)+','+yy.toFixed(1);
+      pts+='<circle cx="'+x.toFixed(1)+'" cy="'+yy.toFixed(1)+'" r="4.5"><title>'+dm(w.from)+'–'+dm(w.to)+': '+w.pct+'% · '+w.n+' סימונים · '+w.days+' ימים</title></circle><text class="pv" x="'+x.toFixed(1)+'" y="'+(yy-10).toFixed(1)+'">'+w.pct+'%</text>';});
+    const lbl='מגמת נוכחות שבועית: '+W.map(w=>dm(w.from)+'–'+dm(w.to)+' '+(w.n?w.pct+'% מתוך '+w.n+' סימונים':'אין נתונים')).join('; ');
+    trend='<svg class="sa-trend" viewBox="0 0 420 196" role="img" aria-label="'+esc(lbl)+'"><g>'+g+'</g><g class="cols">'+cols+'</g><path class="ln" d="'+path.trim().replace(/\s+/g,' ')+'"/><g class="pt">'+pts+'</g></svg>';
+  }
+  const panel=(cls,title,sub,body,foot)=>'<article class="sa-panel '+cls+'"><div class="sa-ph"><h3>'+title+'</h3><span>'+sub+'</span></div>'+body+(foot?'<div class="sa-pf">'+foot+'</div>':'')+'</article>';
+  return '<section class="sa" aria-label="תמונת מצב כללית של התלמידים">'+
+    '<div class="sa-sh"><h2>תמונת מצב כללית</h2><span>'+scope+' · 30 הימים האחרונים ('+dm(D.from)+' עד '+dm(D.today)+')'+(S.q?' · החיפוש מסנן את הרשימה בלבד':'')+'</span></div>'+kpis+
+    '<div class="sa-sh"><h2>ניתוח ויזואלי</h2><span>לפי רישומי הנוכחות ותמונות המצב במערכת</span></div>'+
+    '<div class="sa-grid">'+
+      panel('sa-cls','נוכחות לפי כיתה','30 הימים האחרונים',clsP,'נוכח או איחור מתוך כל סימוני הנוכחות של הכיתה')+
+      panel('sa-lights','תמונת המצב האחרונה','לכל תלמיד',donut,'תלמיד בלי תמונת מצב מוצג בנפרד, ולא נחשב "ירוק"')+
+      panel('sa-wk wide','מגמת נוכחות','6 שבועות · מיום ראשון',trend,'מתחת לכל שבוע: תאריך יום ראשון ומספר סימוני הנוכחות באותו שבוע. "—" = אין רישומים')+
+    '</div></section>';
+}
 function viewStudents(){
   const base=myStudents();
   const list=base.filter(s=>(!S.filter||s.cls===S.filter)&&(!S.q||(s.name+s.father+s.mother+s.fatherPhone+s.motherPhone).includes(S.q)));
@@ -5751,7 +5949,7 @@ function viewStudents(){
   }
   return printHead()+'<div class="head"><div><h2>תלמידים</h2><div class="sub">'+base.length+' רשומים'+(isAdmin()?'':' · '+esc(myClasses().join(', ')||'התלמידים בשיעורים שלך'))+'</div></div>'+
     '<div class="row"><button class="btn" data-act="goto-bdays">🎂 ימי הולדת</button>'+(base.length?'<button class="btn" data-act="stx-open">⬇ ייצוא לאקסל</button>':'')+
-    (isAdmin()?'<button class="btn" data-act="goto-import">ייבוא מאקסל</button><button class="btn" data-v="primary" data-act="student-new">הוספת תלמיד</button>':'')+'</div></div>'+(S.stx?stxCard():'')+form+
+    (isAdmin()?'<button class="btn" data-act="goto-import">ייבוא מאקסל</button><button class="btn" data-v="primary" data-act="student-new">הוספת תלמיד</button>':'')+'</div></div>'+(S.stx?stxCard():'')+form+saView(base)+
     '<div class="card"><div class="row" style="margin-bottom:12px">'+
       '<input class="inp" style="flex:1;min-width:160px" id="q" placeholder="חיפוש לפי שם או טלפון" value="'+esc(S.q)+'" data-in="q">'+
       (isAdmin()?'<select class="inp" data-ch="filter">'+opt('כל הכיתות','',S.filter)+S.config.classes.map(c=>opt(c,c,S.filter)).join('')+'</select>':'')+'</div>'+
