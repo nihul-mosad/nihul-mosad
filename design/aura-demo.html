@@ -1909,6 +1909,80 @@ html[data-theme="dark"] #main .sa-ic[data-t="flat"] { color: #c6b3ff; }
   }
 }
 </style>
+<style id="aura-attendance">
+/* Attendance presentation only. Existing marking, reporting and save behaviour stays unchanged. */
+@media screen {
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) { min-width: 0; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) > .head {
+    display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center;
+    padding: 26px 28px; margin-bottom: 20px; border-radius: var(--au-r-hero);
+    border: 1px solid var(--au-card-b); background: var(--hw-base); box-shadow: var(--au-shadow);
+  }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) > .head > div { min-width: 0; flex: 1; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) > .head h2 { font-size: 30px; font-weight: 800; margin: 0 0 8px; overflow-wrap: anywhere; color: var(--au-title); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .sub { font-size: 14px; line-height: 1.7; color: var(--au-sub); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) > .card { min-width: 0; padding: 22px; border-radius: var(--au-r-hero); box-shadow: var(--au-shadow); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .field > span { color: var(--au-sub); font-size: 14px; line-height: 1.6; margin-bottom: 8px; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) :is(.field,input,select) { min-width: 0; max-width: 100%; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) :is(.field input,.field select) { min-height: 46px; border-radius: 12px; color: var(--au-sub); font-size: 15px; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) :is(.btn,.evb) { min-height: 44px; border-radius: 12px; font-size: 14px; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) :is(button,input,select):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .note { color: var(--au-mute); font-size: 14px; line-height: 1.6; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .tag { font-size: 13px; line-height: 1.5; padding: 5px 10px; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .seg { padding: 4px; gap: 4px; border-radius: 14px; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .seg button { min-height: 44px; padding: 8px 12px; border-radius: 10px; line-height: 1.5; font-size: 14px; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .seg button[data-act="mark-view"][data-on="1"] { background: var(--accent); color: white; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .lrow { padding: 16px 18px; margin-bottom: 10px; gap: 14px; border-radius: 16px; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .lrow:last-child { margin-bottom: 0; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .lrow:has(.tag[data-s="absent"]) { border-inline-start: 4px solid var(--tag-r-ink); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .lrow:has(.tag[data-s="present"]) { border-inline-start: 4px solid var(--tag-g-ink); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .lr-main b { font-size: 16px; line-height: 1.5; color: var(--au-title); overflow-wrap: anywhere; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .lr-main span { margin-top: 4px; font-size: 14px; line-height: 1.6; color: var(--au-mute); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark {
+    display: grid; grid-template-columns: minmax(140px,1fr) minmax(300px,auto) auto; gap: 12px;
+    padding: 16px 0; border-bottom: 1px solid var(--line); align-items: center;
+  }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark:last-child { border-bottom: 0; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark-name { font-size: 16px; font-weight: 750; line-height: 1.6; color: var(--au-title); overflow-wrap: anywhere; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark-name em { margin-top: 3px; font-size: 14px; line-height: 1.5; color: var(--au-mute); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark .seg button[data-on="1"] { font-weight: 800; box-shadow: inset 0 0 0 2px currentColor; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark .seg button[data-on="1"][data-s="present"] { background: var(--tag-g); color: var(--tag-g-ink); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark .seg button[data-on="1"][data-s="late"] { background: var(--tag-y); color: var(--tag-y-ink); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark .seg button[data-on="1"][data-s="absent"] { background: var(--tag-r); color: var(--tag-r-ink); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark .seg button[data-on="1"][data-s="excused"] { background: var(--accent-soft); color: var(--au-sub); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .savebar { display: grid; grid-template-columns: minmax(0,1fr) auto; padding: 12px 16px; border-radius: 18px; gap: 12px; box-shadow: var(--au-shadow); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .savebar .note { color: var(--au-sub); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .scroll { max-width: 100%; border: 1px solid var(--line); border-radius: 14px; scrollbar-color: var(--au-mute) var(--surface2); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .scroll table { min-width: 540px; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .scroll th { background: var(--surface2); color: var(--au-sub); padding: 12px; font-size: 14px; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .scroll td { padding: 12px; line-height: 1.6; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) :is(.gaptab,.stat) { --present: var(--tag-g-ink); --absent: var(--tag-r-ink); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .stat { border-radius: var(--au-r-card); box-shadow: var(--au-shadow); }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .stat span { font-size: 14px; line-height: 1.5; }
+  #main:has([data-ch="markDate"],[data-act="lm-back"]) .empty { padding: 40px 16px; color: var(--au-mute); font-size: 15px; line-height: 1.7; }
+  @media (max-width: 820px) {
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) :is(.lrow,.mark,button,input,select) {
+      scroll-margin-block: calc(76px + env(safe-area-inset-top,0px)) calc(204px + env(safe-area-inset-bottom,0px));
+    }
+  }
+  @media (max-width: 650px) {
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) > .head { padding: 20px 16px; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) > .head h2 { font-size: 26px; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) > .head > div { flex-basis: 100%; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) > .head > .btn { width: 100%; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) > .card { padding: 14px; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) .seg { min-width: 0; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) .seg button { min-width: 0; padding-inline: 6px; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) .lrow { padding: 14px 12px; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark { grid-template-columns: minmax(0,1fr) auto; gap: 10px 8px; padding-block: 18px; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark-name { grid-column: 1; grid-row: 1; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark > .evb { grid-column: 2; grid-row: 1; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark .seg { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) .mark .seg button { font-size: 14px; }
+    #main:has([data-ch="markDate"],[data-act="lm-back"]) .savebar { padding: 12px; }
+  }
+}
+</style>
 <script>/* AURA 3.1: מצב בהיר/כהה ותפריט מקופל, נשמרים במכשיר */(function(){var t='light',c='0';try{t=localStorage.getItem('tt:theme')||'light';c=localStorage.getItem('tt:navc')||'0';}catch(e){}document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');if(c==='1')document.documentElement.classList.add('nav-c');})();
 </script>
 </head>

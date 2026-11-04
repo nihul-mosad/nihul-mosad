@@ -117,6 +117,43 @@ for (const theme of ['light', 'dark']) for (const width of [1648, 390]) {
     await page.context().close();
   });
 }
+for (const theme of ['light', 'dark']) for (const width of [1648, 390]) {
+  test('נוכחות AURA (' + theme + ', ' + width + '): בחירת מצב, טיוטה ופקדים גלויים בלי גלישה', async () => {
+    const page = await openDemo(theme, { width, height: 844 }, MIDDAY);
+    await page.evaluate(() => { S.tab = 'mark'; S.markDate = iso(new Date()); S.markCls = ''; S.markLesson = null; S.markView = 'lessons'; render(); });
+    const id = await page.evaluate(() => markableLessons(S.markDate).find(l => lessonStudents(l).list.length).id);
+    await page.click('.lrow[data-id="' + id + '"]');
+    const before = await page.evaluate(() => JSON.stringify(S.latt));
+    assert.ok(await page.$eval('[data-act="lm-save"]', e => e.disabled));
+    const buttons = '[data-act="lm-set"][data-s="absent"]';
+    const student = await page.$eval(buttons, e => e.dataset.id);
+    await page.click('[data-act="lm-set"][data-id="' + student + '"][data-s="absent"]');
+    assert.equal(await page.evaluate(sid => S.ldraft[sid], student), 'absent');
+    assert.equal(await page.evaluate(() => JSON.stringify(S.latt)), before, 'בחירה בטיוטה כתבה לנתונים השמורים');
+    assert.equal(await page.$eval('[data-act="lm-save"]', e => e.disabled), false);
+    assert.ok(await page.$eval('[data-act="lm-set"][data-id="' + student + '"][data-on="1"]', e => getComputedStyle(e).boxShadow.includes('inset')), 'אין מסגרת למצב הנבחר');
+    await page.click('#auraDemoBar button');
+    assert.equal(await page.evaluate(sid => S.ldraft[sid], student), 'absent', 'החלפת מצב תצוגה איבדה טיוטה');
+    assert.ok(await page.$$eval('[data-act="lm-set"]', es => es.every(e => e.getBoundingClientRect().height >= 44)), 'כפתורי מגע קטנים');
+    if (width < 650) {
+      await page.$$eval(buttons, es => es[es.length - 1].scrollIntoView({ block: 'end' }));
+      const r = await page.$$eval(buttons, es => ({
+        target: es[es.length - 1].getBoundingClientRect().bottom,
+        saveTop: document.querySelector('.savebar').getBoundingClientRect().top,
+        saveBottom: document.querySelector('.savebar').getBoundingClientRect().bottom,
+        navTop: document.getElementById('bnav').getBoundingClientRect().top,
+      }));
+      assert.ok(r.target < r.saveTop && r.saveBottom < r.navTop, 'פקדים מוסתרים: ' + JSON.stringify(r));
+    }
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.evaluate(() => { S.ldirty = false; S.markLesson = null; S.timetable = []; S.draft = {}; render(); });
+    assert.ok(await page.$('[data-act="save-att"]'), 'תצוגת הסימון היומי חסרה');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    assert.deepEqual(page.errors, []);
+    assert.ok(page.external.every(u => /^https:\/\/fonts\.(googleapis|gstatic)\.com\//.test(u)));
+    await page.context().close();
+  });
+}
 const clsBars = page => page.$$eval('.au-cls .r', rs => rs.map(r => {
   const i = r.querySelector('.tr i'), tr = r.querySelector('.tr');
   return { label: r.querySelector('b').textContent.trim(), style: i.style.width, w: i.getBoundingClientRect().width, tw: tr.getBoundingClientRect().width };
