@@ -210,6 +210,26 @@ test('פילוחים: סינון כיתה משנה את המדדים; החיפו
 });
 
 for (const theme of ['light', 'dark']) {
+  test('תלמידים בנייד (' + theme + '): גלילה לשם תלמיד משאירה אותו מעל הניווט ומתחת לכותרת', async () => {
+    const page = await open('admin', { width: 390, height: 844 }, theme);
+    const selector = '.scroll tbody tr:last-child td:first-child .link';
+    for (const block of ['end', 'start']) {
+      await page.$eval(selector, (e, block) => e.scrollIntoView({ block }), block);
+      const r = await page.$eval(selector, e => {
+        const target = e.getBoundingClientRect();
+        return {
+          top: target.top, bottom: target.bottom,
+          navTop: document.getElementById('bnav').getBoundingClientRect().top,
+          headerBottom: document.querySelector('.au-top').getBoundingClientRect().bottom,
+        };
+      });
+      assert.ok(r.bottom < r.navTop, 'שם התלמיד מוסתר מאחורי סרגל הניווט: ' + JSON.stringify(r));
+      assert.ok(r.top > r.headerBottom, 'שם התלמיד מוסתר מאחורי הכותרת: ' + JSON.stringify(r));
+    }
+    assert.deepEqual(page.errors, []);
+    await page.context().close();
+  });
+
   test('פילוחים בנייד (' + theme + '): שום גרף או כרטיס לא גולש מהמסך, ואין גלילה אופקית של העמוד', async () => {
     const page = await open('admin', { width: 360, height: 780 }, theme);
     const r = await page.evaluate(() => {

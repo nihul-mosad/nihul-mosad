@@ -1262,6 +1262,10 @@ html[data-theme="dark"] .s3-id h2{color:#fff}
   /* Narrow screens: the table scrolls inside its card. The name column stays pinned,
      the far edge fades while more columns remain, and a short hint explains the gesture. */
   @media (max-width: 820px) {
+    /* Keep scrolled cards and controls clear of the fixed header and floating navigation. */
+    #main:has(input#q[data-in="q"]) :is(.sa-kpi, .sa-panel, .scroll tbody tr, .scroll td .link, input, select, button) {
+      scroll-margin-block: calc(76px + env(safe-area-inset-top,0px)) calc(104px + env(safe-area-inset-bottom,0px));
+    }
     #main:has(input#q[data-in="q"]) .scroll {
       -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--stu-fade));
       mask-image: linear-gradient(to right, transparent 0, #000 var(--stu-fade));
