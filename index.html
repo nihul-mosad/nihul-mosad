@@ -1272,16 +1272,53 @@ html[data-theme="dark"] .s3-id h2{color:#fff}
         animation-timeline: scroll(self inline);
       }
     }
+    /* Snap: when a swipe ends, the next column lines up exactly against the pinned name column
+       (proximity = the user can still stop anywhere; RTL: inline-start is the right edge). */
+    #main:has(input#q[data-in="q"]) {
+      --stu-name-w: 128px;
+      --stu-pin-edge: var(--stu-line-strong);
+      --stu-pin-shadow: -14px 0 16px -12px rgba(30,40,110,.42);
+    }
+    html[data-theme="dark"] #main:has(input#q[data-in="q"]) {
+      --stu-pin-edge: #4a57a6;
+      --stu-pin-shadow: -14px 0 16px -12px rgba(0,0,0,.85);
+    }
+    #main:has(input#q[data-in="q"]) .scroll {
+      scroll-snap-type: x proximity;
+      scroll-padding-inline-start: var(--stu-name-w);
+    }
+    #main:has(input#q[data-in="q"]) .scroll thead th { scroll-snap-align: start; }
+    /* The last column fills exactly the space left of the pinned column, so at the end of the
+       scroll its edge also meets the name column and no partial column is left peeking out. */
+    #main:has(input#q[data-in="q"]) .scroll { container-type: inline-size; }
+    #main:has(input#q[data-in="q"]) .scroll table { width: max-content; min-width: 100%; }
+    #main:has(input#q[data-in="q"]) .scroll thead th:last-child {
+      scroll-snap-align: end;
+      min-width: calc(100cqi - var(--stu-name-w));
+      box-sizing: border-box;
+    }
+    /* Pinned name column: narrower, wraps only between words (never inside a word), clear divider and shadow */
     #main:has(input#q[data-in="q"]) .scroll thead th:first-child,
     #main:has(input#q[data-in="q"]) .scroll tbody td:first-child {
       position: sticky;
       right: 0;
       z-index: 1;
-      box-shadow: -1px 0 0 var(--stu-line), -10px 0 12px -10px rgba(30,40,110,.28);
+      box-sizing: border-box;
+      width: var(--stu-name-w);
+      min-width: var(--stu-name-w);
+      max-width: var(--stu-name-w);
+      white-space: normal;
+      word-break: keep-all;
+      overflow-wrap: normal;
+      hyphens: none;
+      box-shadow: inset 2px 0 0 var(--stu-pin-edge), var(--stu-pin-shadow);
     }
+    #main:has(input#q[data-in="q"]) .scroll thead th:first-child { z-index: 2; }
+    #main:has(input#q[data-in="q"]) .scroll td:first-child .link { line-height: 1.35; text-align: right; }
+    #main:has(input#q[data-in="q"]) .scroll td:first-child .tag { margin-top: 4px; }
     #main:has(input#q[data-in="q"]) .scroll tbody tr:hover td:first-child,
     #main:has(input#q[data-in="q"]) .scroll tbody tr:focus-within td:first-child {
-      box-shadow: inset -3px 0 0 var(--stu-blue), -1px 0 0 var(--stu-line), -10px 0 12px -10px rgba(30,40,110,.28);
+      box-shadow: inset -3px 0 0 var(--stu-blue), inset 2px 0 0 var(--stu-pin-edge), var(--stu-pin-shadow);
     }
     #main:has(input#q[data-in="q"]) > .card:has(> .scroll)::after {
       content: "החליקו את הטבלה לצד שמאל כדי לראות נוכחות, הורה וטלפון ←";
@@ -1302,7 +1339,6 @@ html[data-theme="dark"] .s3-id h2{color:#fff}
     #main:has(input#q[data-in="q"]) > .head .btn { font-size: 12.5px; min-width: 0; padding-inline: 8px; min-height: 44px; }
     #main:has(input#q[data-in="q"]) > .card { padding: 12px; border-radius: 18px; }
     #main:has(input#q[data-in="q"]) > .card > .row:first-child { grid-auto-flow: row; gap: 9px; padding-bottom: 12px; }
-    #main:has(input#q[data-in="q"]) .scroll table { min-width: 680px; }
     #main:has(input#q[data-in="q"]) .scroll thead th,
     #main:has(input#q[data-in="q"]) .scroll tbody td { padding: 12px 13px; font-size: 13.5px; }
     #main:has(input#q[data-in="q"]) .scroll tbody td { height: 52px; }
