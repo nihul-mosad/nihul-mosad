@@ -1,0 +1,46 @@
+# בדיקות אוטומטיות — רצות על כל דחיפה ועל כל בקשת מיזוג. לא מפרסמות כלום.
+name: tests
+on:
+  push:
+    branches-ignore: [main]   # ב-main הבדיקות רצות מתוך deploy.yml
+  pull_request:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  ui-and-flows:
+    name: מסכים ותהליכים (סביבת ניסוי מקומית)
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: safety-net } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: safety-net/package-lock.json }
+      - run: npm ci
+      - run: npm install --no-save playwright@1 && npx playwright install --with-deps chromium
+      - run: npm test
+  security-rules:
+    name: חוקי אבטחה (Firebase Emulator)
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: safety-net } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: safety-net/package-lock.json }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - run: npm ci
+      - run: npm run test:rules
+  emulator-e2e:
+    name: שמירה ומורים במקביל (Firebase Emulator)
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: safety-net } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: safety-net/package-lock.json }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - run: npm ci
+      - run: npm install --no-save playwright@1 && npx playwright install --with-deps chromium
+      - run: npm run test:emulator

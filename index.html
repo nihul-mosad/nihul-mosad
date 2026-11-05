@@ -524,6 +524,53 @@ th{font-weight:600}
 @media(pointer:coarse){.evs,.evt{padding:10px 15px}}
 .evwhen{font-size:13.5px;margin-top:2px}.evwhen b{font-weight:700}
 </style>
+<style id="student-summary">
+/* חלון "סיכום להורים" (sumOpen / sumPaint) — עיצוב בלבד, בעיצוב הקיים של המערכת */
+#sumDlg .sum-bg { position: fixed; inset: 0; z-index: 90; background: rgba(12,21,86,.38); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+#sumDlg .sum-box { position: fixed; z-index: 91; top: 50%; left: 50%; transform: translate(-50%,-50%); width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px);
+  display: flex; flex-direction: column; border-radius: 24px; background: var(--surface,#fff); border: 1px solid var(--line); box-shadow: 0 30px 70px -24px rgba(20,30,110,.55); color: var(--ink); }
+#sumDlg .sum-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 22px 26px 16px; border-bottom: 1px solid var(--line); }
+#sumDlg .sum-h h2 { margin: 0 0 4px; font-size: 22px; font-weight: 800; color: var(--ink); }
+#sumDlg .sum-h span { font-size: 14px; color: var(--muted); font-weight: 600; }
+#sumDlg .sum-x { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface2,#f2f4fc); color: var(--ink); font-size: 16px; cursor: pointer; }
+#sumDlg .sum-x:focus-visible, #sumDlg .btn:focus-visible, #sumDlg textarea:focus-visible, #sumDlg summary:focus-visible { outline: 2px solid var(--accent,#3d6bf7); outline-offset: 2px; }
+#sumDlg .sum-b { padding: 18px 26px 22px; overflow: auto; overscroll-behavior: contain; }
+#sumDlg .sum-lead { margin: 0 0 12px; font-size: 15px; line-height: 1.6; }
+#sumDlg .sum-priv { padding: 12px 14px; border-radius: 14px; background: var(--accent-soft,#e6edff); color: var(--ink); font-size: 13.5px; line-height: 1.6; }
+#sumDlg .sum-sub { margin: 18px 0 8px; font-size: 15px; font-weight: 800; color: var(--ink); }
+#sumDlg .sum-facts { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin: 0; }
+#sumDlg .sum-facts div { min-width: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface2,#f6f8fe); }
+#sumDlg .sum-facts dt { font-size: 12px; color: var(--muted); font-weight: 600; }
+#sumDlg .sum-facts dd { margin: 3px 0 0; font-size: 14px; font-weight: 700; color: var(--ink); overflow-wrap: anywhere; }
+#sumDlg .sum-raw { margin-top: 12px; font-size: 13px; }
+#sumDlg .sum-raw summary { cursor: pointer; color: var(--accent,#3d6bf7); font-weight: 700; padding: 4px 0; }
+#sumDlg .sum-raw pre { max-height: 220px; overflow: auto; margin: 8px 0 0; padding: 10px; border-radius: 10px; background: var(--surface2,#f2f4fc); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+#sumDlg .sum-raw .sum-facts { margin-top: 8px; }
+#sumDlg .sum-acts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+#sumDlg .sum-acts .btn { min-height: 44px; padding-inline: 18px; border-radius: 13px; font-weight: 750; }
+#sumDlg .sum-lbl { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 800; color: var(--ink); }
+#sumDlg textarea { width: 100%; min-height: 330px; resize: vertical; box-sizing: border-box; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--surface,#fff); color: var(--ink); font: inherit; font-size: 15.5px; line-height: 1.75; }
+#sumDlg .sum-hint, #sumDlg .sum-folder { margin: 8px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+#sumDlg .sum-folder .link { font-size: inherit; }
+#sumDlg .sum-ok, #sumDlg .sum-err { margin-top: 14px; padding: 11px 14px; border-radius: 12px; font-size: 14px; font-weight: 700; }
+#sumDlg .sum-ok { background: #E3F5EC; color: var(--green); }
+#sumDlg .sum-err { background: #FCE6E4; color: var(--red); }
+#sumDlg .sum-busy { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 46px 10px; text-align: center; color: var(--muted); }
+#sumDlg .sum-busy b { font-size: 17px; color: var(--ink); }
+#sumDlg .sum-spin { width: 38px; height: 38px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--accent,#3d6bf7); animation: sum-spin 1s linear infinite; }
+@keyframes sum-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #sumDlg .sum-spin { animation-duration: 3s; } }
+@media (max-width: 620px) {
+  #sumDlg .sum-box { top: auto; bottom: 0; left: 0; transform: none; width: 100%; max-height: 92vh; max-height: 92dvh; border-radius: 22px 22px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+  #sumDlg .sum-h { padding: 18px 16px 12px; }
+  #sumDlg .sum-b { padding: 14px 16px 18px; }
+  #sumDlg .sum-facts { grid-template-columns: minmax(0,1fr); }
+  #sumDlg textarea { min-height: 300px; font-size: 15px; }
+  #sumDlg .sum-acts .btn { flex: 1 1 auto; }
+}
+@media print { #sumDlg { display: none; } }
+</style>
 </head>
 <body>
 
@@ -671,7 +718,7 @@ async function enterInst(inst,user,typed){
   S.staff=isAdmin()?await load(K.staff,[]):[];S.markLesson=null;S.markView='lessons';S.ttInit=0;S.ttMode='class';S.ttTeacher='';
   try{localStorage.setItem('tt:inst',inst);localStorage.setItem('tt:instName',S.config.name||'');}catch(e){}
   S.tab=(isAdmin()||myClasses().length)?'dash':'mark';S.markCls=myClasses()[0]||'';S.revCls=myClasses()[0]||'';S.filter='';S.repCls='';S.revIdx=null;
-  S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;
+  S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=!!UNSAVED[K.att];
   document.getElementById('login').style.display='none';
   document.getElementById('shell').classList.add('on');
   render();startProbe();
@@ -701,7 +748,7 @@ async function dbSet(path,body){
 }
 function saveFailed(e){
   const c=e&&e.code;
-  toast(c==='quota_exceeded'?'המאגר מלא — לא נשמר':c==='revoked'||c==='not_granted'?'אין הרשאה לשמור':'השמירה נכשלה — בדקו את החיבור');
+  toast((c==='quota_exceeded'?'המאגר מלא — לא נשמר':c==='revoked'||c==='not_granted'||c==='permission-denied'?'אין הרשאה לשמור — השינוי לא נשמר':'השמירה נכשלה — בדקו את החיבור ונסו שוב'),1,7000);
 }
 
 /* ===== אחסון מופרד: כל מורה מקבל מהשרת רק את מה שמותר לו ===== */
@@ -733,7 +780,7 @@ async function writeDoc(path,field,depth,newMap,order){
     if(ordCh){args.push(new firebase.firestore.FieldPath('o'));args.push(order);}
     try{await ref.update(...args);}
     catch(e){
-      if(e&&(e.code==='not-found'||e.code==='invalid_argument')){const full={};full[field]=newMap;if(order)full.o=order;await ref.set(full);}
+      if(e&&(e.code==='not-found'||e.code==='invalid_argument')){const full={};full[field]=newMap;if(order)full.o=order;await ref.set(full,{merge:true});} // merge: אם מכשיר אחר יצר את המסמך באותו רגע, לא דורסים את מה שהוא כתב
       else throw e;
     }
     LD[path]=clone(newMap);if(order)LD[path+'#o']=ordJ;
@@ -749,12 +796,16 @@ async function saveStudentsSec(){
   for(const c of Object.keys(byC))await writeDoc('cls/'+c,'m',1,clone(byC[c]),ord[c]||[]);
   for(const c of Object.keys(rC))await writeDoc('roster/'+c,'m',1,rC[c]);
 }
+/* ממצא מ2: סימון שכבר שמור בשרת נשאר במסמך שבו נכתב (הכיתה שבה התלמיד היה באותו יום),
+   גם אם התלמיד עבר מאז כיתה או שאינו מופיע ברשימה של המורה. כך מעבר כיתה לא מוחק היסטוריה. */
 function attTargets(isL){
-  const src=isL?S.latt:S.att,out={},sc={},lt={};
+  const src=isL?S.latt:S.att,out={},sc={},lt={},at={};
   S.students.forEach(x=>sc[x.id]=x.cls);S.timetable.forEach(l=>lt[l.id]=l.teacher||'');
-  knownPaths('att/'+(isL?'L':'D')).forEach(p=>out[p]={});
+  knownPaths('att/'+(isL?'L':'D')).forEach(p=>{out[p]={};const d=LD[p]||{};Object.keys(d).forEach(date=>Object.keys(d[date]||{}).forEach(k=>{at[date+'|'+k]=p;}));});
   Object.keys(src).forEach(function(date){const day=src[date]||{};Object.keys(day).forEach(function(k){
-    const v=day[k];if(!v)return;let sid=k,tk='';
+    const v=day[k];if(!v)return;
+    const was=at[date+'|'+k];if(was){((out[was]=out[was]||{})[date]=out[was][date]||{})[k]=v;return;}
+    let sid=k,tk='';
     if(isL){const i=k.indexOf(':');if(i<0)return;sid=k.slice(i+1);tk=tkOf(lt[k.slice(0,i)]);}
     if(sc[sid]===undefined)return;
     const p='att/'+(isL?'L':'D')+month(date)+'_'+ckOf(sc[sid])+'_'+tk;
@@ -763,9 +814,14 @@ function attTargets(isL){
 }
 async function saveAttSec(isL){const t=attTargets(isL);for(const p of Object.keys(t))await writeDoc(p,'d',2,t[p]);}
 async function saveReviewsSec(){
-  const sc={},out={};S.students.forEach(x=>sc[x.id]=x.cls);
-  knownPaths('rev/').forEach(p=>out[p]={});
-  S.reviews.forEach(function(r){if(!r.id)r.id=uid();if(sc[r.studentId]===undefined)return;const p='rev/'+month(r.date)+'_'+ckOf(sc[r.studentId]);(out[p]=out[p]||{})[r.id]=r;});
+  const sc={},out={},at={};S.students.forEach(x=>sc[x.id]=x.cls);
+  // ממצא מ2: תמונת מצב שכבר שמורה נשארת במסמך של הכיתה שבה נכתבה (אלא אם התאריך שלה שונה לחודש אחר)
+  knownPaths('rev/').forEach(p=>{out[p]={};Object.keys(LD[p]||{}).forEach(id=>{at[id]=p;});});
+  S.reviews.forEach(function(r){if(!r.id)r.id=uid();const was=at[r.id];
+    if(was&&was.slice(4,11)===month(r.date)){(out[was]=out[was]||{})[r.id]=r;return;}
+    const c=sc[r.studentId]!==undefined?sc[r.studentId]:(was?null:undefined);
+    if(c===undefined)return;
+    const p=c===null?'rev/'+month(r.date)+was.slice(11):'rev/'+month(r.date)+'_'+ckOf(c);(out[p]=out[p]||{})[r.id]=r;});
   for(const p of Object.keys(out))await writeDoc(p,'r',1,clone(out[p]));
 }
 async function saveTasksSec(){
@@ -901,8 +957,21 @@ async function load(key,fb){
   try{ const v=localStorage.getItem(key); if(v) return JSON.parse(v); }catch(e){}
   return fb;
 }
-async function save(key,val){
-  if(DB&&SECKEYS[key]&&!S.legacy&&S.inst){try{await saveSec(key);}catch(e){saveFailed(e);}return;}
+/* ממצא מ1: הודעת "נשמר" מוצגת רק אחרי שהשרת אישר את השמירה.
+   save() מחזירה הבטחה ל-true/false. הודעה (toast) שנקראת מיד אחרי save() באותו טיפול בלחיצה
+   ממתינה לתוצאה: בהצלחה היא מוצגת, בכישלון מוצגת הודעת שגיאה במקומה. */
+const SAVE_TICK=[];let SAVE_PENDING=0;const UNSAVED={};
+function save(key,val){
+  SAVE_PENDING++;
+  const p=save0(key,val).then(ok=>ok!==false,e=>{saveFailed(e);return false;});
+  // אחרי כישלון: כפתור השמירה נשאר פעיל (גם כשפותחים שוב את השיעור) עד ששמירה מצליחה
+  p.then(ok=>{SAVE_PENDING--;UNSAVED[key]=!ok;});
+  if(!SAVE_TICK.length)setTimeout(()=>{SAVE_TICK.length=0;},0);
+  SAVE_TICK.push(p);return p;
+}
+window.addEventListener('beforeunload',function(e){if(SAVE_PENDING>0){e.preventDefault();e.returnValue='';}});
+async function save0(key,val){
+  if(DB&&SECKEYS[key]&&!S.legacy&&S.inst){try{await saveSec(key);}catch(e){saveFailed(e);return false;}return true;}
   if(DB){
     try{
       if(ARRKEYS[key]){
@@ -945,9 +1014,11 @@ async function save(key,val){
         for(const mo of Object.keys(by))await dbMerge('rev/'+mo,{r:by[mo]});
         LAST[key]=L;return;
       }
-    }catch(e){saveFailed(e);return;}
+    }catch(e){saveFailed(e);return false;}
+    return true;
   }
-  try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){ toast('אין מקום לשמור בדפדפן'); }
+  try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){ toast('אין מקום לשמור בדפדפן',1); return false; }
+  return true;
 }
 const STATUSES=[['present','נוכח'],['late','איחור'],['absent','חיסור'],['excused','מאושר']];
 const LABEL=Object.fromEntries(STATUSES);
@@ -978,7 +1049,16 @@ function hebShort(s){const p=hebParts(s);return p&&p.d?gem(p.d)+' ב'+p.m:'';}
 function dual(s){return gregLabel(s)+' · '+hebLabel(s);}
 function shortDate(s){try{const g=new Intl.DateTimeFormat('he-IL',{day:'numeric',month:'numeric'}).format(new Date(s+'T12:00:00'));const h=hebShort(s);return g+(h?' · '+h:'');}catch(e){return s;}}
 let toastTimer;
-function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',2400);}
+function showToast(m,ms){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(toastTimer);if(ms!==0)toastTimer=setTimeout(()=>t.style.display='none',ms||2400);}
+function toast(m,now,ms){
+  if(!now&&SAVE_TICK.length){
+    const ps=SAVE_TICK.slice();let done=false;showToast('שומר…',0);
+    const slow=setTimeout(()=>{if(!done)showToast('השמירה מתעכבת — אין חיבור לשרת. אל תסגרו את הדף עד שיופיע "נשמר"',0);},6000);
+    Promise.all(ps).then(r=>{done=true;clearTimeout(slow);if(r.every(Boolean))showToast(m,ms);});
+    return;
+  }
+  showToast(m,ms);
+}
 function copy(txt,msg){navigator.clipboard&&navigator.clipboard.writeText(txt);toast(msg);}
 function download(name,content,type){
   const url=URL.createObjectURL(new Blob([content],{type:type}));
@@ -1124,7 +1204,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=55;
+const APP_VER=57;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -1532,6 +1612,242 @@ function reviewDone(){
 }
 
 /* ================= כרטיס תלמיד ================= */
+/* כללי התובנות של כרטיס התלמיד (לוגיקה בלבד, מועתק מענף העיצוב) — משמשים את סיכום התלמיד */
+const S360_RULES={lowAtt:90,attDrop:5,lates14:3,neg14:3,pos14:2,staleDays:21,domDrop:2};
+function s360Insights(s,ctx){
+  const R=S360_RULES,out=[];const c=ctx;
+  if(c.a30.pct!==null&&c.a30.pct<R.lowAtt)out.push({lv:'risk',t:'נוכחות נמוכה',why:'נוכחות של '+c.a30.pct+'% ב-30 הימים האחרונים — מתחת לסף '+R.lowAtt+'%.'});
+  if(c.a30.pct!==null&&c.a30p.pct!==null&&c.a30p.pct-c.a30.pct>=R.attDrop)out.push({lv:'warn',t:'ירידה בנוכחות',why:c.a30.pct+'% ב-30 הימים האחרונים לעומת '+c.a30p.pct+'% ב-30 הימים שלפניהם (ירידה של '+(c.a30p.pct-c.a30.pct)+' נקודות; סף: '+R.attDrop+').'});
+  if(c.a14.late>=R.lates14)out.push({lv:'warn',t:'דפוס איחורים',why:c.a14.late+' איחורים לשיעורים ב-14 הימים האחרונים (סף: '+R.lates14+').'});
+  if(c.neg14>=R.neg14)out.push({lv:'risk',t:'ריבוי אירועים לשיפור',why:c.neg14+' אירועים לשיפור ב-14 הימים האחרונים (סף: '+R.neg14+').'});
+  if(c.sevOpen)out.push({lv:'risk',t:'אירוע חמור שלא טופל',why:c.sevOpen+' אירועים בחומרה גבוהה עדיין לא סומנו כמטופלים.'});
+  if(!c.last)out.push({lv:'info',t:'אין תמונת מצב',why:'עוד לא נרשמה תמונת מצב לתלמיד.'});
+  else{
+    const age=Math.round((new Date(iso(new Date())+'T12:00:00')-new Date(c.last.date+'T12:00:00'))/864e5);
+    if(age>R.staleDays)out.push({lv:'info',t:'תמונת מצב לא עדכנית',why:'תמונת המצב האחרונה נרשמה לפני '+age+' ימים (סף: '+R.staleDays+').'});
+    if(c.last.light==='red')out.push({lv:'risk',t:'רמזור אדום',why:'בתמונת המצב האחרונה ('+shortDate(c.last.date)+') סומן רמזור אדום.'});
+    if(c.prev)domains().forEach(function(d){const a=c.prev.scores&&c.prev.scores[d.id],b=c.last.scores&&c.last.scores[d.id];
+      if(a&&b&&a-b>=R.domDrop)out.push({lv:'warn',t:'ירידה ב'+d.name,why:'הציון ירד מ-'+a+' ל-'+b+' בין שתי תמונות המצב האחרונות (סף: ירידה של '+R.domDrop+').'});
+      if(a&&b&&b-a>=R.domDrop)out.push({lv:'good',t:'שיפור ב'+d.name,why:'הציון עלה מ-'+a+' ל-'+b+' בין שתי תמונות המצב האחרונות.'});});
+  }
+  if(c.pos14>=R.pos14)out.push({lv:'good',t:'מגמה חיובית',why:c.pos14+' אירועים לשבח ב-14 הימים האחרונים (סף: '+R.pos14+').'});
+  if(!out.some(x=>x.lv==='risk'||x.lv==='warn'))out.push({lv:'good',t:'אין חריגות',why:'נבדקו כללי נוכחות, איחורים, אירועים ותמונת מצב — לא נמצאה חריגה.'});
+  const ord={risk:0,warn:1,info:2,good:3};return out.sort((a,b)=>ord[a.lv]-ord[b.lv]);
+}
+/* ===== סיכום תלמיד להורים (AI) — רק למנהל =====
+   1. החבילה נבנית כאן: בלי שם התלמיד, בלי שמות הורים ובלי טלפונים. שמות שמופיעים בהערות מוחלפים,
+      וטלפונים / מספרי זהות נמחקים. לפני השליחה נבדק שוב שאין בחבילה שם או מספר.
+   2. הפונקציה studentSummary בשרת בודקת הרשאה, מנקה שוב ושולחת ל-Claude (המפתח רק בשרת).
+   3. התשובה היא טיוטה לעריכה. המערכת מחליפה את {{שם}} בשם התלמיד רק כאן, במחשב.
+   4. שמירה: PDF לתיקייה "סיכומי תלמידים" במחשב (Chrome/Edge — בחירת מיקום פעם אחת); בדפדפן אחר — הורדה רגילה.
+   ה-PDF נבנה בלי ספריות חיצוניות: כל עמוד מצויר כתמונה (לכן הטקסט בקובץ אינו ניתן לסימון). */
+const SUM_DIR='סיכומי תלמידים',SUM_TOKEN='{{שם}}';
+let SUMS=null;
+const SUM_HB='\\u0590-\\u05FFA-Za-z0-9';
+function sumRx(w){return new RegExp('(^|[^'+SUM_HB+'])([ובכלמשה]{0,2})'+String(w).trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s+')+'(?=$|[^'+SUM_HB+'])','g');}
+function sumNames(s){
+  const other=S.students.concat(S.evRoster||[]).filter(x=>x.id!==s.id).map(x=>x.name);
+  const staff=[].concat(S.staff.map(x=>x.name),S.timetable.map(l=>l.teacher),Object.values(S.config.homeroom||{}),(S.config.users||[]).map(u=>u.teacher||u.user),[S.me.teacher,S.me.user]);
+  const L=(a,by)=>a.filter(n=>n&&String(n).trim().length>1).map(n=>[String(n).trim(),by]);
+  const own=String(s.name||'').trim();
+  // מהארוך לקצר, כדי ששם מלא יוחלף לפני חלק ממנו
+  return L(other,'תלמיד אחר').concat(L([s.father,s.mother],'ההורה'),L(staff,'המורה'),L(own?[own]:[],'התלמיד'),L(own.split(/\s+/).filter(w=>w.length>2),'התלמיד'))
+    .sort((a,b)=>b[0].length-a[0].length);
+}
+function sumScrub(t,names){
+  let x=String(t||'');
+  x=x.replace(/(?:\+?972[-\s]?|0)(?:[23489]|5\d|7\d)[-\s]?\d{3}[-\s]?\d{4}/g,'[מספר הוסר]').replace(/(?<!\d)\d{9}(?!\d)/g,'[מספר הוסר]');
+  names.forEach(function(p){x=x.replace(sumRx(p[0]),'$1$2'+p[1]);});
+  return x;
+}
+function sumSchoolYear(){const d=new Date(),y=d.getMonth()>=8?d.getFullYear():d.getFullYear()-1;return y+'-09-01';}
+function sumPacket(s){
+  const today=iso(new Date()),names=sumNames(s),revs=reviewsOf(s.id),last=revs[revs.length-1]||null,prev=revs[revs.length-2]||null;
+  const a30=attStats(s.id,daysAgo(29),today),a30p=attStats(s.id,daysAgo(59),daysAgo(30)),a14=attStats(s.id,daysAgo(13),today),aY=attStats(s.id,sumSchoolYear(),today);
+  const ev=S.events.filter(e=>e.sid===s.id);
+  const pos14=ev.filter(e=>e.date>=daysAgo(13)&&e.kind==='pos').length,neg14=ev.filter(e=>e.date>=daysAgo(13)&&e.kind!=='pos').length,sevOpen=ev.filter(e=>e.kind!=='pos'&&e.sev>=3&&!e.handled).length;
+  const ins=s360Insights(s,{a30:a30,a30p:a30p,a14:a14,neg14:neg14,pos14:pos14,sevOpen:sevOpen,last:last,prev:prev});
+  const dn={};domains().forEach(d=>{dn[d.id]=d.name;});
+  const A=a=>({pct:a.pct,present:a.present,late:a.late,absent:a.absent,excused:a.excused,total:a.total});
+  return {
+    cls:s.cls||'',period:{from:daysAgo(29),to:today},
+    attendance:{last30:A(a30),prev30:A(a30p),year:A(aY)},
+    events:ev.filter(e=>e.date>=daysAgo(90)).sort((a,b)=>(b.date+(b.time||''))>(a.date+(a.time||''))?1:-1).slice(0,30)
+      .map(e=>({date:e.date,kind:e.kind==='pos'?'pos':'neg',type:e.typeName||'',severity:e.sev||null,handled:!!e.handled,note:sumScrub(e.note,names)})),
+    snapshots:revs.slice(-4).map(r=>{const sc={};Object.keys(r.scores||{}).forEach(k=>{if(dn[k]&&typeof r.scores[k]==='number')sc[dn[k]]=r.scores[k];});
+      return {date:r.date,light:LIGHTNAME[r.light]||'',scores:sc,note:sumScrub(r.note,names)};}),
+    scale:'1 (נמוך) עד 5 (גבוה)',
+    insights:ins.map(i=>({level:i.lv,title:i.t,why:sumScrub(i.why,names)}))
+  };
+}
+// בדיקה אחרונה לפני שליחה: אין שם של התלמיד או של הוריו, ואין טלפון או מספר זהות
+function sumLeak(p,s){
+  const j=JSON.stringify(p),bad=[];
+  [s.name].concat(String(s.name||'').split(/\s+/).filter(w=>w.length>2),s.father,s.mother).filter(Boolean).forEach(n=>{if(sumRx(n).test(j))bad.push(n);});
+  if(/(?:\+?972[-\s]?|0)(?:[23489]|5\d|7\d)[-\s]?\d{3}[-\s]?\d{4}/.test(j)||/(?<!\d)\d{9}(?!\d)/.test(j))bad.push('מספר');
+  return bad;
+}
+function sumFacts(p){
+  const a=p.attendance.last30,pos=p.events.filter(e=>e.kind==='pos').length,neg=p.events.length-pos,l=p.snapshots[p.snapshots.length-1];
+  return [['נוכחות · 30 יום',a.pct===null?'אין רישומים':a.pct+'% ('+(a.present+a.late)+' מתוך '+a.total+' סימונים)'],
+    ['אירועים · 90 יום',p.events.length?pos+' לשבח · '+neg+' לשיפור':'אין'],
+    ['תמונות מצב',p.snapshots.length?p.snapshots.length+' (האחרונה '+l.date.slice(8,10)+'.'+l.date.slice(5,7)+(l.light?' · '+l.light:'')+')':'אין'],
+    ['תובנות',p.insights.map(i=>i.title).join(' · ')||'—']];
+}
+
+/* ---- חלון הסיכום (נבנה מחוץ ל-#main, כך שהוא לא משנה את כרטיס התלמיד) ---- */
+function sumOpen(sid){
+  if(!isAdmin())return;
+  const s=studentById(sid);if(!s)return;
+  SUMS={sid:sid,phase:'intro',text:'',edited:false,saved:'',err:'',dir:'',packet:sumPacket(s)};
+  let d=document.getElementById('sumDlg');
+  if(!d){d=document.createElement('div');d.id='sumDlg';document.body.appendChild(d);
+    d.addEventListener('click',sumClick);d.addEventListener('input',e=>{if(e.target.id==='sumText'&&SUMS){SUMS.text=e.target.value;SUMS.edited=true;}});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&SUMS&&SUMS.phase!=='busy')sumClose();});}
+  sumPaint();
+  if(SUM_DIRH)SUMS.dir=SUM_DIRH.name;else sumIdb('get').then(h=>{if(SUMS&&h){SUMS.dir=h.name;sumPaint();}});
+}
+function sumClose(){if(SUMS&&SUMS.edited&&!SUMS.saved&&!confirm('הטיוטה לא נשמרה. לסגור בכל זאת?'))return;SUMS=null;const d=document.getElementById('sumDlg');if(d)d.innerHTML='';}
+function sumPaint(){
+  const d=document.getElementById('sumDlg');if(!d)return;if(!SUMS){d.innerHTML='';return;}
+  const s=studentById(SUMS.sid)||{},P=SUMS.packet,ph=SUMS.phase;
+  const facts='<dl class="sum-facts">'+sumFacts(P).map(f=>'<div><dt>'+f[0]+'</dt><dd>'+esc(f[1])+'</dd></div>').join('')+'</dl>';
+  const folder=window.showDirectoryPicker?(SUMS.dir?'הקבצים נשמרים בתיקייה <b>'+esc(SUMS.dir)+'</b> · <button class="link" data-sum="pick">החלפת תיקייה</button>':'בשמירה הראשונה תתבקשו לבחור היכן ליצור את התיקייה <b>'+SUM_DIR+'</b>. מכאן והלאה כל סיכום יישמר בה ישירות.'):'בדפדפן הזה הקובץ יירד לתיקיית ההורדות. לשמירה ישירה לתיקייה "'+SUM_DIR+'" פתחו את המערכת ב-Chrome או ב-Edge.';
+  let body='';
+  if(ph==='intro')body='<p class="sum-lead">טיוטת סיכום מקצועית להורים, על סמך הנתונים שבמערכת. תוכלו לקרוא ולערוך אותה לפני השמירה.</p>'+
+    '<div class="sum-priv"><b>פרטיות:</b> שם התלמיד, שמות ההורים ומספרי טלפון לא נשלחים. שמות שמופיעים בהערות מוחלפים ב"התלמיד", "תלמיד אחר" או "המורה". השם מוכנס לסיכום רק כאן, אצלכם.</div>'+
+    '<h3 class="sum-sub">הנתונים שיישלחו</h3>'+facts+
+    '<details class="sum-raw"><summary>הצגת החבילה המלאה</summary><pre dir="rtl">'+esc(JSON.stringify(P,null,1))+'</pre></details>'+
+    '<div class="sum-acts"><button class="btn" data-v="primary" data-sum="gen">יצירת סיכום</button><button class="btn" data-v="ghost" data-sum="close">ביטול</button></div>';
+  else if(ph==='busy')body='<div class="sum-busy" role="status"><span class="sum-spin" aria-hidden="true"></span><b>כותב את הסיכום…</b><span>זה לוקח בדרך כלל 10–30 שניות.</span></div>';
+  else if(ph==='error')body='<div class="sum-err" role="alert">'+esc(SUMS.err)+'</div><div class="sum-acts"><button class="btn" data-v="primary" data-sum="gen">נסו שוב</button><button class="btn" data-v="ghost" data-sum="close">סגירה</button></div>';
+  else body='<label class="sum-lbl" for="sumText">טיוטה — קראו ותקנו לפני השמירה</label>'+
+    '<textarea id="sumText" dir="rtl" spellcheck="true">'+esc(SUMS.text)+'</textarea>'+
+    '<p class="sum-hint">שורה שמתחילה ב-## תוצג ב-PDF ככותרת.</p>'+
+    '<details class="sum-raw"><summary>על סמך הנתונים</summary>'+facts+'</details>'+
+    (SUMS.saved?'<div class="sum-ok" role="status">נשמר: '+esc(SUMS.saved).replace(/(\d+\.\d+\.\d{4}(?: \(\d+\))?\.pdf)$/,'<span dir="ltr">$1</span>')+'</div>':'')+(SUMS.err?'<div class="sum-err" role="alert">'+esc(SUMS.err)+'</div>':'')+
+    '<div class="sum-acts"><button class="btn" data-v="primary" data-sum="save">שמירה כ-PDF</button><button class="btn" data-sum="copy">העתקה</button><button class="btn" data-v="ghost" data-sum="gen">יצירה מחדש</button></div>'+
+    '<p class="sum-folder">'+folder+'</p>';
+  d.innerHTML='<div class="sum-bg" data-sum="close"></div><div class="sum-box" role="dialog" aria-modal="true" aria-labelledby="sumT">'+
+    '<div class="sum-h"><div><h2 id="sumT">סיכום להורים</h2><span>'+esc(s.name||'')+(s.cls?' · '+esc(s.cls):'')+'</span></div>'+
+    (ph==='busy'?'':'<button class="sum-x" data-sum="close" aria-label="סגירה">✕</button>')+'</div><div class="sum-b">'+body+'</div></div>';
+  const f=d.querySelector(ph==='done'?'#sumText':'[data-sum="gen"],.sum-x');if(f)try{f.focus({preventScroll:true});}catch(e){}
+}
+async function sumClick(e){
+  const b=e.target.closest('[data-sum]');if(!b||!SUMS)return;const a=b.dataset.sum;
+  if(a==='close'){if(SUMS.phase!=='busy')sumClose();return;}
+  if(a==='gen'){if(SUMS.phase==='done'&&SUMS.edited&&!confirm('יצירה מחדש תחליף את הטיוטה שערכתם. להמשיך?'))return;return sumGenerate();}
+  if(a==='copy'){try{await navigator.clipboard.writeText(SUMS.text.replace(/^##\s*/gm,''));toast('הסיכום הועתק');}catch(x){toast('לא הצלחתי להעתיק');}return;}
+  if(a==='save')return sumSave(false);
+  if(a==='pick')return sumSave(true);
+}
+async function sumGenerate(){
+  const s=studentById(SUMS.sid);if(!s)return;
+  const leak=sumLeak(SUMS.packet,s);
+  if(leak.length){SUMS.phase='error';SUMS.err='החבילה לא נשלחה: נמצא בה פרט מזהה ('+leak.join(', ')+'). פנו לתמיכה.';return sumPaint();}
+  SUMS.phase='busy';SUMS.err='';SUMS.saved='';sumPaint();
+  try{
+    await loadFnSDK();
+    const fn=firebase.app().functions(AC_FN_REGION).httpsCallable('studentSummary',{timeout:130000});
+    const r=await fn({inst:S.inst,packet:SUMS.packet}),d=(r&&r.data)||{};
+    const t=String(d.text||'').trim();if(!t)throw {code:'unavailable',message:'Claude החזיר תשובה ריקה'};
+    if(!SUMS)return;
+    SUMS.text=t.split(SUM_TOKEN).join(s.name||'');SUMS.edited=false;SUMS.phase='done';SUMS.model=d.model||'';
+  }catch(e){if(!SUMS)return;SUMS.phase='error';SUMS.err=acApiErr(e);}
+  sumPaint();
+}
+
+/* ---- PDF בלי ספריות: כל עמוד A4 מצויר על canvas ומוטמע כ-JPEG ---- */
+async function sumPdf(s,text){
+  const F='"Noto Sans Hebrew","Noto Sans","Arial",sans-serif',W=1240,H=1754,M=105,X=W-M,BW=W-2*M;
+  try{await Promise.all(['400 27px','700 27px'].map(f=>document.fonts.load(f+' "Noto Sans Hebrew"')));}catch(e){}
+  const logo=S.config.logo?await new Promise(r=>{const im=new Image();im.onload=()=>r(im);im.onerror=()=>r(null);im.src=S.config.logo;}):null;
+  const pages=[];let ctx,y;
+  const font=(w,z,c)=>{ctx.font=w+' '+z+'px '+F;ctx.fillStyle=c||'#1a2350';};
+  const page=()=>{const cv=document.createElement('canvas');cv.width=W;cv.height=H;ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+    ctx.direction='rtl';ctx.textAlign='right';ctx.textBaseline='alphabetic';pages.push(cv);font('400',20,'#6b7280');ctx.fillText('בס״ד',W-56,58);y=M;};
+  const wrap=(t,max)=>{const out=[];String(t).split('\n').forEach(par=>{let line='';par.split(/\s+/).filter(Boolean).forEach(w=>{const tt=line?line+' '+w:w;if(ctx.measureText(tt).width>max&&line){out.push(line);line=w;}else line=tt;});out.push(line);});return out;};
+  const need=h=>{if(y+h>H-130)page();};
+  page();
+  // כותרת
+  if(logo){const sc=Math.min(150/logo.width,150/logo.height,1);ctx.drawImage(logo,M,70,logo.width*sc,logo.height*sc);}
+  font('700',36,'#0c1556');ctx.fillText(S.config.name||'',X,128);
+  font('400',26,'#546198');ctx.fillText('סיכום תלמיד להורים',X,170);
+  const today=iso(new Date());
+  ctx.strokeStyle='#d9def3';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(M,236);ctx.lineTo(X,236);ctx.stroke();
+  font('700',42,'#0c1556');ctx.fillText(s.name||'',X,306);
+  font('400',24,'#546198');ctx.fillText((s.cls?s.cls+'   ·   ':'')+Number(today.slice(8,10))+'.'+Number(today.slice(5,7))+'.'+today.slice(0,4)+(hebLabel(today)?'   ·   '+hebLabel(today):''),X,350);
+  y=420;
+  // גוף
+  String(text).replace(/\r/g,'').split(/\n{1,}/).forEach(function(par){
+    par=par.trim();if(!par)return;
+    if(/^#{1,3}\s*/.test(par)){const h=par.replace(/^#{1,3}\s*/,'');need(110);y+=22;font('700',30,'#3d6bf7');ctx.fillText(h,X,y);y+=14;
+      ctx.strokeStyle='#e6eaf7';ctx.beginPath();ctx.moveTo(X-Math.min(BW,ctx.measureText(h).width+40),y);ctx.lineTo(X,y);ctx.stroke();y+=44;return;}
+    font('400',27,'#1a2350');wrap(par,BW).forEach(l=>{need(46);ctx.fillText(l,X,y);y+=46;});y+=16;
+  });
+  // חתימה
+  need(150);y+=30;font('400',27,'#1a2350');ctx.fillText('בברכה,',X,y);y+=46;font('700',27,'#0c1556');ctx.fillText(S.me.teacher||S.me.user||'',X,y);y+=40;
+  font('400',24,'#546198');ctx.fillText('מנהל'+(S.config.name?' · '+S.config.name:''),X,y);
+  // כותרות תחתונות
+  pages.forEach(function(cv,i){const c=cv.getContext('2d');c.direction='rtl';c.textAlign='center';c.font='400 20px '+F;c.fillStyle='#8a93b2';
+    c.strokeStyle='#e6eaf7';c.lineWidth=2;c.beginPath();c.moveTo(M,H-92);c.lineTo(X,H-92);c.stroke();
+    c.fillText('עמוד '+(i+1)+' מתוך '+pages.length+'   ·   '+(s.name||''),W/2,H-58);});
+  const jpgs=pages.map(cv=>{const b=atob(cv.toDataURL('image/jpeg',0.9).split(',')[1]),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;});
+  return sumPdfBytes(jpgs,W,H);
+}
+function sumPdfBytes(jpgs,W,H){
+  const enc=new TextEncoder(),parts=[],offs=[];let len=0;
+  const push=x=>{const b=typeof x==='string'?enc.encode(x):x;parts.push(b);len+=b.length;};
+  const obj=(i,body)=>{offs[i]=len;push(i+' 0 obj\n'+body+'\nendobj\n');};
+  push('%PDF-1.4\n%âãÏÓ\n');
+  const n=jpgs.length,kids=jpgs.map((_,k)=>(3+3*k)+' 0 R').join(' ');
+  obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2,'<< /Type /Pages /Kids ['+kids+'] /Count '+n+' >>');
+  jpgs.forEach(function(b,k){const p=3+3*k,cs='q 595.28 0 0 841.89 0 0 cm /Im0 Do Q';
+    obj(p,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 '+(p+2)+' 0 R >> >> /Contents '+(p+1)+' 0 R >>');
+    obj(p+1,'<< /Length '+cs.length+' >>\nstream\n'+cs+'\nendstream');
+    offs[p+2]=len;push((p+2)+' 0 obj\n<< /Type /XObject /Subtype /Image /Width '+W+' /Height '+H+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+b.length+' >>\nstream\n');push(b);push('\nendstream\nendobj\n');});
+  const total=2+3*n,xo=len;
+  let x='xref\n0 '+(total+1)+'\n0000000000 65535 f \n';for(let i=1;i<=total;i++)x+=String(offs[i]).padStart(10,'0')+' 00000 n \n';
+  push(x+'trailer\n<< /Size '+(total+1)+' /Root 1 0 R >>\nstartxref\n'+xo+'\n%%EOF\n');
+  return new Blob(parts,{type:'application/pdf'});
+}
+
+/* ---- שמירה לתיקייה "סיכומי תלמידים" ---- */
+function sumIdb(op,val){return new Promise(function(res){try{const r=indexedDB.open('tt-sum',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');
+  r.onsuccess=()=>{try{const db=r.result,st=db.transaction('kv',op==='get'?'readonly':'readwrite').objectStore('kv'),k='dir:'+(S.inst||'');
+    const q=op==='get'?st.get(k):op==='del'?st.delete(k):st.put(val,k);q.onsuccess=()=>res(op==='get'?(q.result||null):true);q.onerror=()=>res(null);}catch(e){res(null);}};
+  r.onerror=()=>res(null);}catch(e){res(null);}});}
+let SUM_DIRH=null;
+async function sumGetDir(pick){
+  let d=pick?null:(SUM_DIRH||await sumIdb('get'));
+  if(d){let p='denied';try{p=await d.queryPermission({mode:'readwrite'});if(p!=='granted')p=await d.requestPermission({mode:'readwrite'});}catch(e){}if(p==='granted'){SUM_DIRH=d;return d;}}
+  const root=await window.showDirectoryPicker({id:'tt-summaries',mode:'readwrite',startIn:'documents'});
+  d=root.name===SUM_DIR?root:await root.getDirectoryHandle(SUM_DIR,{create:true});
+  SUM_DIRH=d;await sumIdb('put',d);return d;
+}
+function sumFileName(s){const t=iso(new Date());return (String(s.name||'תלמיד').replace(/[\\/:*?"<>|]+/g,'-').trim()||'תלמיד')+' - '+Number(t.slice(8,10))+'.'+Number(t.slice(5,7))+'.'+t.slice(0,4)+'.pdf';}
+async function sumWrite(dir,name,blob){
+  let fn=name;
+  for(let i=2;i<100;i++){try{await dir.getFileHandle(fn);fn=name.replace(/\.pdf$/,' ('+i+').pdf');}catch(e){if(e&&e.name==='NotFoundError')break;throw e;}}
+  const fh=await dir.getFileHandle(fn,{create:true}),w=await fh.createWritable();await w.write(blob);await w.close();return fn;
+}
+async function sumSave(pick){
+  const s=studentById(SUMS.sid);if(!s||!SUMS.text.trim())return;
+  SUMS.err='';SUMS.saved='';const name=sumFileName(s);
+  try{
+    if(window.showDirectoryPicker){
+      const dir=await sumGetDir(pick);  // קודם התיקייה (דורש לחיצה של המשתמש), אחר כך בניית הקובץ
+      SUMS.dir=dir.name;const blob=await sumPdf(s,SUMS.text);
+      const fn=await sumWrite(dir,name,blob);SUMS.saved=dir.name+' / '+fn;
+    }else{
+      const blob=await sumPdf(s,SUMS.text),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);SUMS.saved='הורדות / '+name;
+    }
+    SUMS.edited=false;toast('הסיכום נשמר כ-PDF');
+  }catch(e){SUMS.err=e&&e.name==='AbortError'?'השמירה בוטלה.':'לא הצלחתי לשמור את הקובץ'+(e&&e.message?' ('+e.message+')':'')+'.';}
+  sumPaint();
+}
 function viewCard(){
   const s=studentById(S.cardId);
   if(!s)return '<div class="empty">התלמיד לא נמצא.</div>';
@@ -1548,7 +1864,7 @@ function viewCard(){
     (last?' · '+LIGHTNAME[last.light]+' מ־'+shortDate(last.date):'')+'</div></div>'+
     '<div class="row"><button class="btn" data-v="ghost" data-act="goto-students">חזרה</button>'+
     '<button class="btn" data-act="print">הדפסה</button>'+
-    (isAdmin()?'<button class="btn" data-act="student-edit" data-id="'+s.id+'">עריכת פרטים</button>':'')+'</div></div>'+
+    (isAdmin()?'<button class="btn" data-act="student-edit" data-id="'+s.id+'">עריכת פרטים</button><button class="btn" data-v="primary" data-act="sum-open" data-id="'+s.id+'">סיכום להורים</button>':'')+'</div></div>'+
     '<div class="grid g3" style="margin-bottom:14px">'+
       stat(a30.pct!==null?a30.pct+'%':'—','נוכחות בחודש האחרון',a30.pct!==null&&a30.pct<85?'var(--late)':'')+
       stat(aAll.absent,'חיסורים מצטברים','')+
@@ -2630,7 +2946,7 @@ async function markAction(a,el){
   if(a==='mark-view'){S.markView=el.dataset.v;return render();}
   if(a==='lm-open'){S.markLesson=el.dataset.id;const day=S.latt[S.markDate]||{};S.ldraft={};
     Object.keys(day).forEach(k=>{if(k.indexOf(S.markLesson+':')===0)S.ldraft[k.slice(S.markLesson.length+1)]=day[k];});
-    S.ldirty=false;window.scrollTo(0,0);return render();}
+    S.ldirty=!!UNSAVED[K.latt];window.scrollTo(0,0);return render();}
   if(a==='lm-back'){if(S.ldirty&&!confirm('יש שינויים שלא נשמרו. לחזור בלי לשמור?'))return;S.markLesson=null;S.ldirty=false;return render();}
   if(a==='lm-set'){S.ldraft[el.dataset.id]=el.dataset.s;S.ldirty=true;return render();}
   if(a==='lm-all'){const l=S.timetable.find(x=>x.id===S.markLesson);lessonStudents(l).list.forEach(s=>{S.ldraft[s.id]='present';});S.ldirty=true;return render();}
@@ -3365,7 +3681,7 @@ async function dlSend(t){
   if(!confirm('לשלוח ל'+t+' את הסיכום?\n\n'+text))return;
   const id=uid(),now=Date.now(),o={n:{},dm:{}};o.n[id]={id:id,kind:'dm',text:text,from:S.me.user,ts:now};o.dm[id]={id:id,text:text,date:d,from:S.me.user,ts:now};
   try{await FS.doc(IB()+'tasks/'+u.id).set(o,{merge:true});}catch(e){return saveFailed(e);}
-  x.sent=x.sent||{};x.sent[t]=now;x.sid=x.sid||{};x.sid[t]=id;S.dmAll=S.dmAll||{};S.dmAll[u.id]=S.dmAll[u.id]||{};S.dmAll[u.id][id]={id:id,ts:now};await saveDaylog();logAct('שליחת סיכום יום',t+' · '+d);toast('הסיכום נשלח ל'+t);render();
+  x.sent=x.sent||{};x.sent[t]=now;x.sid=x.sid||{};x.sid[t]=id;S.dmAll=S.dmAll||{};S.dmAll[u.id]=S.dmAll[u.id]||{};S.dmAll[u.id][id]={id:id,ts:now};if(!(await saveDaylog()))return render();logAct('שליחת סיכום יום',t+' · '+d);toast('הסיכום נשלח ל'+t);render();
 }
 /* אצל המורה: סיכומים שקיבל מההנהלה (בלשונית משימות) */
 function dmCard(){
@@ -5154,7 +5470,7 @@ function goTab(t){
   if(S.tab==='daylog'&&t!=='daylog'){dlCapture();saveDaylog();}
   S.tab=t;S.editStudent=null;S.editStaff=null;S.editUser=null;S.importPreview=null;S.ttSlot=null;S.ttEdit=null;S.ttImport=null;
   if(S.tab!=='review'){S.revIdx=null;}
-  if(S.tab==='mark'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;S.markLesson=null;S.ldirty=false;}
+  if(S.tab==='mark'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=!!UNSAVED[K.att];S.markLesson=null;S.ldirty=false;}
   S.scan=null;S.evc=null;S.evBack=null;S.mtEdit=null;S.remc=null;S.exEdit=null;S.dutyEdit=null;S.stx=null;
   if(S.tab!=='rem'){S.remOpen=null;S.remDraft=null;S.remDirty=false;}
   render();
@@ -5212,13 +5528,14 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a.indexOf('ac-')===0)return accountAction(a);
 
   if(a==='logout')return logout();
-  if(a==='goto-mark'){S.tab='mark';if(el.dataset.cls)S.markCls=el.dataset.cls;S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;return render();}
+  if(a==='goto-mark'){S.tab='mark';if(el.dataset.cls)S.markCls=el.dataset.cls;S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=!!UNSAVED[K.att];return render();}
   if(a==='goto-students'){S.tab='students';S.importPreview=null;return render();}
   if(a==='goto-import'){S.tab='import';S.importPreview=null;return render();}
   if(a==='goto-review'){S.tab='review';S.revIdx=null;return render();}
   if(a==='goto-tasks'){S.tab='tasks';return render();}
   if(a==='card'){S.cardId=id;S.tab='card';return render();}
   if(a==='print')return window.print();
+  if(a==='sum-open')return sumOpen(id);
 
   /* תמונת מצב */
   if(a==='rev-start'){startReview(myStudents().filter(s=>s.cls===S.revCls));return render();}
@@ -5594,7 +5911,7 @@ document.getElementById('main').addEventListener('change',function(e){
   if(k==='dlDate'){dlCapture();saveDaylog();}
   S[k]=el.value;
   if(k==='lgCls')S.lgStu='';
-  if(k==='markDate'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=false;S.markLesson=null;S.ldirty=false;}
+  if(k==='markDate'){S.draft=Object.assign({},S.att[S.markDate]||{});S.dirty=!!UNSAVED[K.att];S.markLesson=null;S.ldirty=false;}
   if(k==='revDate'&&S.revIdx!==null)loadRevDraft();
   render();
 });
