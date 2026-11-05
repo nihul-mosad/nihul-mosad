@@ -55,11 +55,12 @@ function finalCheck(name, s) {
 // 1. מקומי עם מאגר מדומה
 {
   let s = base(stripGstatic(src));
-  s = s.replace('<head>', '<head>\n' + GUARD + '\n<script src="fake-firebase.js"></script>');
+  s = s.replace('<head>', '<head>\n' + GUARD + '\n<script src="fake-firebase.js"></script>\n<script src="demo-summary-mock.js"></script>');
   s = config(s, { apiKey: 'staging-local', authDomain: 'localhost', projectId: 'staging-local', appId: 'staging-local' });
   s = beforeBodyEnd(s, BANNER('סביבת ניסוי מקומית · מאגר מדומה בזיכרון · שום דבר לא נשמר בשרת'));
   finalCheck('staging-local.html', s);
   fs.copyFileSync(path.join(here, 'fake-firebase.js'), path.join(OUT, 'fake-firebase.js'));
+  fs.copyFileSync(path.join(here, 'demo-summary-mock.js'), path.join(OUT, 'demo-summary-mock.js'));
 }
 
 // 2. אמולטור (פרויקט demo-* לא יכול להגיע לשרתי Firebase אמיתיים)

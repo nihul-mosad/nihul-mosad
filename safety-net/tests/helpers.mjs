@@ -24,7 +24,8 @@ export function startServer() {
   });
 }
 
-export async function launch() { return chromium.launch(); }
+// UTF-8: בלי זה Chromium בסביבות בדיקה בלי הגדרות שפה שומר הורדה עם שם בעברית בשם "download"
+export async function launch() { return chromium.launch({ env: Object.assign({}, process.env, { LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' }) }); }
 
 // דף חדש: חוסם כל פנייה החוצה (גוגל פונטים, CDN), זורע את המוסד ושומר שגיאות JavaScript
 export async function newPage(browser, { seed = true, width = 1280, height = 900, mobile = false } = {}) {

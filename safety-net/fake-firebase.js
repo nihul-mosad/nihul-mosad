@@ -171,7 +171,7 @@
     }
     control.projectId = cfg && cfg.projectId;
     const fs = makeFirestore(), au = makeAuth();
-    const app = { name, options: cfg, firestore: () => fs, auth: () => au, functions: () => ({ httpsCallable: () => async () => { throw err('unavailable'); } }) };
+    const app = { name, options: cfg, firestore: () => fs, auth: () => au, functions: () => ({ httpsCallable: name => async data => { const f = window.__FAKE_FN && window.__FAKE_FN[name]; if (!f) throw err('unavailable'); return { data: await f(data) }; } }) };
     apps.push(app); return app;
   }
   const firebase = {
