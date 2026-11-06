@@ -66,3 +66,17 @@ test('ממצא מ3 (תיעוד מצב קיים): מסמך כניסה קריא ב
   await assertSucceeds(anon().doc('logins/' + INST + '_admin').get());
   await assertFails(anon().collection('logins').get());
 });
+
+test('סיכומים ששותפו (sums): מנהל כותב; מחנך הכיתה קורא בלבד; מורה מקצועי ומחנך של כיתה אחרת חסומים', async () => {
+  const idA = B + 'sums/2026_' + ckA, idC = B + 'sums/2026_' + ckC;
+  const item = { m: { x1: { id: 'x1', sid: 's1', cls: 'כיתה א׳', text: 'סיכום', date: '2026-11-05', ts: 1, by: 'מנהל', to: USERS.teacherA.teacher } } };
+  await assertSucceeds(as(USERS.admin.uid).doc(idA).set(item, { merge: true }));
+  await assertSucceeds(as(USERS.admin.uid).doc(idC).set(item, { merge: true }));
+  await assertSucceeds(as(USERS.teacherA.uid).doc(idA).get());
+  await assertFails(as(USERS.teacherA.uid).doc(idC).get());
+  await assertFails(as(USERS.teacherA.uid).doc(idA).set({ m: { x2: { id: 'x2' } } }, { merge: true }));
+  await assertFails(as(USERS.teacherA.uid).doc(idA).delete());
+  await assertFails(as(USERS.teacherMath.uid).doc(idA).get());
+  await assertFails(as(USERS.teacherA.uid).collection(B + 'sums').get());
+  await assertFails(anon().doc(idA).get());
+});

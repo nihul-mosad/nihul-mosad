@@ -177,3 +177,76 @@ test('סיכום בנייד: החלון בתוך המסך, בלי גלילה א�
   assert.deepEqual(page.errors, []);
   await page.context().close();
 });
+
+// ===== שיתוף סיכום עם מחנך הכיתה =====
+async function shareAsAdmin(page, text) {
+  await generate(page, 's1');
+  if (text) await page.fill('#sumText', text);
+  await page.click('#sumDlg [data-sum="share"]');
+  await page.waitForSelector('#sumDlg .sum-ok', { timeout: 15000 });
+}
+async function switchUser(page, who) {
+  await page.evaluate(() => firebase.auth().signOut());
+  await login(page, server.url, who);
+}
+
+test('שיתוף: המנהל משתף, נשמר רק הנוסח הסופי במסמך של הכיתה, והמחנך רואה בכרטיס עם "חדש" — בלי עריכה', async () => {
+  const page = await open();
+  const name = await page.evaluate(() => studentById('s1').name);
+  const finalText = 'הורים יקרים, נוסח סופי שהמנהל ערך.\n## נוכחות\nנוכחות טובה.';
+  await shareAsAdmin(page, finalText);
+  assert.match(await page.textContent('#sumDlg .sum-ok'), /הרב ישראל ישראלי/);
+  const doc = await page.evaluate(() => { const y = sumYear(), p = 'insts/' + S.inst + '/sums/' + y + '_' + ckOf(studentById('s1').cls); return { p, d: window.__fakefs ? null : null, list: S.sums.map(x => ({ sid: x.sid, text: x.text, to: x.to, cls: x.cls })) }; });
+  assert.deepEqual(doc.list, [{ sid: 's1', text: finalText, to: 'הרב ישראל ישראלי', cls: 'כיתה א׳' }]);
+  // המנהל רואה בכרטיס "סיכומים ששותפו" עם ביטול שיתוף
+  await page.click('#sumDlg .sum-x');
+  assert.ok(await page.$('.sum-card [data-act="sum-unshare"]'));
+  // המחנך
+  await switchUser(page, 'teacherA');
+  await card(page, 's1');
+  assert.equal(await page.textContent('.sum-card h3'), 'סיכומים מהמנהל');
+  assert.ok(await page.$('.sum-card .sum-new'), 'אין סימון "חדש"');
+  assert.equal(await page.$('.sum-card [data-act="sum-unshare"]'), null, 'מחנך יכול לבטל שיתוף');
+  assert.equal(await page.$('[data-act="sum-open"]'), null);
+  await page.click('.sum-card summary');
+  assert.match(await page.textContent('.sum-card .sum-text'), /נוסח סופי שהמנהל ערך/);
+  assert.equal(await page.$('.sum-card .sum-new'), null, '"חדש" לא נעלם אחרי פתיחה');
+  await card(page, 's1');
+  assert.equal(await page.$('.sum-card .sum-new'), null, '"חדש" חזר אחרי רענון הכרטיס');
+  // הורדת PDF אצל המחנך: עם תאריך הסיכום וחתימת המנהל
+  await page.click('.sum-card summary');
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), page.click('.sum-card [data-act="sum-pdf"]')]);
+  assert.equal(dl.suggestedFilename(), name + ' - ' + today() + '.pdf');
+  assert.equal(fs.readFileSync(await dl.path()).subarray(0, 8).toString('latin1'), '%PDF-1.4');
+  assert.deepEqual(page.errors, []);
+  await page.context().close();
+});
+
+test('שיתוף: מורה מקצועי לא רואה את הסיכום; ביטול שיתוף מסיר אותו מהמחנך', async () => {
+  const page = await open();
+  await shareAsAdmin(page);
+  await switchUser(page, 'teacherMath');
+  assert.deepEqual(await page.evaluate(() => (S.sums || []).length), 0, 'מורה מקצועי קיבל סיכומים');
+  await switchUser(page, 'admin');
+  await card(page, 's1');
+  await page.click('.sum-card summary');
+  await page.click('.sum-card [data-act="sum-unshare"]');
+  await page.waitForFunction(() => !document.querySelector('.sum-card'));
+  await switchUser(page, 'teacherA');
+  await card(page, 's1');
+  assert.equal(await page.$('.sum-card'), null, 'הסיכום עדיין אצל המחנך אחרי ביטול השיתוף');
+  assert.deepEqual(page.errors, []);
+  await page.context().close();
+});
+
+test('שיתוף: כיתה בלי מחנך — אי אפשר לשתף ומוצג הסבר', async () => {
+  const page = await open();
+  await page.evaluate(() => { S.config.homeroom = {}; });
+  await generate(page, 's1');
+  assert.match(await page.textContent('#sumDlg .sum-share'), /לא הוגדר מחנך/);
+  await page.click('#sumDlg [data-sum="share"]');
+  await page.waitForSelector('#sumDlg .sum-err');
+  assert.match(await page.textContent('#sumDlg .sum-err'), /לא הוגדר מחנך/);
+  assert.deepEqual(await page.evaluate(() => (S.sums || []).length), 0);
+  await page.context().close();
+});
