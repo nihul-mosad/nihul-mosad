@@ -570,6 +570,15 @@ th{font-weight:600}
   #sumDlg .sum-acts .btn { flex: 1 1 auto; }
 }
 @media print { #sumDlg { display: none; } }
+#main .sum-card details.sum-item { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-top: 10px; background: var(--surface); }
+#main .sum-card summary { cursor: pointer; list-style-position: inside; padding: 2px 0; }
+#main .sum-card summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+#main .sum-card .sum-new { display: inline-block; padding: 1px 9px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; }
+#main .sum-card .sum-text { margin-top: 10px; line-height: 1.75; color: var(--ink); }
+#main .sum-card .sum-text h4 { margin: 14px 0 4px; font-size: 15px; color: var(--accent); }
+#main .sum-card .sum-text p { margin: 0 0 8px; }
+@media print { #main .sum-card { display: none; } }
+
 </style>
 </head>
 <body>
@@ -899,6 +908,7 @@ async function loadSec(){
     S.students=studs;S.latt=L;S.att=D;S.reviews=revs;S.tasks=tasks;S.events=EVS;S.evRoster=ext;
   }
   revs=S.reviews.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  await loadSums();
   await loadMeetings();
   await loadDuty();
   await loadGrades();
@@ -1204,7 +1214,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=57;
+const APP_VER=58;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -1707,7 +1717,7 @@ function sumOpen(sid){
   sumPaint();
   if(SUM_DIRH)SUMS.dir=SUM_DIRH.name;else sumIdb('get').then(h=>{if(SUMS&&h){SUMS.dir=h.name;sumPaint();}});
 }
-function sumClose(){if(SUMS&&SUMS.edited&&!SUMS.saved&&!confirm('הטיוטה לא נשמרה. לסגור בכל זאת?'))return;SUMS=null;const d=document.getElementById('sumDlg');if(d)d.innerHTML='';}
+function sumClose(){if(SUMS&&SUMS.edited&&!SUMS.saved&&!SUMS.shared&&!confirm('הטיוטה לא נשמרה. לסגור בכל זאת?'))return;SUMS=null;const d=document.getElementById('sumDlg');if(d)d.innerHTML='';}
 function sumPaint(){
   const d=document.getElementById('sumDlg');if(!d)return;if(!SUMS){d.innerHTML='';return;}
   const s=studentById(SUMS.sid)||{},P=SUMS.packet,ph=SUMS.phase;
@@ -1726,7 +1736,9 @@ function sumPaint(){
     '<p class="sum-hint">שורה שמתחילה ב-## תוצג ב-PDF ככותרת.</p>'+
     '<details class="sum-raw"><summary>על סמך הנתונים</summary>'+facts+'</details>'+
     (SUMS.saved?'<div class="sum-ok" role="status">נשמר: '+esc(SUMS.saved).replace(/(\d+\.\d+\.\d{4}(?: \(\d+\))?\.pdf)$/,'<span dir="ltr">$1</span>')+'</div>':'')+(SUMS.err?'<div class="sum-err" role="alert">'+esc(SUMS.err)+'</div>':'')+
-    '<div class="sum-acts"><button class="btn" data-v="primary" data-sum="save">שמירה כ-PDF</button><button class="btn" data-sum="copy">העתקה</button><button class="btn" data-v="ghost" data-sum="gen">יצירה מחדש</button></div>'+
+    '<div class="sum-acts"><button class="btn" data-v="primary" data-sum="save">שמירה כ-PDF</button><button class="btn" data-sum="share"'+(SUMS.sharing?' disabled':'')+'>'+(SUMS.sharing?'משתף…':SUMS.shared?'שיתוף שוב':'שיתוף עם המחנך')+'</button><button class="btn" data-sum="copy">העתקה</button><button class="btn" data-v="ghost" data-sum="gen">יצירה מחדש</button></div>'+
+    (SUMS.shared?'<div class="sum-ok" role="status">שותף עם '+esc(SUMS.shared)+'. הסיכום מופיע אצלו בכרטיס התלמיד.</div>':'')+
+    '<p class="sum-hint sum-share">'+(sumTeacher(s.cls)?'שיתוף: <b>'+esc(sumTeacher(s.cls))+'</b>, מחנך '+esc(s.cls)+'. יישמר הנוסח שמופיע כאן.':'לא הוגדר מחנך ל'+esc(s.cls||'כיתה')+', לכן אי אפשר לשתף.')+'</p>'+
     '<p class="sum-folder">'+folder+'</p>';
   d.innerHTML='<div class="sum-bg" data-sum="close"></div><div class="sum-box" role="dialog" aria-modal="true" aria-labelledby="sumT">'+
     '<div class="sum-h"><div><h2 id="sumT">סיכום להורים</h2><span>'+esc(s.name||'')+(s.cls?' · '+esc(s.cls):'')+'</span></div>'+
@@ -1740,6 +1752,7 @@ async function sumClick(e){
   if(a==='copy'){try{await navigator.clipboard.writeText(SUMS.text.replace(/^##\s*/gm,''));toast('הסיכום הועתק');}catch(x){toast('לא הצלחתי להעתיק');}return;}
   if(a==='save')return sumSave(false);
   if(a==='pick')return sumSave(true);
+  if(a==='share')return sumShare();
 }
 async function sumGenerate(){
   const s=studentById(SUMS.sid);if(!s)return;
@@ -1758,7 +1771,7 @@ async function sumGenerate(){
 }
 
 /* ---- PDF בלי ספריות: כל עמוד A4 מצויר על canvas ומוטמע כ-JPEG ---- */
-async function sumPdf(s,text){
+async function sumPdf(s,text,opt){
   const F='"Noto Sans Hebrew","Noto Sans","Arial",sans-serif',W=1240,H=1754,M=105,X=W-M,BW=W-2*M;
   try{await Promise.all(['400 27px','700 27px'].map(f=>document.fonts.load(f+' "Noto Sans Hebrew"')));}catch(e){}
   const logo=S.config.logo?await new Promise(r=>{const im=new Image();im.onload=()=>r(im);im.onerror=()=>r(null);im.src=S.config.logo;}):null;
@@ -1773,7 +1786,7 @@ async function sumPdf(s,text){
   if(logo){const sc=Math.min(150/logo.width,150/logo.height,1);ctx.drawImage(logo,M,70,logo.width*sc,logo.height*sc);}
   font('700',36,'#0c1556');ctx.fillText(S.config.name||'',X,128);
   font('400',26,'#546198');ctx.fillText('סיכום תלמיד להורים',X,170);
-  const today=iso(new Date());
+  const today=(opt&&opt.date)||iso(new Date());
   ctx.strokeStyle='#d9def3';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(M,236);ctx.lineTo(X,236);ctx.stroke();
   font('700',42,'#0c1556');ctx.fillText(s.name||'',X,306);
   font('400',24,'#546198');ctx.fillText((s.cls?s.cls+'   ·   ':'')+Number(today.slice(8,10))+'.'+Number(today.slice(5,7))+'.'+today.slice(0,4)+(hebLabel(today)?'   ·   '+hebLabel(today):''),X,350);
@@ -1786,7 +1799,7 @@ async function sumPdf(s,text){
     font('400',27,'#1a2350');wrap(par,BW).forEach(l=>{need(46);ctx.fillText(l,X,y);y+=46;});y+=16;
   });
   // חתימה
-  need(150);y+=30;font('400',27,'#1a2350');ctx.fillText('בברכה,',X,y);y+=46;font('700',27,'#0c1556');ctx.fillText(S.me.teacher||S.me.user||'',X,y);y+=40;
+  need(150);y+=30;font('400',27,'#1a2350');ctx.fillText('בברכה,',X,y);y+=46;font('700',27,'#0c1556');ctx.fillText((opt&&opt.by)||S.me.teacher||S.me.user||'',X,y);y+=40;
   font('400',24,'#546198');ctx.fillText('מנהל'+(S.config.name?' · '+S.config.name:''),X,y);
   // כותרות תחתונות
   pages.forEach(function(cv,i){const c=cv.getContext('2d');c.direction='rtl';c.textAlign='center';c.font='400 20px '+F;c.fillStyle='#8a93b2';
@@ -1848,6 +1861,70 @@ async function sumSave(pick){
   }catch(e){SUMS.err=e&&e.name==='AbortError'?'השמירה בוטלה.':'לא הצלחתי לשמור את הקובץ'+(e&&e.message?' ('+e.message+')':'')+'.';}
   sumPaint();
 }
+/* ===== שיתוף סיכום עם מחנך הכיתה =====
+   נשמר ב-sums/{שנת לימודים}_{כיתה}, בשדה m: {id: סיכום}. רק הנוסח הסופי שהמנהל אישר, ורק אחרי שהשרת אישר את השמירה.
+   חוקי Firestore: קריאה — מנהל ומחנך הכיתה (members.classes); כתיבה — מנהל בלבד. המחנך לא יכול לערוך או למחוק.
+   הסימון "חדש" אצל המחנך נשמר רק בדפדפן שלו (בלי כתיבה למערכת). */
+function sumYear(d){const t=d||iso(new Date()),y=+t.slice(0,4),m=+t.slice(5,7);return m>=9?y:y-1;}
+function sumDocId(cls,date){return sumYear(date)+'_'+ckOf(cls);}
+function sumTeacher(cls){return String((S.config.homeroom||{})[cls]||'').trim();}
+async function loadSums(){
+  const out=[],add=d=>{if(d)Object.values(nn(d.m)).forEach(it=>{if(it&&it.id&&it.sid)out.push(it);});};
+  try{
+    if(isAdmin())(await fsList('sums')).forEach(x=>add(x.data));
+    else{const y=sumYear(),ids=[];myClasses().forEach(c=>{ids.push(y+'_'+ckOf(c),(y-1)+'_'+ckOf(c));});
+      await inChunks(ids,async id=>add(await fsGet('sums/'+id).catch(()=>null)),10);}
+  }catch(e){}
+  S.sums=out;
+}
+function sumsOf(sid){return (S.sums||[]).filter(x=>x.sid===sid).sort((a,b)=>(b.ts||0)-(a.ts||0));}
+function sumSeenKey(){return 'tt:sumSeen:'+(S.inst||'')+':'+((S.me&&S.me.id)||'');}
+function sumSeen(){try{return JSON.parse(localStorage.getItem(sumSeenKey())||'{}')||{};}catch(e){return {};}}
+function sumMarkSeen(id){try{const m=sumSeen();m[id]=1;localStorage.setItem(sumSeenKey(),JSON.stringify(m));}catch(e){}}
+function sumHtml(t){return String(t||'').replace(/\r/g,'').split(/\n+/).map(p=>p.trim()).filter(Boolean)
+  .map(p=>/^#{1,3}\s*/.test(p)?'<h4>'+esc(p.replace(/^#{1,3}\s*/,''))+'</h4>':'<p>'+esc(p)+'</p>').join('');}
+function sumCardSection(s){
+  const L=sumsOf(s.id),adm=isAdmin();if(!L.length)return '';
+  const seen=adm?{}:sumSeen();
+  return '<div class="card sum-card brk"><h3>'+(adm?'סיכומים ששותפו עם המחנך':'סיכומים מהמנהל')+'</h3>'+L.map(function(it){
+    const isNew=!adm&&!seen[it.id];
+    return '<details class="sum-item" data-id="'+esc(it.id)+'"><summary data-act="sum-seen" data-id="'+esc(it.id)+'"><b>'+dual(it.date)+'</b>'+
+      (isNew?' <span class="sum-new">חדש</span>':'')+'<span class="note"> · '+(adm?'שותף עם '+esc(it.to||'—'):'מאת '+esc(it.by||'המנהל'))+'</span></summary>'+
+      '<div class="sum-text">'+sumHtml(it.text)+'</div><div class="row" style="gap:8px;margin-top:10px">'+
+      '<button class="btn sm" data-act="sum-pdf" data-id="'+esc(it.id)+'">הורדת PDF</button>'+
+      (adm?'<button class="btn sm" data-v="ghost" data-act="sum-unshare" data-id="'+esc(it.id)+'">ביטול שיתוף</button>':'')+'</div></details>';
+  }).join('')+(adm?'':'<p class="note" style="margin-top:8px">הסיכום נכתב להורים. אפשר לקרוא, להדפיס ולהוריד, בלי לערוך.</p>')+'</div>';
+}
+async function sumShare(){
+  const s=studentById(SUMS.sid);if(!s||!SUMS.text.trim()||!isAdmin())return;
+  const to=sumTeacher(s.cls);
+  if(!to){SUMS.err='לא הוגדר מחנך ל'+(s.cls||'כיתה')+'. אפשר להגדיר בהגדרות, ואז לשתף.';return sumPaint();}
+  if(!confirm('לשתף את הסיכום עם '+to+' (מחנך '+s.cls+')?\nהוא יראה אותו בכרטיס התלמיד ויוכל לקרוא ולהדפיס, בלי לערוך.'))return;
+  const it={id:uid(),sid:s.id,cls:s.cls,text:SUMS.text,date:iso(new Date()),ts:Date.now(),by:S.me.teacher||'המנהל',to:to};
+  SUMS.err='';SUMS.sharing=true;sumPaint();
+  try{
+    const m={};m[it.id]=it;
+    await FS.doc(IB()+'sums/'+sumDocId(it.cls,it.date)).set({m:m},{merge:true}); // מסתיים רק אחרי אישור השרת
+    (S.sums=S.sums||[]).push(it);SUMS.shared=to;SUMS.edited=false;logAct('שיתוף סיכום תלמיד',s.name+' ← '+to);toast('הסיכום שותף עם '+to);
+  }catch(e){SUMS.err='השיתוף נכשל: '+fbErr(e)+'. הסיכום לא שותף.';}
+  SUMS.sharing=false;sumPaint();if(S.tab==='card')render();
+}
+async function sumUnshare(id){
+  const it=(S.sums||[]).find(x=>x.id===id);if(!it||!isAdmin())return;
+  if(!confirm('לבטל את השיתוף? הסיכום יוסר מכרטיס התלמיד אצל '+(it.to||'המחנך')+'.'))return;
+  try{
+    await FS.doc(IB()+'sums/'+sumDocId(it.cls,it.date)).update(new firebase.firestore.FieldPath('m',id),firebase.firestore.FieldValue.delete());
+    S.sums=S.sums.filter(x=>x.id!==id);logAct('ביטול שיתוף סיכום',it.to||'');toast('השיתוף בוטל');render();
+  }catch(e){saveFailed(e);}
+}
+async function sumDownload(id){
+  const it=(S.sums||[]).find(x=>x.id===id),s=it&&studentById(it.sid);if(!it||!s)return;
+  try{
+    const blob=await sumPdf(s,it.text,{by:it.by,date:it.date}),a=document.createElement('a'),t=it.date;
+    a.href=URL.createObjectURL(blob);a.download=(String(s.name||'תלמיד').replace(/[\\/:*?"<>|]+/g,'-').trim()||'תלמיד')+' - '+Number(t.slice(8,10))+'.'+Number(t.slice(5,7))+'.'+t.slice(0,4)+'.pdf';
+    document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);
+  }catch(e){toast('לא הצלחתי ליצור את הקובץ');}
+}
 function viewCard(){
   const s=studentById(S.cardId);
   if(!s)return '<div class="empty">התלמיד לא נמצא.</div>';
@@ -1885,6 +1962,7 @@ function viewCard(){
         if(t.now&&t.prev){const x=t.now-t.prev;d=x>0?'<span style="color:var(--green)">▲</span>':x<0?'<span style="color:var(--red)">▼</span>':'<span class="note">=</span>';}
         return '<div class="dom"><div class="dom-label">'+esc(t.name)+'</div><div>'+(t.now?'<b style="font-size:18px">'+t.now+'</b> '+d:'<span class="note">—</span>')+'</div></div>';
       }).join(''):'<p class="note">עוד לא נרשמה תמונת מצב.</p>')+'</div></div>'+
+    sumCardSection(s)+
     cardGroupsSection(s)+
     cardAttSection(s)+
     cardGradesSection(s)+
@@ -5536,6 +5614,9 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a==='card'){S.cardId=id;S.tab='card';return render();}
   if(a==='print')return window.print();
   if(a==='sum-open')return sumOpen(id);
+  if(a==='sum-seen'){if(!isAdmin()){sumMarkSeen(id);const b=el.querySelector('.sum-new');if(b)b.remove();}return;}
+  if(a==='sum-pdf')return sumDownload(id);
+  if(a==='sum-unshare')return sumUnshare(id);
 
   /* תמונת מצב */
   if(a==='rev-start'){startReview(myStudents().filter(s=>s.cls===S.revCls));return render();}
