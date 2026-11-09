@@ -45,6 +45,9 @@ test('מיפוי: מנהל ממלא רמה, היבטי קושי והערה → �
   assert.equal(r.s_dec, 'זיהוי אותיות|ניקוד', 'היבטי הקושי נשמרים בסדר של הטופס');
   assert.equal(r.n_dec, 'מתבלבל בין קמץ לפתח');
   assert.equal(Object.keys(r).filter(k => k.startsWith('h_')).length, 1, 'נרשמה היסטוריית שינוי');
+  // הטופס הוא דף נפרד: הרשימה לא מוצגת מתחתיו; "חזרה לרשימה" מחזיר לטבלה
+  assert.equal(await page.locator('table.mpt').count(), 0, 'הרשימה לא אמורה להופיע מתחת לטופס');
+  await page.click('[data-act="mp-close"]');
   // בטבלה מופיעים הרמה וההיבטים
   const row = await page.$eval('tr[data-remopen="s1"]', e => e.innerText);
   assert.match(row, /מתקשה/); assert.match(row, /זיהוי אותיות, ניקוד/);
@@ -88,5 +91,25 @@ test('מיפוי: הדפסת טפסים ריקים — טופס לכל תלמי�
   assert.equal(await page.evaluate(() => window.__printed), 4);
   await page.waitForFunction(() => !S.remPrint, null, { timeout: 5000 });
   assert.equal(await page.locator('table.mpt').count(), 1, 'אחרי ההדפסה חוזרים לטבלה');
+  assert.deepEqual(page.errors, []);
+});
+
+test('מיפוי: טופס התלמיד נפתח כדף נפרד — הבא/הקודם, וכפתור "חזרה" של הדפדפן מחזיר לרשימה', async () => {
+  const page = await newPage(browser);
+  await login(page, server.url, 'admin');
+  await openRem(page);
+  await page.selectOption('[data-remf="cls"]', CLASSES[0]);
+  await page.click('tr[data-remopen="s2"]');
+  assert.equal(await page.locator('#remCard').count(), 1);
+  assert.equal(await page.locator('table.mpt').count(), 0);
+  assert.match(await page.$eval('#main', e => e.innerText), /2 מתוך 4/);
+  await page.click('[data-act="mp-nav"]:has-text("הבא")');
+  assert.equal(await page.evaluate(() => S.remOpen), 's3');
+  await page.goBack();
+  await page.waitForFunction(() => S.remOpen === 's2', null, { timeout: 5000 });
+  await page.goBack();
+  await page.waitForFunction(() => !S.remOpen, null, { timeout: 5000 });
+  assert.equal(await page.locator('table.mpt').count(), 1, 'אחרי "חזרה" מוצגת הרשימה');
+  assert.equal(await page.evaluate(() => S.tab), 'rem');
   assert.deepEqual(page.errors, []);
 });
