@@ -5160,7 +5160,7 @@ function remComments(r){return Object.keys(r).filter(k=>k.indexOf('c_')===0&&r[k
 function remHist(r){return Object.keys(r).filter(k=>k.indexOf('h_')===0&&r[k]).map(k=>Object.assign({id:k},r[k])).sort((a,b)=>(b.t||0)-(a.t||0));}
 function remSeenGet(){try{return JSON.parse(localStorage.getItem('tt:remSeen:'+S.inst+':'+S.me.id)||'{}');}catch(e){return {};}}
 function remSeenSet(sid){const o=remSeenGet();o[sid]=Date.now();try{localStorage.setItem('tt:remSeen:'+S.inst+':'+S.me.id,JSON.stringify(o));}catch(e){}}
-function remNew(s,seen){const r=remRec(s),t=(seen||{})[s.id]||0;return remComments(r).some(c=>c.uid!==S.me.id&&(c.t||0)>t)||(r.u&&r.u.uid!==S.me.id&&(r.u.t||0)>t&&t>0);}
+function remNew(s,seen){const r=remRec(s),t=(seen||{})[s.id]||0;return remComments(r).some(c=>c.uid!==S.me.id&&(c.t||0)>t)||(r.u&&r.u.uid!==S.me.id&&(r.u.t||0)>t);}
 /* כתיבה: מחילים את השינויים שלי על הגרסה העדכנית מהשרת, ושולחים רק את השדות ששיניתי */
 async function remWrite(s,changes,histLabel){
   const c=s.cls,p='rem/'+ckOf(c),ref=FS.doc(IB()+p);
