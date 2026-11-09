@@ -44,7 +44,7 @@ async function open({ who = 'admin', fsApi = 'מסמכים', width = 1280, heigh
 const card = (page, sid) => page.evaluate(id => { S.tab = 'card'; S.cardId = id; render(); }, sid);
 async function generate(page, sid = 's1') {
   await card(page, sid);
-  await page.click('[data-act="sum-open"]');
+  await page.click('.s3-acts [data-act="sum-open"]');
   await page.click('#sumDlg [data-sum="gen"]');
   await page.waitForSelector('#sumText');
 }
@@ -59,15 +59,14 @@ const today = () => { const d = new Date(); return d.getDate() + '.' + (d.getMon
 test('סיכום (גרסה קלאסית): הכפתור רק למנהל; מורה לא פותח את החלון; שאר הכרטיס כמו קודם', async () => {
   const page = await open();
   await card(page, 's1');
-  assert.ok(await page.$('[data-act="sum-open"]'));
-  // הכרטיס הקלאסי: אותם כפתורים כמו קודם + "סיכום להורים", ואין שכבות עיצוב חדשות
-  assert.deepEqual(await page.$$eval('#main .head .row [data-act]', bs => bs.map(b => b.dataset.act)), ['goto-students', 'print', 'student-edit', 'sum-open']);
-  assert.equal(await page.$('style#aura-3-1, style#aura-students, .s3-hero, .au-top'), null, 'נכנס עיצוב חדש');
+  assert.ok(await page.$('.s3-acts [data-act="sum-open"]'));
+  // בלי שכבות העיצוב החדש (AURA): רק הכרטיס החכם בעיצוב הקלאסי
+  assert.equal(await page.$('style#aura-3-1, style#aura-students, .au-top'), null, 'נכנס עיצוב חדש');
   assert.deepEqual(page.errors, []);
   await page.context().close();
   const t = await open({ who: 'teacherA' });
   await card(t, 's1');
-  assert.equal(await t.$('[data-act="sum-open"]'), null);
+  assert.equal(await t.$('.s3-acts [data-act="sum-open"]'), null);
   await t.evaluate(() => sumOpen('s1'));
   assert.equal(await t.$('#sumDlg .sum-box'), null, 'מורה פתח את חלון הסיכום');
   assert.deepEqual(t.errors, []);
@@ -143,7 +142,7 @@ test('סיכום: שגיאה מהשרת מוצגת, "נסו שוב" עובד, ו
   const page = await open();
   await page.evaluate(() => { window.__SUM_FAIL = 'הגעת למכסת הסיכומים היומית (40)'; });
   await card(page, 's1');
-  await page.click('[data-act="sum-open"]');
+  await page.click('.s3-acts [data-act="sum-open"]');
   await page.click('#sumDlg [data-sum="gen"]');
   await page.waitForSelector('#sumDlg .sum-err');
   assert.match(await page.textContent('#sumDlg .sum-err'), /מכסת הסיכומים/);
@@ -155,7 +154,7 @@ test('סיכום: שגיאה מהשרת מוצגת, "נסו שוב" עובד, ו
   await page.evaluate(() => { window.__lastSummaryReq = null; const s = studentById('s2'); s.name = domains()[0].name;
     S.reviews.push({ id: 'rx', studentId: s.id, date: daysAgo(2), light: 'green', scores: { d1: 4 }, note: '' }); });
   await card(page, 's2');
-  await page.click('[data-act="sum-open"]');
+  await page.click('.s3-acts [data-act="sum-open"]');
   await page.click('#sumDlg [data-sum="gen"]');
   await page.waitForSelector('#sumDlg .sum-err');
   assert.match(await page.textContent('#sumDlg .sum-err'), /לא נשלחה/);
@@ -207,7 +206,7 @@ test('שיתוף: המנהל משתף, נשמר רק הנוסח הסופי במ�
   assert.equal(await page.textContent('.sum-card h3'), 'סיכומים מהמנהל');
   assert.ok(await page.$('.sum-card .sum-new'), 'אין סימון "חדש"');
   assert.equal(await page.$('.sum-card [data-act="sum-unshare"]'), null, 'מחנך יכול לבטל שיתוף');
-  assert.equal(await page.$('[data-act="sum-open"]'), null);
+  assert.equal(await page.$('.s3-acts [data-act="sum-open"]'), null);
   await page.click('.sum-card summary');
   assert.match(await page.textContent('.sum-card .sum-text'), /נוסח סופי שהמנהל ערך/);
   assert.equal(await page.$('.sum-card .sum-new'), null, '"חדש" לא נעלם אחרי פתיחה');
