@@ -45,6 +45,16 @@ test('מיפוי: מנהל ממלא רמה, היבטי קושי והערה → �
   assert.equal(r.s_dec, 'זיהוי אותיות|ניקוד', 'היבטי הקושי נשמרים בסדר של הטופס');
   assert.equal(r.n_dec, 'מתבלבל בין קמץ לפתח');
   assert.equal(Object.keys(r).filter(k => k.startsWith('h_')).length, 1, 'נרשמה היסטוריית שינוי');
+  // אחרי השמירה מוצג מסך הסיכום (ולא הטופס)
+  assert.equal(await page.locator('#remSum').count(), 1, 'אחרי שמירה צריך להופיע מסך הסיכום');
+  const sum = await page.$eval('#remSum', e => e.innerText);
+  assert.match(sum, /דורש התייחסות/); assert.match(sum, /פענוח/); assert.match(sum, /קושי בזיהוי אותיות, ניקוד/); assert.match(sum, /מתבלבל בין קמץ לפתח/);
+  assert.match(sum, /תקין:\s*חשבון/); assert.match(sum, /לא נבדק:/); assert.match(sum, /נמפה/);
+  // עריכה חוזרת וביטול
+  await page.click('[data-act="mp-edit"]');
+  assert.equal(await page.locator('#remCard').count(), 1);
+  await page.click('[data-act="mp-cancel-edit"]');
+  assert.equal(await page.locator('#remSum').count(), 1);
   // הטופס הוא דף נפרד: הרשימה לא מוצגת מתחתיו; "חזרה לרשימה" מחזיר לטבלה
   assert.equal(await page.locator('table.mpt').count(), 0, 'הרשימה לא אמורה להופיע מתחת לטופס');
   await page.click('[data-act="mp-close"]');
@@ -111,5 +121,20 @@ test('מיפוי: טופס התלמיד נפתח כדף נפרד — הבא/הק
   await page.waitForFunction(() => !S.remOpen, null, { timeout: 5000 });
   assert.equal(await page.locator('table.mpt').count(), 1, 'אחרי "חזרה" מוצגת הרשימה');
   assert.equal(await page.evaluate(() => S.tab), 'rem');
+  assert.deepEqual(page.errors, []);
+});
+
+test('מיפוי: טופס ריק מודפס בעמוד אחד לכל תלמיד (A4), וגם טופס ממולא בהערות קצרות', async () => {
+  const page = await newPage(browser);
+  await login(page, server.url, 'admin');
+  await openRem(page);
+  const pages = async () => { const buf = await page.pdf({ format: 'A4', printBackground: true }); return (buf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length; };
+  await page.emulateMedia({ media: 'print' });
+  await page.evaluate(() => { S.remPrint = { ids: ['s1', 's2', 's3'], blank: true }; render(); });
+  assert.equal(await pages(), 3, '3 טפסים ריקים = 3 עמודים');
+  await page.evaluate(() => { const c = keyify(S.config.classes[0]);
+    S.rem.d[S.config.classes[0]] = { s1: { l_read: 3, s_read: 'שטף|קצב', n_read: 'קורא לאט, מדלג על שורות', l_dec: 2, n_dec: 'מתבלבל בצירופים', fnd: 'קושי בעיקר בשטף', rec: 'קריאה מודרכת פעמיים בשבוע', md: '2026-11-09' } };
+    S.remPrint = { ids: ['s1'], blank: false }; render(); });
+  assert.equal(await pages(), 1, 'טופס ממולא בעמוד אחד');
   assert.deepEqual(page.errors, []);
 });
