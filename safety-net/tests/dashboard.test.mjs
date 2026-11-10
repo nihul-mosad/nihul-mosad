@@ -27,7 +27,7 @@ test('לוח בקרה: עוגות, מגמה, מפת חום, קבוצות מוק�
   for (const sel of ['.dv-donut svg circle', '.dv-legend .dv-leg', '.dv-line polyline', '.dv-heat .dv-hc', '.dv-tiers .dv-tier', '.dv-ct tbody tr'])
     assert.ok(await page.$(sel), 'חסר: ' + sel);
   const h3 = await page.$$eval('#main h3', xs => xs.map(x => x.textContent));
-  for (const t of ['נוכחות היום', 'מה דורש התייחסות', 'אירועי השבוע לפי סוג', 'מגמות', 'תלמידים במוקד', 'השוואת כיתות'])
+  for (const t of ['נוכחות היום', 'מה לעשות עכשיו', 'אירועי השבוע לפי סוג', 'מגמות', 'תלמידים במוקד', 'השוואת כיתות'])
     assert.ok(h3.some(x => x.includes(t)), 'חסרה כותרת: ' + t);
   // מקרא העוגה של נוכחות היום מסתכם במספר התלמידים
   const r = await page.evaluate(() => {

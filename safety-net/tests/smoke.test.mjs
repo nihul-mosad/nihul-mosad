@@ -20,7 +20,8 @@ test('מנהל: כל 17 המסכים נפתחים בלי שגיאה', async () =
   const page = await newPage(browser);
   await login(page, server.url, 'admin');
   const nav = await page.evaluate(() => tabsFor().map(t => t[0]));
-  assert.deepEqual(nav.slice().sort(), ADMIN_TABS.slice().sort(), 'רשימת המסכים בתפריט השתנתה');
+  // "ניתוחים" אוחד עם "דוחות" בתפריט (מתג בראש המסך), אבל המסך עצמו נשאר ונבדק כאן
+  assert.deepEqual(nav.slice().sort(), ADMIN_TABS.filter(t => t !== 'analytics').sort(), 'רשימת המסכים בתפריט השתנתה');
   for (const tab of ADMIN_TABS) {
     const before = page.errors.length;
     const txt = await openTab(page, tab);
