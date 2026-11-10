@@ -948,13 +948,6 @@ html.nav-c .nav button span{display: none;}
 @media (prefers-color-scheme: dark){:root .side{background: linear-gradient(rgb(21, 42, 92) 0%, rgb(14, 31, 79) 40%, rgb(16, 31, 85) 75%, rgb(28, 39, 104) 100%);}}
 @media (prefers-color-scheme: dark){:root .side::after{opacity: 0.45;}}
 .brand{position: relative; display: grid; grid-template-columns: 52px auto; grid-template-rows: auto auto; gap: 5px 12px; place-content: center; height: 92px; padding: 0px 14px; margin: 0px 0px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); background: linear-gradient(rgba(255, 255, 255, 0.06), transparent);}
-.brand::before{content: ""; grid-row: 1 / 3; align-self: center; width: 52px; height: 46px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 52 46'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23CFEAFF'/%3E%3Cstop offset='.45' stop-color='%236FB2FF'/%3E%3Cstop offset='1' stop-color='%232F5BEA'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='1' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%234F86FF'/%3E%3Cstop offset='1' stop-color='%231E3FBF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M22 3 Q26 0 30 3 L51 43 Q51.5 45 49 45 H38 L26 19 Z' fill='url(%23b)'/%3E%3Cpath d='M22 3 Q26 0 30 3 L14.5 45 H3 Q.5 45 1 43 Z' fill='url(%23a)'/%3E%3Cpath d='M26 19 L33 34 H19 Z' fill='%231B3699' opacity='.7'/%3E%3C/svg%3E") center center / contain no-repeat;}
-.brand img, .brand span{display: none !important;}
-.brand h1{font-size: 0px; line-height: 1; text-align: left; direction: ltr; unicode-bidi: isolate;}
-.brand h1::before{content: "AURA"; font-family: "Noto Sans", "Segoe UI", system-ui, sans-serif; font-size: 31px; font-weight: 700; letter-spacing: 0.04em; color: rgb(255, 255, 255);}
-.brand h1::after{content: "3.1"; margin-left: 8px; font-family: "Noto Sans", "Segoe UI", system-ui, sans-serif; font-size: 23px; font-weight: 700; color: rgb(95, 163, 255);}
-.brand::after{content: "מערכת ניהול מוסדית"; font-size: 15px; line-height: 1.1; color: rgb(227, 232, 255); font-weight: 500; white-space: nowrap;}
-.brand h1{align-self: end; white-space: nowrap;}
 .nav{gap: 12px; padding: 0px 16px;}
 .nav .nsec{display: none;}
 .nav button{display: flex; align-items: center; gap: 16px; color: rgb(242, 244, 255); border-radius: 12px; padding: 0px 18px 0px 16px; height: 46px; font-size: 18.5px; font-weight: 700; background: none; position: relative; letter-spacing: -0.01em;}
@@ -1738,6 +1731,11 @@ main { padding-top: 26px; }
 .nav button[data-tab="analytics"] { --nav-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%203v9h9%20M9%204a9%209%200%201%200%2011%2011%22%2F%3E%3C%2Fsvg%3E"); }
 .nav button[data-tab="staff"] { --nav-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M9%2011a4%204%200%201%200%200-8%204%204%200%200%200%200%208%20M2%2021v-3a5%205%200%200%201%205-4h4a5%205%200%200%201%205%204v3%20M20%2010v8%20M17%2014h6%22%2F%3E%3C%2Fsvg%3E"); }
 .nav button[data-tab="settings"] { --nav-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%208a4%204%200%201%200%200%208%204%204%200%200%200%200-8%20M12%202v3%20M12%2019v3%20M2%2012h3%20M19%2012h3%20M5%205l2%202%20M17%2017l2%202%20M5%2019l2-2%20M17%207l2-2%22%2F%3E%3C%2Fsvg%3E"); }
+
+/* Preserve institution branding from the existing application. */
+html:not(.nav-x) .brand { display: block; height: auto; min-height: 92px; padding: 12px 14px; text-align: right; }
+html:not(.nav-x) .brand h1 { font-size: 21px; line-height: 1.4; font-weight: 550; white-space: normal; overflow-wrap: anywhere; }
+.brand span { color: #c7d1ef; line-height: 1.5; }
 
 }
 </style>

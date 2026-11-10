@@ -36,3 +36,11 @@ No push, merge, PR or deployment is part of this work. The original experimental
 The service worker and cache version were deliberately unchanged. A future deployment should verify first load and refresh on an already-installed client as well as a fresh browser. Existing native print behavior is retained.
 
 Rollback: remove the single `aura-css-only` style block (or revert this candidate commit). No data migration is involved.
+
+## Institution branding correction
+
+Removed the experimental AURA name, version label and synthetic logo from the release CSS. Existing institution name, subtitle and configured logo remain controlled by the original application; no HTML or logic changes.
+
+Branding validation: all 41 isolated regression tests passed again after removal. Original name, subtitle and a configured sample logo were checked at widths 1440/1024/390/320, light and dark (8 cases), with no page overflow or script errors.
+
+Publication scope updated by owner approval: push this integration branch and open a review PR only; no merge or deployment. Earlier no-push statements above describe the preparation phase.
