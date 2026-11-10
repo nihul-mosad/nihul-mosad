@@ -1754,7 +1754,44 @@ html:not(.nav-x) .brand h1 { font-size: 21px; line-height: 1.4; font-weight: 550
 /* שורות "נוכחות לפי כיתה" בלוח הבקרה: ברוחב של 4 עמודות הטקסט חרג מהכרטיס */
 .dcls > .note { min-width: 0 !important; white-space: nowrap; }
 .dcls > .bar { min-width: 30px; }
+
+/* תפריט הצד במחשב (באגים):
+   1. הגל הדקורטיבי בתחתית התפריט צף מעל הכפתורים וכיסה/החליש אותם בגלילה, בעיקר במסכים נמוכים.
+      עכשיו הוא האלמנט האחרון בתפריט — יושב מתחת לכפתורים ולא מעליהם.
+   2. שם מוסד ארוך (שתי שורות) עם לוגו חרג מהכותרת ועלה על "לוח בקרה".
+   3. אזור המשתמש (שם, החלפת סיסמה, יציאה) היה מוסתר במחשב — לא הייתה דרך לצאת מהמערכת. */
+.side::after { position: relative; inset: auto; flex: 0 0 150px; height: 150px; margin: 8px 0 0; }
+.side { padding-bottom: 0 !important; }
+.side > * { flex-shrink: 0; } /* התפריט גולל; בלי זה הכותרת נדחסה לגובה קבוע והטקסט חרג ממנה */
+@media (min-width: 821px) {
+  .side .brand { height: auto; min-height: 92px; padding-top: 12px; padding-bottom: 12px; }
+  .side .who { display: block; }
+}
+/* בורר בהיר / כהה / אוטומטי */
+.thm { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 10px 0 2px; padding: 3px; border-radius: 12px; background: rgba(255,255,255,.08); }
+.thm button { font: inherit; font-size: 12.5px; padding: 6px 2px; border: 0; border-radius: 9px; background: transparent; color: inherit; cursor: pointer; min-height: 32px; }
+.thm button[aria-pressed="true"] { background: rgba(255,255,255,.92); color: #193165; font-weight: 600; }
+.thm button:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 </style>
+<script>
+/* מצב תצוגה: העיצוב עוקב אחרי הגדרת מערכת ההפעלה (prefers-color-scheme). כאן אפשר לכפות בהיר או כהה
+   בלי לגעת בעיצוב — מפעילים או מכבים את אותם בלוקים של מצב כהה. הבחירה נשמרת במכשיר. */
+var THEME=(function(){
+  function get(){try{return localStorage.getItem('tt:theme')||'auto';}catch(e){return 'auto';}}
+  function walk(rules,m){for(var i=0;i<rules.length;i++){var r=rules[i];
+    if(r.media&&r.cssRules){var o=r.__orig||(r.__orig=r.media.mediaText);
+      if(/prefers-color-scheme:\s*dark/.test(o)){var t=m==='auto'?o:/^\(prefers-color-scheme:\s*dark\)$/.test(o.trim())?(m==='dark'?'all':'not all'):o.replace(/\(prefers-color-scheme:\s*dark\)/,m==='dark'?'(min-width:0px)':'(max-width:0px)');
+        if(r.media.mediaText!==t)r.media.mediaText=t;}
+      walk(r.cssRules,m);}
+    else if(r.cssRules)walk(r.cssRules,m);}}
+  function apply(m){m=m==='light'||m==='dark'?m:'auto';
+    for(var i=0;i<document.styleSheets.length;i++){var rs;try{rs=document.styleSheets[i].cssRules;}catch(e){continue;}walk(rs,m);}
+    document.documentElement.setAttribute('data-theme',m);}
+  function set(m){try{if(m==='auto')localStorage.removeItem('tt:theme');else localStorage.setItem('tt:theme',m);}catch(e){}apply(m);}
+  apply(get());
+  return {get:get,set:set,apply:apply};
+})();
+</script>
 </head>
 <body>
 
@@ -2389,7 +2426,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=63;
+const APP_VER=64;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -6886,6 +6923,7 @@ function printHead(){
     '<div class="note">הופק ב'+gregLabel(iso(new Date()))+' · '+hebLabel(iso(new Date()))+'</div></div>';
 }
 
+function themeSwitch(){const m=THEME.get();return '<div class="thm" role="group" aria-label="מצב תצוגה">'+[['light','בהיר'],['dark','כהה'],['auto','אוטומטי']].map(t=>'<button type="button" data-theme-set="'+t[0]+'" aria-pressed="'+(m===t[0])+'" title="'+(t[0]==='auto'?'לפי הגדרת המחשב':'מצב '+t[1])+'">'+t[1]+'</button>').join('')+'</div>';}
 function render(){
   if(!S.me)return;
   document.getElementById('brandName').textContent=S.config.name;
@@ -6894,7 +6932,7 @@ function render(){
   document.getElementById('brandSub').textContent=!S.inst?'בעל המערכת':isAdmin()?'ניהול המוסד':(myClasses().length?'מחנך '+myClasses().join(', '):'מורה');
   document.getElementById('nav').innerHTML=tabsFor().map(t=>'<button data-tab="'+t[0]+'" data-on="'+(S.tab===t[0]?1:0)+'">'+t[1]+'</button>').join('');
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
-    '<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
+    themeSwitch()+'<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
     reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,duty:viewDuty,rem:viewRem,bdays:viewBirthdays,analytics:viewAnalytics,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,assist:viewAssist,account:viewAccount,import:viewImport,card:viewCard};
   if(S.inst&&!isAdmin()&&['card','account','bdays','rcard'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
@@ -6924,7 +6962,7 @@ document.getElementById('nav').addEventListener('click',function(e){
   const b=e.target.closest('button[data-tab]');if(!b)return;
   closeDrawer(true);goTab(b.dataset.tab);window.scrollTo(0,0);
 });
-document.getElementById('who').addEventListener('click',function(e){if(e.target.closest('[data-act="logout"]'))logout();if(e.target.closest('[data-act="go-account"]')){closeDrawer(true);goTab('account');}});
+document.getElementById('who').addEventListener('click',function(e){const th=e.target.closest('[data-theme-set]');if(th){THEME.set(th.dataset.themeSet);document.querySelectorAll('.thm button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.themeSet===THEME.get()?'true':'false'));return;}if(e.target.closest('[data-act="logout"]'))logout();if(e.target.closest('[data-act="go-account"]')){closeDrawer(true);goTab('account');}});
 
 function startReview(list){
   S.revList=list;S.revIdx=0;S.revDone=0;loadRevDraft();
