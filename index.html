@@ -1739,6 +1739,22 @@ html:not(.nav-x) .brand h1 { font-size: 21px; line-height: 1.4; font-weight: 550
 
 }
 </style>
+<style id="aura-readability-fix">
+/* תיקון קריאות לשכבת העיצוב (באג): צבעי המצב של העיצוב (צהוב #F5B800, ירוק #22B04B) בהירים מדי לטקסט על רקע בהיר
+   (ניגודיות 1.8 ו-2.9; נדרש 4.5). כאן מחליפים אותם — רק כשהם משמשים כצבע טקסט — לצבעי ה"דיו" שהעיצוב עצמו מגדיר
+   לבהיר ולכהה (--tag-*-ink), באותה שיטה שהעיצוב כבר משתמש בה בסטטיסטיקות של האירועים והנוכחות. פסים, נקודות ורקעים לא משתנים. */
+@media screen {
+  #main [style^="color:var(--late)"], #main [style*=";color:var(--late)"], #main [style^="color:var(--yellow)"], #main [style*=";color:var(--yellow)"],
+  .lsn .bd, .evgrp.neg > span { --late: var(--tag-y-ink); --yellow: var(--tag-y-ink); }
+  #main [style^="color:var(--present)"], #main [style*=";color:var(--present)"], #main [style^="color:var(--green)"], #main [style*=";color:var(--green)"],
+  .afresh .alert[data-tone="good"], .evgrp.pos > span { --present: var(--tag-g-ink); --green: var(--tag-g-ink); }
+  #main [style^="color:var(--absent)"], #main [style*=";color:var(--absent)"], #main [style^="color:var(--red)"], #main [style*=";color:var(--red)"],
+  .afresh .alert[data-tone="bad"], .acurg:has(input:checked) { --absent: var(--tag-r-ink); --red: var(--tag-r-ink); }
+}
+/* שורות "נוכחות לפי כיתה" בלוח הבקרה: ברוחב של 4 עמודות הטקסט חרג מהכרטיס */
+.dcls > .note { min-width: 0 !important; white-space: nowrap; }
+.dcls > .bar { min-width: 30px; }
+</style>
 </head>
 <body>
 
@@ -2373,7 +2389,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=62;
+const APP_VER=63;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
