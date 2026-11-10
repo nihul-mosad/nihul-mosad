@@ -64,3 +64,28 @@ test('תלמידים: לחיצה בכל מקום בשורה פותחת את הכ
   assert.deepEqual(page.errors, []);
   await page.context().close();
 });
+
+test('דוחות וניתוחים: לשונית אחת בתפריט ומתג בין שני המסכים; הלשונית מסומנת בשניהם', async () => {
+  const page = await newPage(browser, { width: 1366, height: 768 });
+  await login(page, server.url, 'admin');
+  await page.evaluate(() => { S.tab = 'reports'; render(); });
+  await page.click('.rep-sw [data-id="analytics"]');
+  assert.equal(await page.evaluate(() => S.tab), 'analytics');
+  assert.equal(await page.$eval('#nav button[data-tab="reports"]', b => b.dataset.on), '1');
+  await page.click('.rep-sw [data-id="reports"]');
+  assert.equal(await page.evaluate(() => S.tab), 'reports');
+  assert.deepEqual(page.errors, []);
+  await page.context().close();
+});
+
+test('"בטל" במקום חלון אישור: הסרת כיתה בהגדרות מחזירה אותה בלחיצה על "בטל"', async () => {
+  const page = await newPage(browser, { width: 1366, height: 768 });
+  await login(page, server.url, 'admin');
+  const before = await page.evaluate(() => { S.tab = 'settings'; render(); return S.config.classes.slice(); });
+  await page.click('[data-act="del-cls"]');
+  assert.equal(await page.evaluate(() => S.config.classes.length), before.length - 1);
+  await page.click('#toast .undo');
+  assert.deepEqual(await page.evaluate(() => S.config.classes), before);
+  assert.deepEqual(page.errors, []);
+  await page.context().close();
+});

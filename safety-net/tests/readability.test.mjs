@@ -41,7 +41,7 @@ for (const scheme of ['light', 'dark']) {
     const tabs = await page.evaluate(() => tabsFor().map(t => t[0]));
     const bad = [];
     let checked = 0;
-    for (const t of tabs.concat(['card'])) {
+    for (const t of tabs.concat(['analytics', 'card'])) {
       const r = await page.evaluate(([t, fnSrc]) => {
         if (t === 'card') { S.tab = 'card'; S.cardId = myStudents()[0].id; render(); const d = document.querySelector('details.s3-more'); if (d) d.open = true; }
         else { S.tab = t; render(); }
