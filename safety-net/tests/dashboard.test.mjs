@@ -18,28 +18,63 @@ async function open(who = 'admin', vp = { width: 1440, height: 900 }) {
   const page = await newPage(browser, vp);
   await login(page, server.url, who);
   await page.evaluate(fill);
-  await page.evaluate(() => { S.tab = 'dash'; render(); });
+  await page.evaluate(() => { S.tab = 'dash'; S.dashMode = 'week'; render(); });
   return page;
 }
 
-test('לוח בקרה: עוגות, מגמה, מפת חום, קבוצות מוקד והשוואת כיתות מוצגים', async () => {
+test('לוח בקרה "השבוע": מגמה, מפת חום, קבוצות מוקד, השוואת כיתות ומדדי השבוע', async () => {
   const page = await open();
-  for (const sel of ['.dv-donut svg circle', '.dv-legend .dv-leg', '.dv-line polyline', '.dv-heat .dv-hc', '.dv-tiers .dv-tier', '.dv-ct tbody tr'])
+  for (const sel of ['.dv-line polyline', '.dv-heat .dv-hc', '.dv-tiers .dv-tier', '.dv-ct tbody tr', '.care-st'])
     assert.ok(await page.$(sel), 'חסר: ' + sel);
   const h3 = await page.$$eval('#main h3', xs => xs.map(x => x.textContent));
-  for (const t of ['נוכחות היום', 'מה לעשות עכשיו', 'אירועי השבוע לפי סוג', 'מגמות', 'תלמידים במוקד', 'השוואת כיתות'])
+  for (const t of ['מעקב טיפול', 'מילה טובה להורים', 'תלמידים במוקד', 'חיסורים חוזרים', 'הסלמה בהתנהגות', 'כיסוי תמונות מצב', 'התמדת מורים', 'מגמות', 'השוואת כיתות'])
     assert.ok(h3.some(x => x.includes(t)), 'חסרה כותרת: ' + t);
-  // מקרא העוגה של נוכחות היום מסתכם במספר התלמידים
-  const r = await page.evaluate(() => {
-    const card = [...document.querySelectorAll('#main .card')].find(c => /^נוכחות היום/.test(c.querySelector('h3').textContent));
-    return { sum: [...card.querySelectorAll('.dv-leg b')].reduce((a, b) => a + Number(b.textContent), 0), n: myStudents().length,
+  const r = await page.evaluate(() => ({ n: myStudents().length,
       classes: myClasses().filter(c => myStudents().some(s => s.cls === c)).length, rows: document.querySelectorAll('.dv-ct tbody tr').length,
-      tiers: [...document.querySelectorAll('.dv-tier b')].reduce((a, b) => a + Number(b.textContent), 0), pts: document.querySelectorAll('.dv-line .dv-pt').length };
-  });
-  assert.equal(r.sum, r.n);
+      tiers: [...document.querySelectorAll('.dv-tier b')].reduce((a, b) => a + Number(b.textContent), 0), pts: document.querySelectorAll('.dv-line .dv-pt').length }));
   assert.equal(r.rows, r.classes);
   assert.equal(r.tiers, r.n, 'כל תלמיד שייך בדיוק לקבוצה אחת');
   assert.ok(r.pts >= 2 && r.pts <= 8);
+  assert.deepEqual(page.errors, []);
+  await page.context().close();
+});
+
+test('לוח בקרה "היום": משפט פתיחה, חסרים עם חיוג/וואטסאפ, אירועים לפי מצב, המשימות שלי; הבחירה נשמרת', async () => {
+  const page = await open();
+  await page.click('[data-act="dash-mode"][data-id="today"]');
+  const r = await page.evaluate(() => {
+    const ids = myStudents().map(s => s.id), d = iso(new Date()); S.latt[d] = S.latt[d] || {};
+    S.latt[d]['L01:' + ids[0]] = 'absent'; S.latt[d]['L01:' + ids[1]] = 'present'; S.tasks.push({ id: 'tx', text: 'משימה בדיקה', due: daysAgo(1), status: 'open', uid: S.me.id, by: 'admin' });
+    LIDX = null; render();
+    const h3 = [...document.querySelectorAll('#main h3')].map(x => x.textContent);
+    return { h3, sum: document.querySelector('.dsum').textContent, absName: studentById(ids[0]).name,
+      absCard: [...document.querySelectorAll('#main .card')].find(c => /^חסרים היום/.test(c.querySelector('h3').textContent)).innerText,
+      wa: !!document.querySelector('#main a[href^="https://wa.me/"]'), tel: !!document.querySelector('#main a[href^="tel:"]'), evst: !!document.querySelector('.ev-st'),
+      task: document.body.innerText.includes('משימה בדיקה'), saved: localStorage.getItem('tt:dashMode') };
+  });
+  for (const t of ['מה לעשות עכשיו', 'חסרים היום', 'אירועים לטיפול', 'המשימות שלי']) assert.ok(r.h3.some(x => x.includes(t)), 'חסר: ' + t);
+  assert.match(r.sum, /חסרים היום|אין חסרים|עוד לא סומנה/);
+  assert.match(r.sum, /משימה אחת באיחור|משימות באיחור/);
+  assert.ok(r.absCard.includes(r.absName));
+  assert.ok(r.wa && r.tel && r.evst && r.task);
+  assert.equal(r.saved, 'today');
+  assert.deepEqual(page.errors, []);
+  await page.context().close();
+});
+
+test('מעקב טיפול: "פתיחת טיפול" יוצר משימה מקושרת לתלמיד אצל האחראי, והסטטוס מופיע ברשימת המוקד', async () => {
+  const page = await open();
+  await page.evaluate(() => { const s = myStudents()[0]; Array.from(new Set(Object.keys(S.latt))).sort().slice(-3)
+    .forEach(d => Object.keys(S.latt[d]).forEach(k => { if (k.endsWith(':' + s.id)) S.latt[d][k] = 'absent'; })); LIDX = null; render(); });
+  const sid = await page.$eval('[data-act="care-open"]', b => b.dataset.id);
+  await page.click('[data-act="care-open"]');
+  await page.fill('#care-step', 'שיחה עם ההורים');
+  await page.click('[data-act="care-save"]');
+  const r = await page.evaluate(id => ({ t: S.tasks.filter(t => t.sid === id && t.kind === 'care'), chip: !!document.querySelector('.tag.care[data-c="open"]'), st: careState(id, iso(new Date())).k }), sid);
+  assert.equal(r.t.length, 1);
+  assert.match(r.t[0].text, /שיחה עם ההורים/);
+  assert.ok(r.t[0].due && r.t[0].uid);
+  assert.equal(r.st, 'open'); assert.ok(r.chip);
   assert.deepEqual(page.errors, []);
   await page.context().close();
 });
@@ -66,6 +101,7 @@ test('לוח בקרה: תלמיד שנעדר 3 ימים ברצף מסומן כ"�
   });
   const urgent = await page.$$eval('.dv-fr', xs => xs.filter(x => x.querySelector('.dv-dot').dataset.tier === 'urgent').map(x => x.textContent));
   assert.ok(urgent.some(t => t.includes(name) && t.includes('נעדר 3 ימים ברצף')), 'לא סומן: ' + urgent.join(' | '));
+  await page.evaluate(() => { S.dashMode = 'today'; render(); });
   assert.match(await page.textContent('#main'), /תלמידים נעדרים 3 ימים ברצף/);
   assert.deepEqual(page.errors, []);
   await page.context().close();
@@ -86,7 +122,7 @@ test('לוח בקרה למחנך: רק הכיתה שלו, בלי טבלת השו
 for (const scheme of ['light', 'dark']) test('לוח בקרה בנייד (' + scheme + '): בלי גלילה אופקית של הדף', async () => {
   const page = await newPage(browser, { width: 360, height: 780, mobile: true });
   await page.emulateMedia({ colorScheme: scheme });
-  await login(page, server.url, 'admin'); await page.evaluate(fill); await page.evaluate(() => { S.tab = 'dash'; render(); });
+  await login(page, server.url, 'admin'); await page.evaluate(fill); await page.evaluate(() => { S.tab = 'dash'; S.dashMode = 'week'; render(); });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   assert.deepEqual(page.errors, []);
   await page.context().close();
