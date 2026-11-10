@@ -1958,6 +1958,7 @@ a.tel{color:inherit;text-decoration:none}a.tel:hover{color:var(--accent);text-de
   #main:has(input#q[data-in="q"]) .scroll tbody td:nth-child(6){grid-column:2;grid-row:2}
   #main:has(input#q[data-in="q"]) .scroll tbody td:nth-child(6) a.tel{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-weight:600}
 }
+.staff-hint{background:var(--accent-soft)!important;border-color:transparent!important}
 </style>
 <style id="aura-readability-fix">
 /* תיקון קריאות לשכבת העיצוב (באג): צבעי המצב של העיצוב (צהוב #F5B800, ירוק #22B04B) בהירים מדי לטקסט על רקע בהיר
@@ -2698,7 +2699,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=68;
+const APP_VER=69;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -6899,29 +6900,54 @@ function viewStudents(){
 }
 
 /* ================= צוות / הודעות / דוחות ================= */
+/* ===== צוות מאוחד: כל איש צוות פעם אחת — מרשימת העובדים, ממערכת השעות, מהמחנכים ומהמשתמשים =====
+   לא משנה נתונים: מחבר לפי השם (כמו שהמערכת כבר מקשרת משתמש למורה במערכת השעות). */
+function staffRoster(){
+  const P={},key=n=>String(n||'').trim();
+  const get=n=>{const k=key(n);if(!k)return null;return P[k]||(P[k]={name:k,rec:null,user:null,lessons:0,subjects:{},classes:{}});};
+  S.staff.forEach(s=>{const p=get(s.name);if(p)p.rec=s;});
+  S.timetable.forEach(l=>{const p=get(l.teacher);if(!p)return;p.lessons++;if(l.subject)p.subjects[l.subject]=1;(l.classes||[]).forEach(c=>p.classes[c]=1);});
+  Object.values(S.config.homeroom||{}).forEach(n=>get(n));
+  (S.config.users||[]).forEach(u=>{if(!u.teacher&&u.role==='admin'&&!P[key(u.user)])return;/* כניסת הנהלה בלי שם מורה — לא איש צוות נפרד */const p=get(u.teacher||u.user);if(p&&!p.user)p.user=u;});
+  return Object.values(P).map(p=>Object.assign(p,{hr:homeroomOf(p.name),subjects:Object.keys(p.subjects),classes:Object.keys(p.classes)}))
+    .sort((a,b)=>(b.hr.length-a.hr.length)||(b.lessons-a.lessons)||a.name.localeCompare(b.name,'he'));
+}
 function viewStaff(){
-  const hours=S.staff.reduce((a,s)=>a+(Number(s.hours)||0),0);
+  const R=staffRoster(),hours=S.staff.reduce((a,s)=>a+(Number(s.hours)||0),0),noRec=R.filter(p=>!p.rec),withUser=R.filter(p=>p.user).length;
   const sen=st=>{if(!st)return '—';const y=(Date.now()-new Date(st))/31557600000;return y<1?'פחות משנה':Math.floor(y)+' שנים';};
+  const ROLE={admin:'מנהל',teacher:'מורה'};
   let form='';
   if(S.editStaff){
-    const e=S.editStaff;
-    form='<div class="card"><h3>'+(e.id?'עריכת עובד':'עובד חדש')+'</h3><div class="grid g2">'+
-      '<label class="field"><span>שם</span><input id="s-name" value="'+esc(e.name)+'"></label>'+
-      '<label class="field"><span>תפקיד</span><input id="s-role" value="'+esc(e.role)+'"></label>'+
-      '<label class="field"><span>כיתה</span><select id="s-cls">'+opt('ללא שיוך','',e.cls)+S.config.classes.map(c=>opt(c,c,e.cls)).join('')+'</select></label>'+
+    const e=S.editStaff,p=R.find(x=>x.name===String(e.name||'').trim());
+    form='<div class="card"><h3>'+(e.id?'עריכת איש צוות':'איש צוות חדש')+'</h3><div class="grid g2">'+
+      '<label class="field"><span>שם (כמו במערכת השעות)</span><input id="s-name" value="'+esc(e.name)+'"></label>'+
+      '<label class="field"><span>תפקיד</span><input id="s-role" value="'+esc(e.role)+'" placeholder="מלמד, מחנך, מורה מקצועי…"></label>'+
       '<label class="field"><span>טלפון</span><input id="s-phone" dir="ltr" value="'+esc(e.phone)+'"></label>'+
       '<label class="field"><span>שעות שבועיות</span><input id="s-hours" type="number" value="'+esc(e.hours)+'"></label>'+
       '<label class="field"><span>תחילת עבודה</span><input id="s-start" type="date" value="'+esc(e.start)+'"></label>'+
-      '</div><div class="row"><button class="btn" data-v="primary" data-act="staff-save">שמירה</button>'+
+      '</div>'+(p?'<p class="note" style="margin:4px 0 12px">'+(p.hr.length?'מחנך '+esc(p.hr.join(', '))+' · ':'')+(p.lessons?p.lessons+' שיעורים בשבוע במערכת השעות · ':'')+(p.user?'נכנס למערכת כ"'+esc(p.user.user)+'"':'אין כניסה למערכת')+'. את אלה משנים במערכת השעות ובהגדרות.</p>':'')+
+      '<div class="row"><button class="btn" data-v="primary" data-act="staff-save">שמירה</button>'+
       '<button class="btn" data-v="ghost" data-act="staff-cancel">ביטול</button>'+
-      (e.id?'<button class="btn" data-v="danger" style="margin-right:auto" data-act="staff-del" data-id="'+e.id+'">הסרת העובד</button>':'')+'</div></div>';
+      (e.id?'<button class="btn" data-v="danger" style="margin-right:auto" data-act="staff-del" data-id="'+e.id+'">הסרה מרשימת הצוות</button>':'')+'</div></div>';
   }
-  return printHead()+'<div class="head"><div><h2>צוות</h2><div class="sub">'+S.staff.length+' עובדים · '+hours+' שעות שבועיות</div></div>'+
-    '<button class="btn" data-v="primary" data-act="staff-new">הוספת עובד</button></div>'+form+
-    '<div class="card">'+(S.staff.length?table(['שם','תפקיד','כיתה','טלפון','שעות','ותק',''],S.staff.map(s=>
-      ['<b>'+esc(s.name)+'</b>',esc(s.role),esc(s.cls||'—'),'<span class="ltr">'+esc(s.phone)+'</span>',esc(s.hours),'<span class="note">'+sen(s.start)+'</span>',
-       '<button class="btn sm" data-v="ghost" data-act="staff-edit" data-id="'+s.id+'">עריכה</button>']))
-      :'<div class="empty">עוד לא נוספו אנשי צוות.</div>')+'</div>';
+  const rows=R.map(function(p){
+    const r=p.rec||{},enc=encodeURIComponent(p.name);
+    const role=r.role||(p.hr.length?'מחנך':p.lessons?'מורה':p.user?ROLE[p.user.role]||'':'');
+    const teach=(p.hr.length?'<b>מחנך '+esc(p.hr.join(', '))+'</b>'+(p.lessons?'<br>':''):'')+(p.lessons?'<span class="note">'+p.lessons+' שיעורים · '+esc(p.subjects.slice(0,3).join(', '))+(p.subjects.length>3?'…':'')+'</span>':(p.hr.length?'':'<span class="note">—</span>'));
+    const login=p.user?'<span class="tag" data-s="present">'+esc(p.user.user)+' · '+(ROLE[p.user.role]||p.user.role)+'</span>':'<span class="note">אין כניסה</span>';
+    return ['<b>'+esc(p.name)+'</b>'+(p.rec?'':' <span class="tag" data-s="excused" title="מופיע במערכת השעות או במשתמשים, בלי כרטיס עובד">בלי כרטיס</span>'),esc(role),teach,login,
+      r.phone?'<a class="ltr tel" href="tel:'+esc(String(r.phone).replace(/[^\d+]/g,''))+'">'+esc(r.phone)+'</a>':'<span class="note">—</span>',
+      esc(r.hours||'—'),'<span class="note">'+sen(r.start)+'</span>',
+      '<div class="row" style="gap:6px;flex-wrap:nowrap">'+(p.rec?'<button class="btn sm" data-v="ghost" data-act="staff-edit" data-id="'+r.id+'">עריכה</button>':'<button class="btn sm" data-v="ghost" data-act="staff-new" data-name="'+esc(p.name)+'">השלמת פרטים</button>')+
+        (p.user?'<button class="btn sm" data-v="ghost" data-act="staff-user" data-id="'+p.user.id+'">הרשאה</button>':(isAdmin()?'<button class="btn sm" data-v="ghost" data-act="staff-login" data-name="'+esc(p.name)+'">יצירת כניסה</button>':''))+'</div>'];
+  });
+  return printHead()+'<div class="head"><div><h2>צוות</h2><div class="sub">'+R.length+' אנשי צוות · '+withUser+' עם כניסה למערכת'+(hours?' · '+hours+' שעות שבועיות':'')+'</div></div>'+
+    '<button class="btn" data-v="primary" data-act="staff-new">הוספת איש צוות</button></div>'+form+
+    (noRec.length?'<div class="card staff-hint"><div class="row" style="justify-content:space-between;gap:10px"><span>'+noRec.length+' מורים מופיעים במערכת השעות או במשתמשים ועדיין בלי כרטיס עובד (טלפון, שעות, ותק).</span>'+
+      '<button class="btn sm" data-act="staff-import">יצירת כרטיסים לכולם</button></div></div>':'')+
+    '<div class="card">'+(R.length?table(['שם','תפקיד','מחנך / שיעורים','כניסה למערכת','טלפון','שעות','ותק',''],rows)
+      :'<div class="empty">עוד אין אנשי צוות. אפשר להוסיף כאן, או לבנות מערכת שעות ולהוסיף משתמשים — הם יופיעו כאן אוטומטית.</div>')+'</div>'+
+    '<p class="note">הרשימה מאחדת את רשימת העובדים, מערכת השעות, המחנכים והמשתמשים לפי שם המורה. מחנך ושיעורים משנים במערכת השעות; כניסה והרשאה — בהגדרות.</p>';
 }
 function recipients(){
   const today=iso(new Date()),day=S.att[today]||{},base=myStudents();
@@ -7581,17 +7607,21 @@ document.getElementById('main').addEventListener('click',async function(e){
   }
 
   /* צוות */
-  if(a==='staff-new'){S.editStaff={name:'',role:'מלמד',cls:'',phone:'',hours:'',start:''};return render();}
+  if(a==='staff-new'){S.editStaff={name:el.dataset.name||'',role:'',cls:'',phone:'',hours:'',start:''};render();window.scrollTo(0,0);return;}
+  if(a==='staff-import'){const add=staffRoster().filter(p=>!p.rec).map(p=>({id:uid(),name:p.name,role:p.hr.length?'מחנך':p.lessons?'מורה':'',cls:p.hr[0]||'',phone:'',hours:'',start:''}));if(!add.length)return;
+    const prev=S.staff.slice();S.staff=S.staff.concat(add);save(K.staff,S.staff);render();undoToast('נוצרו '+add.length+' כרטיסי עובד.',()=>{S.staff=prev;save(K.staff,S.staff);render();});return;}
+  if(a==='staff-user'){S.tab='settings';S.editUser=Object.assign({},S.config.users.find(u=>u.id===id));render();const f=document.getElementById('u-user');if(f)f.scrollIntoView({block:'center'});return;}
+  if(a==='staff-login'){S.tab='settings';S.editUser={user:'',role:'teacher',cls:'',teacher:el.dataset.name||''};render();const f=document.getElementById('u-user');if(f){f.scrollIntoView({block:'center'});f.focus();}return;}
   if(a==='staff-edit'){S.editStaff=Object.assign({},S.staff.find(s=>s.id===id));return render();}
   if(a==='staff-cancel'){S.editStaff=null;return render();}
   if(a==='staff-save'){
     const g=i=>document.getElementById(i).value;
-    const o={id:S.editStaff.id||uid(),name:g('s-name').trim(),role:g('s-role').trim(),cls:g('s-cls'),phone:cleanPhone(g('s-phone')),hours:g('s-hours'),start:g('s-start')};
+    const o={id:S.editStaff.id||uid(),name:g('s-name').trim(),role:g('s-role').trim(),cls:S.editStaff.cls||'',phone:cleanPhone(g('s-phone')),hours:g('s-hours'),start:g('s-start')};
     if(!o.name)return toast('צריך למלא שם');
     S.staff=S.editStaff.id?S.staff.map(s=>s.id===o.id?o:s):S.staff.concat([o]);
     save(K.staff,S.staff);S.editStaff=null;toast('איש הצוות נשמר');return render();
   }
-  if(a==='staff-del'){S.staff=S.staff.filter(s=>s.id!==id);save(K.staff,S.staff);S.editStaff=null;toast('העובד הוסר');return render();}
+  if(a==='staff-del'){const prev=S.staff.slice();S.staff=S.staff.filter(s=>s.id!==id);save(K.staff,S.staff);S.editStaff=null;render();undoToast('הכרטיס הוסר מרשימת הצוות.',()=>{S.staff=prev;save(K.staff,S.staff);render();});return;}
 
   /* הודעות */
   if(a==='tpl'){
