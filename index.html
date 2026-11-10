@@ -1959,6 +1959,21 @@ a.tel{color:inherit;text-decoration:none}a.tel:hover{color:var(--accent);text-de
   #main:has(input#q[data-in="q"]) .scroll tbody td:nth-child(6) a.tel{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-weight:600}
 }
 .staff-hint{background:var(--accent-soft)!important;border-color:transparent!important}
+/* לוח בקרה: היום / השבוע */
+.dsum{margin:8px 0 0;font-size:15px;color:var(--au-sub,var(--ink));max-width:60ch;line-height:1.55}
+.dash-mode{max-width:280px;margin:0 0 14px}
+.ev-st{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:10px}
+.ev-st > div{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.ev-st b{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.ev-st span{font-size:12.5px;color:var(--muted)}
+.ev-st [data-k="stuck"] b,.ev-st [data-k="stuck2"] b{color:var(--tag-r-ink,#C2272C)}
+.ev-st [data-k="new"] b{color:var(--tag-y-ink,#8E6400)}
+.ev-st [data-k="done"] b{color:var(--tag-g-ink,#13843A)}
+.tag.care[data-c="open"]{background:var(--accent-soft);color:var(--accent)}
+.tag.care[data-c="late"]{background:var(--tag-r,#FDE4E5);color:var(--tag-r-ink,#C2272C)}
+.tag.care[data-c="done"]{background:var(--tag-g,#DFF5E6);color:var(--tag-g-ink,#13843A)}
+.care-form{border:1px solid var(--accent)!important}
+.grid.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
 </style>
 <style id="aura-readability-fix">
 /* תיקון קריאות לשכבת העיצוב (באג): צבעי המצב של העיצוב (צהוב #F5B800, ירוק #22B04B) בהירים מדי לטקסט על רקע בהיר
@@ -2699,7 +2714,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=69;
+const APP_VER=70;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -2986,6 +3001,9 @@ function dvFocus(list,today){
   return out.sort((x,y)=>y.sc-x.sc);
 }
 const DV_TIERS=[['urgent','דורש טיפול מיידי','נעדר 3 ימים ברצף, או נוכחות נמוכה יחד עם אירועים / רמזור אדום'],['watch','במעקב','נוכחות מתחת ל־90%, רמזור אדום או אירועים לשיפור'],['up','מגמת שיפור','נוכחות עלתה ב־5% ומעלה בשבועיים האחרונים, או שיפור בתמונת המצב'],['ok','תקין','אין סימנים חריגים']];
+function dvCare(f){if(f.tier!=='urgent'&&f.tier!=='watch')return '';const cs=careState(f.s.id,iso(new Date()));
+  const tag=cs.k==='none'?'':'<span class="tag care" data-c="'+cs.k+'" title="'+esc(cs.task?cs.task.text:'')+'">'+cs.t+(cs.task&&cs.k!=='done'?' · '+esc(careOwnerName(cs.task.uid))+(cs.task.due?' עד '+shortDate(cs.task.due):''):'')+'</span>';
+  return ' '+tag+(cs.k==='open'||cs.k==='late'?'':' <button class="btn sm" data-v="ghost" data-act="care-open" data-id="'+f.s.id+'">'+(cs.k==='done'?'טיפול נוסף':'פתיחת טיפול')+'</button>');}
 function dvFocusView(focus){
   const cnt={};focus.forEach(f=>cnt[f.tier]=(cnt[f.tier]||0)+1);
   const sel=S.dashTier||'';
@@ -2995,7 +3013,7 @@ function dvFocusView(focus){
     '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">'+(sel?DV_TIERS.find(t=>t[0]===sel)[1]:'רשימת מוקד')+'</h3>'+
       (sel?'<button class="btn sm" data-v="ghost" data-act="dash-tier" data-id="">חזרה לרשימת המוקד</button>':'<span class="note">דורש טיפול ובמעקב · לחיצה על קבוצה מסננת</span>')+'</div>'+
       (rows.length?'<div class="dv-flist">'+rows.slice(0,sel==='ok'?60:30).map(f=>'<div class="alert dv-fr"><span class="dv-dot" data-tier="'+f.tier+'"></span>'+stuB(f.s)+' <span class="note">'+esc(f.s.cls)+'</span><span style="flex:1"></span>'+
-        f.why.map(x=>'<span class="tag" data-s="'+x[0]+'">'+esc(x[1])+'</span>').join(' ')+'</div>').join('')+'</div>'+(rows.length>(sel==='ok'?60:30)?'<p class="note">ועוד '+(rows.length-(sel==='ok'?60:30))+'.</p>':'')
+        f.why.map(x=>'<span class="tag" data-s="'+x[0]+'">'+esc(x[1])+'</span>').join(' ')+dvCare(f)+'</div>').join('')+'</div>'+(rows.length>(sel==='ok'?60:30)?'<p class="note">ועוד '+(rows.length-(sel==='ok'?60:30))+'.</p>':'')
       :'<div class="empty">'+(sel?'אין תלמידים בקבוצה הזו.':'אין תלמידים שדורשים טיפול או מעקב כרגע.')+'</div>')+'</div>';
 }
 /* השוואת כיתות */
@@ -3013,6 +3031,129 @@ function dvClassTable(list,classes,today,missed){
       '<td><span class="tag" data-s="'+(red?'absent':'present')+'">'+red+'</span></td><td>'+stale+'</td><td>'+(um?'<b class="dv-bad">'+um+'</b>':'0')+'</td></tr>';
   }).join('');
   return '<div class="scroll"><table class="dv-ct"><thead><tr><th>כיתה</th><th>תלמידים</th><th style="width:30%">נוכחות 30 יום</th><th>שבח / שיפור</th><th>רמזור אדום</th><th>בלי תמונת מצב 3 שב׳</th><th>לא סומנו היום</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+/* ===== לוח בקרה: "היום" / "השבוע" (v70) ===== */
+function dashMode(){if(S.dashMode)return S.dashMode;try{return localStorage.getItem('tt:dashMode')||'today';}catch(e){return 'today';}}
+function waHref(phone,text){const n=intlPhone(phone);return n?'https://wa.me/'+n+'?text='+encodeURIComponent(text):'';}
+/* מעקב טיפול: משימה שמקושרת לתלמיד (sid) — אחראי, צעד הבא ותאריך */
+function careTasks(sid){return S.tasks.filter(t=>t.sid===sid).sort((a,b)=>String(b.due||'').localeCompare(String(a.due||'')));}
+function careState(sid,today){const ts=careTasks(sid),open=ts.filter(t=>t.status!=='done');
+  if(open.length)return open.some(t=>t.due&&t.due<today)?{k:'late',t:'טיפול באיחור',task:open[0]}:{k:'open',t:'בטיפול',task:open[0]};
+  return ts.length?{k:'done',t:'טופל',task:ts[0]}:{k:'none',t:'אין טיפול'};}
+function careOwnerName(uidv){if(!uidv||uidv===S.me.id)return 'אני';const u=(S.config.users||[]).find(x=>x.id===uidv);return u?(u.teacher||u.user):'';}
+function careForm(today){
+  const s=studentById(S.careFor);if(!s)return '';
+  const us=[{id:S.me.id,n:'אני ('+(S.me.teacher||S.me.user)+')'}].concat(isAdmin()?(S.config.users||[]).filter(u=>u.id!==S.me.id).map(u=>({id:u.id,n:u.teacher||u.user})):[]);
+  const hr=(S.config.homeroom||{})[s.cls],def=(us.find(u=>u.n===hr)||{}).id||S.me.id,due=iso(new Date(Date.now()+7*864e5));
+  return '<div class="card care-form"><h3>פתיחת טיפול — '+esc(s.name)+' <span class="note">'+esc(s.cls)+'</span></h3><div class="grid g3">'+
+    '<label class="field"><span>אחראי</span><select id="care-uid">'+us.map(u=>opt(u.n,u.id,def)).join('')+'</select></label>'+
+    '<label class="field"><span>הצעד הבא</span><input id="care-step" placeholder="שיחה עם ההורים, שיחה אישית, תוכנית…"></label>'+
+    '<label class="field"><span>עד תאריך</span><input id="care-due" type="date" value="'+due+'"></label></div>'+
+    '<div class="row"><button class="btn" data-v="primary" data-act="care-save">שמירה</button><button class="btn" data-v="ghost" data-act="care-cancel">ביטול</button>'+
+    '<span class="note">נשמר כמשימה ביומן של האחראי, עם קישור לתלמיד.</span></div></div>';
+}
+function dashToday(o){
+  const {today,list,c,lst,missed,alerts,card,stuLink,overdue,lDone,stIcon,lessonRows,missTL,missT,adm,bds,hasBD,op}=o;
+  // 2. חסרים היום
+  const abs=list.filter(s=>dayStatus(s.id,today)==='absent'),exc=list.filter(s=>dayStatus(s.id,today)==='excused');
+  const inst=(S.config.name||'התלמוד תורה');
+  const absBody=abs.length?abs.map(function(s){const ph=contactPhone(s),wa=waHref(ph,'שלום, '+s.name+' לא הגיע היום ל'+inst+'. הכול בסדר? נשמח לעדכון.');
+      return '<div class="alert">'+stuLink(s.id,s.name)+' <span class="note">'+esc(s.cls)+'</span><span style="flex:1"></span>'+
+        (ph?'<a class="btn sm" data-v="ghost" href="tel:'+esc(ph.replace(/[^\d+]/g,''))+'">'+icon('phone',14)+' חיוג</a>':'')+
+        (wa?'<a class="btn sm" data-v="ghost" target="_blank" rel="noreferrer" href="'+wa+'">'+icon('msg',14)+' וואטסאפ</a>':'')+'</div>';}).join('')
+    :'<div class="empty">'+(c.none===list.length?'עוד לא סומנה נוכחות היום.':'אין חסרים בלי הודעה.')+'</div>';
+  // 5. אירועים לפי מצב
+  const need=S.events.filter(e=>e.kind==='neg'&&e.sev>=2&&canHandle(e)),openE=need.filter(e=>!e.handled),stuck=openE.filter(e=>e.date<daysAgo(3)),
+    fresh=openE.filter(e=>e.date>=daysAgo(3)),doneW=need.filter(e=>e.handled&&e.hts&&e.hts>=Date.now()-7*864e5);
+  const evBody='<div class="ev-st"><div data-k="new"><b>'+fresh.length+'</b><span>לטיפול</span></div><div data-k="stuck"><b>'+stuck.length+'</b><span>פתוחים מעל 3 ימים</span></div><div data-k="done"><b>'+doneW.length+'</b><span>טופלו השבוע</span></div></div>'+
+    (openE.length?openE.slice().sort((a,b)=>a.date<b.date?-1:1).slice(0,6).map(e=>'<div class="alert"><span class="tag" data-s="'+(e.date<daysAgo(3)?'absent':'late')+'">'+esc(e.typeName||'אירוע')+'</span>'+
+        stuLink(e.sid,(studentById(e.sid)||{}).name||e.sname||'')+' <span class="note">'+shortDate(e.date)+'</span><span style="flex:1"></span><button class="btn sm" data-v="ghost" data-act="ev-handle" data-id="'+e.id+'">סימון כ"טופל"</button></div>').join('')
+      :'<div class="empty">אין אירועים פתוחים.</div>');
+  // 14. המשימות שלי — באיחור ולהיום
+  const mine=myTasks().filter(t=>t.status!=='done'&&t.due&&t.due<=today).sort((a,b)=>a.due<b.due?-1:1);
+  const taskBody=mine.length?mine.slice(0,8).map(t=>'<label class="alert" style="cursor:pointer"><input type="checkbox" data-act="task-toggle" data-id="'+t.id+'"><span style="flex:1">'+esc(t.text)+'</span>'+
+      '<span class="note"'+(t.due<today?' style="color:var(--tag-r-ink,#C2272C)"':'')+'>'+(t.due<today?'באיחור · ':'')+shortDate(t.due)+'</span></label>').join('')
+    :'<div class="empty">אין משימות להיום או באיחור.</div>';
+  const bdToday=hasBD?bds.filter(x=>x.i===0):[];
+  return '<div class="dv-row dv-q">'+
+     card('מה לעשות עכשיו',alerts.length?alerts.slice(0,8).map(function(a){
+       return '<div class="alert"><b class="note" style="min-width:82px">'+a.t+'</b><span style="flex:1">'+esc(a.x)+'</span>'+
+       '<button class="btn sm" data-v="ghost" data-act="'+a.act+'"'+(a.id?' data-id="'+a.id+'"':'')+(a.cls?' data-cls="'+esc(a.cls)+'"':'')+'>'+(a.l||'פתיחה')+'</button></div>';
+     }).join(''):'<div class="empty">הכול תקין. אין התראות פתוחות.</div>')+
+     (lst.length?card(adm?'סימון שיעורים היום':'השיעורים היום','<div class="dv-split" style="margin-bottom:10px">'+dvDonut([{n:lDone,color:'var(--accent)'},{n:lst.length-lDone,color:'transparent'}],lDone+'/'+lst.length,'סומנו',110)+
+         '<div class="dv-strip" aria-label="מצב הסימון לפי שיעור">'+lst.map(x=>'<span data-st="'+x.state+'" title="שיעור '+x.l.period+' · '+esc(x.l.subject)+' · '+esc((x.l.classes||[]).join(', '))+' · '+stIcon[x.state][1]+'">'+x.l.period+'</span>').join('')+'</div></div>'+
+       (lessonRows?'<div class="dv-scroll">'+lessonRows+'</div>':'<div class="empty">כל השיעורים שהתקיימו עד עכשיו סומנו.</div>')+
+       (missTL.length?'<div style="margin-top:10px"><span class="note">טרם סימנו (לחיצה שולחת תזכורת):</span><div class="row" style="gap:6px;margin-top:6px">'+
+         missTL.map(t=>'<button class="chip" data-act="rem-teacher" data-t="'+esc(t)+'">'+icon('bell',14)+' '+esc(t)+' ('+missT[t]+')</button>').join('')+'</div></div>':''),
+       '<span class="note">'+lDone+'/'+lst.length+' סומנו</span>'):'')+
+   '</div>'+
+   '<div class="dv-row dv-r2">'+
+     card('חסרים היום'+(abs.length?' ('+abs.length+')':''),absBody+(exc.length?'<p class="note" style="margin-top:8px">בהודעה מראש: '+exc.map(s=>esc(s.name)).join(', ')+'</p>':''),'<span class="note">'+(list.length-c.none)+'/'+list.length+' סומנו</span>')+
+     card('אירועים לטיפול',evBody,'<button class="btn sm" data-v="ghost" data-act="goto-events">לכל האירועים</button>')+
+   '</div>'+
+   '<div class="dv-row dv-r2">'+
+     card('המשימות שלי — היום ובאיחור',taskBody,'<button class="btn sm" data-v="ghost" data-act="goto-tasks">ליומן</button>')+
+     (bdToday.length?card('יום הולדת היום',bdToday.map(x=>'<div class="alert">'+icon('cake')+' '+stuLink(x.s.id,x.s.name)+' <span class="note">'+esc(x.s.cls)+'</span></div>').join('')):'')+
+   '</div>';
+}
+function dashWeek(o){
+  const {today,list,classes,card,stuLink,focus,weeks,missed,posW}=o;
+  // 6. מעקב טיפול
+  const inFocus=focus.filter(f=>f.tier==='urgent'||f.tier==='watch'),cs={none:0,open:0,late:0,done:0};
+  inFocus.forEach(f=>cs[careState(f.s.id,today).k]++);
+  const careBody='<div class="ev-st care-st"><div data-k="stuck"><b>'+cs.none+'</b><span>בלי טיפול</span></div><div data-k="new"><b>'+cs.open+'</b><span>בטיפול</span></div><div data-k="stuck2"><b>'+cs.late+'</b><span>באיחור</span></div><div data-k="done"><b>'+cs.done+'</b><span>טופלו</span></div></div>'+
+    '<p class="note" style="margin:8px 0 0">מתוך '+inFocus.length+' תלמידים ב"דורש טיפול" וב"במעקב". ברשימה למטה — "פתיחת טיפול" לכל תלמיד.</p>';
+  // 7. חיסורים חוזרים
+  const from=daysAgo(30),chronic=list.map(s=>({s:s,a:attStats(s.id,from,today)})).filter(x=>x.a.total>=6&&x.a.pct!==null&&x.a.pct<90).sort((a,b)=>a.a.pct-b.a.pct);
+  // 8. הסלמה בהתנהגות
+  const esc14=list.map(s=>({s:s,n:S.events.filter(e=>e.sid===s.id&&e.kind==='neg'&&e.date>=daysAgo(13)).length})).filter(x=>x.n>=2).sort((a,b)=>b.n-a.n);
+  const stuList=(arr,fn,empty)=>arr.length?arr.slice(0,10).map(x=>'<div class="alert">'+stuLink(x.s.id,x.s.name)+' <span class="note">'+esc(x.s.cls)+'</span><span style="flex:1"></span>'+fn(x)+'</div>').join('')+(arr.length>10?'<p class="note">ועוד '+(arr.length-10)+'.</p>':''):'<div class="empty">'+empty+'</div>';
+  // 9. כיסוי תמונות מצב
+  const cov=classes.map(function(cl){const st=list.filter(s=>s.cls===cl),ok=st.filter(s=>{const r=lastReview(s.id);return r&&r.date>=daysAgo(21);}).length,p=st.length?Math.round(ok/st.length*100):0;
+    return '<div class="dcls"><b>'+esc(cl)+'</b><div class="bar" style="flex:1"><i style="width:'+p+'%" data-low="'+(p<50?2:p<80?1:0)+'"></i></div><span class="note" style="min-width:90px;text-align:left">'+p+'% · '+ok+'/'+st.length+'</span></div>';}).join('');
+  // 10. התמדת מורים בסימון השבוע
+  const sun=new Date();sun.setDate(sun.getDate()-sun.getDay());const T={},hm=nowHM();
+  for(let d=new Date(sun);iso(d)<=today;d.setDate(d.getDate()+1)){const ds=iso(d);if(d.getDay()>5)continue;
+    markableLessons(ds).forEach(function(l){if(!l.teacher)return;if(ds===today){const p=periods().find(x=>x.n===l.period);if(!p||!p.end||p.end>hm)return;}
+      const t=T[l.teacher]||(T[l.teacher]={n:0,d:0});t.n++;if(lessonMarked(ds,l).done)t.d++;});}
+  const TL=Object.keys(T).sort((a,b)=>T[a].d/T[a].n-T[b].d/T[b].n);
+  const teachBody=TL.length?TL.map(function(t){const p=Math.round(T[t].d/T[t].n*100);
+    return '<div class="dcls"><b style="min-width:120px">'+esc(t)+'</b><div class="bar" style="flex:1"><i style="width:'+p+'%" data-low="'+(p<70?2:p<90?1:0)+'"></i></div><span class="note" style="min-width:90px;text-align:left">'+p+'% · '+T[t].d+'/'+T[t].n+'</span></div>';}).join('')
+    :'<div class="empty">אין עדיין שיעורים השבוע.</div>';
+  // 11. מילה טובה להורים
+  const inst=(S.config.name||'התלמוד תורה'),byS={};posW.forEach(e=>{(byS[e.sid]=byS[e.sid]||[]).push(e.typeName||'');});
+  const praise=Object.keys(byS).map(id=>({s:studentById(id),t:Array.from(new Set(byS[id])).filter(Boolean)})).filter(x=>x.s&&list.some(s=>s.id===x.s.id));
+  const praiseBody=praise.length?praise.slice(0,12).map(function(x){const wa=waHref(contactPhone(x.s),'שלום רב, רצינו לשתף אתכם ש'+x.s.name+' זכה השבוע לשבח'+(x.t.length?' על '+x.t.join(' ו'):'')+'. כל הכבוד! — '+inst);
+      return '<div class="alert">'+stuLink(x.s.id,x.s.name)+' <span class="note">'+esc(x.s.cls)+(x.t.length?' · '+esc(x.t.join(', ')):'')+'</span><span style="flex:1"></span>'+
+        (wa?'<a class="btn sm" data-v="ghost" target="_blank" rel="noreferrer" href="'+wa+'">'+icon('send',14)+' מילה טובה להורים</a>':'<span class="note">אין טלפון</span>')+'</div>';}).join('')
+    :'<div class="empty">לא נרשמו השבוע אירועים לשבח.</div>';
+  return (S.careFor?careForm(today):'')+
+   '<div class="dv-row dv-r2">'+card('מעקב טיפול',careBody)+card('מילה טובה להורים'+(praise.length?' ('+praise.length+')':''),praiseBody,'<span class="note">שבח מ־7 הימים האחרונים</span>')+'</div>'+
+   '<h3 class="dv-sec">תלמידים במוקד</h3>'+dvFocusView(focus)+
+   '<div class="dv-row dv-r2">'+
+     card('חיסורים חוזרים'+(chronic.length?' ('+chronic.length+')':''),stuList(chronic,x=>'<span class="tag" data-s="'+(x.a.pct<85?'absent':'late')+'">'+x.a.pct+'% נוכחות</span>','אין תלמידים מתחת ל־90% נוכחות.'),'<span class="note">מתחת ל־90% ב־30 יום</span>')+
+     card('הסלמה בהתנהגות'+(esc14.length?' ('+esc14.length+')':''),stuList(esc14,x=>'<span class="tag" data-s="'+(x.n>=4?'absent':'late')+'">'+x.n+' אירועים לשיפור</span>','אין תלמידים עם 2 אירועים לשיפור ומעלה.'),'<span class="note">2 ומעלה ב־14 יום</span>')+
+   '</div>'+
+   '<div class="dv-row dv-r2">'+
+     (classes.length?card('כיסוי תמונות מצב',cov,'<span class="note">עדכנית = 3 שבועות אחרונים</span>'):'')+
+     (isAdmin()?card('התמדת מורים בסימון נוכחות',teachBody,'<span class="note">מתחילת השבוע</span>'):'')+
+   '</div>'+
+   '<h3 class="dv-sec">מגמות</h3><div class="dv-row dv-r2">'+
+     card('מגמת נוכחות — 8 שבועות',dvLine(weeks))+
+     (classes.length?card('נוכחות לפי כיתה ויום בשבוע — 4 שבועות',dvHeat(list,classes)):'')+
+   '</div>'+
+   (classes.length>1?card('השוואת כיתות',dvClassTable(list,classes,today,missed),'<span class="note">30 הימים האחרונים</span>'):'');
+}
+function dashSummary(o){
+  const {list,c,missed,op,today,hasBD,bds}=o,parts=[];
+  if(c.none===list.length)parts.push('עוד לא סומנה נוכחות היום');
+  else{const ex=c.excused?' ('+c.excused+' בהודעה)':'';parts.push(c.absent+c.excused?'חסרים היום '+(c.absent+c.excused)+' תלמידים'+ex:'אין חסרים היום');}
+  if(missed.length)parts.push(missed.length+' שיעורים שהסתיימו עדיין לא סומנו');
+  const sev=op.filter(e=>e.sev>=3).length;if(sev)parts.push(sev===1?'אירוע חמור אחד פתוח':sev+' אירועים חמורים פתוחים');
+  else if(op.length)parts.push(op.length+' אירועים ממתינים לטיפול');
+  const ov=myTasks().filter(t=>t.status!=='done'&&t.due&&t.due<today).length;if(ov)parts.push(ov===1?'משימה אחת באיחור':ov+' משימות באיחור');
+  const bd=hasBD?bds.filter(x=>x.i===0):[];if(bd.length)parts.push('יום הולדת היום ל'+bd.map(x=>x.s.name).join(' ול'));
+  return parts.join(' · ')+'.';
 }
 function viewDash(){
   const today=iso(new Date()),day=S.att[today]||{},list=myStudents(),adm=isAdmin();
@@ -3075,9 +3216,11 @@ function viewDash(){
   let evT=Object.keys(byT).sort((a,b)=>byT[b]-byT[a]).map(t=>({label:t,n:byT[t]}));
   if(evT.length>6){const rest=evT.slice(5).reduce((a,x)=>a+x.n,0);evT=evT.slice(0,5).concat([{label:'אחר',n:rest}]);}
   const evSegs=evT.map((x,i)=>Object.assign(x,{color:DV_PAL[i%DV_PAL.length]}));
+  const mode=dashMode();
+  const O={today,list,c,lst,missed,alerts,card,stuLink,overdue,lDone,stIcon,lessonRows,missTL,missT,adm,bds,hasBD,op,classes,focus,weeks,posW};
   return printHead()+
    '<div class="dhero"><div><div class="note" style="font-size:15px">'+greet+(nm?', '+esc(nm):'')+'</div><h2 style="margin:2px 0">'+gregLabel(today)+'</h2><div class="hebdate">'+hebLabel(today)+'</div>'+
-     (S.timetable.length?'<div class="dnow">'+esc(dashNow())+'</div>':'')+'</div>'+
+     (S.timetable.length?'<div class="dnow">'+esc(dashNow())+'</div>':'')+'<p class="dsum">'+esc(dashSummary({list,c,missed,op,today,hasBD,bds}))+'</p></div>'+
      '<div class="row dquick"><button class="btn" data-v="primary" data-act="goto-mark">נוכחות</button><button class="btn" data-act="dash-ev">+ דיווח אירוע</button>'+
      '<button class="btn" data-act="goto-review">תמונת מצב</button><button class="btn" data-act="goto-tasks">+ משימה</button>'+refreshBtn()+
      (adm?'<button class="btn" data-act="rem-new">'+icon('bell')+' תזכורת למורה</button>':'')+'</div></div>'+
@@ -3087,52 +3230,8 @@ function viewDash(){
      stat(c.absent,'חיסורים היום'+(c.late?' · '+c.late+' איחורים':''),c.absent?'var(--absent)':'')+
      stat(posW.length+' · '+negW,'אירועים השבוע: שבח · שיפור','')+
      stat(openTasks.length,'המשימות הפתוחות שלי'+(overdue.length?' · '+overdue.length+' באיחור':''),overdue.length?'var(--absent)':'')+'</div>'+
-   '<div class="dv-row dv-q">'+
-     card('מה לעשות עכשיו',alerts.length?alerts.slice(0,10).map(function(a){
-       return '<div class="alert"><b class="note" style="min-width:82px">'+a.t+'</b><span style="flex:1">'+esc(a.x)+'</span>'+
-       '<button class="btn sm" data-v="ghost" data-act="'+a.act+'"'+(a.id?' data-id="'+a.id+'"':'')+(a.cls?' data-cls="'+esc(a.cls)+'"':'')+'>'+(a.l||'פתיחה')+'</button></div>';
-     }).join(''):'<div class="empty">הכול תקין. אין התראות פתוחות.</div>')+
-     (lst.length?card(adm?'סימון שיעורים היום':'השיעורים היום','<div class="dv-split" style="margin-bottom:10px">'+dvDonut([{n:lDone,color:'var(--accent)'},{n:lst.length-lDone,color:'transparent'}],lDone+'/'+lst.length,'סומנו',110)+
-         '<div class="dv-strip" aria-label="מצב הסימון לפי שיעור">'+lst.map(x=>'<span data-st="'+x.state+'" title="שיעור '+x.l.period+' · '+esc(x.l.subject)+' · '+esc((x.l.classes||[]).join(', '))+' · '+stIcon[x.state][1]+'">'+x.l.period+'</span>').join('')+'</div></div>'+
-       (lessonRows?'<div class="dv-scroll">'+lessonRows+'</div>':'<div class="empty">כל השיעורים שהתקיימו עד עכשיו סומנו.</div>')+
-       (missTL.length?'<div style="margin-top:10px"><span class="note" style="color:var(--absent)">טרם סימנו (לחיצה שולחת תזכורת):</span><div class="row" style="gap:6px;margin-top:6px">'+
-         missTL.map(t=>'<button class="chip" data-act="rem-teacher" data-t="'+esc(t)+'">'+icon('bell',14)+' '+esc(t)+' ('+missT[t]+')</button>').join('')+'</div></div>':''),
-       '<span class="note">'+lDone+'/'+lst.length+' סומנו</span>'):'')+
-   '</div>'+
-   '<div class="dv-row dv-r2">'+
-     card('נוכחות היום','<div class="dv-split">'+dvDonut(attSegs,pctToday===null?'—':pctToday+'%','נוכחים',150)+dvLegend(attSegs,list.length)+'</div>'+(classes.length>1?'<h4 class="dv-sub">לפי כיתה</h4>'+clsRows:''))+
-     card('אירועי השבוע לפי סוג',evW.length?'<div class="dv-split">'+dvDonut(evSegs,posW.length+' / '+negW,'שבח / שיפור',150)+dvLegend(evSegs,0)+'</div>':'<div class="empty">לא דווחו אירועים השבוע.</div>',
-       '<button class="btn sm" data-v="ghost" data-act="goto-events-all">לכל האירועים</button>')+
-   '</div>'+
-   '<h3 class="dv-sec">מגמות</h3><div class="dv-row dv-r2">'+
-     card('מגמת נוכחות — 8 שבועות',dvLine(weeks))+
-     (classes.length?card('נוכחות לפי כיתה ויום בשבוע — 4 שבועות',dvHeat(list,classes)):'')+
-   '</div>'+
-   '<h3 class="dv-sec">תלמידים במוקד</h3>'+dvFocusView(focus)+
-   (classes.length>1?card('השוואת כיתות',dvClassTable(list,classes,today,missed),'<span class="note">30 הימים האחרונים</span>'):'')+
-   '<div class="grid g2 dv-rest">'+
-     (hasBD?card('ימי הולדת השבוע',bds.length?bds.map(x=>'<div class="alert"'+(x.i===0?' style="background:var(--accent-soft);border-radius:10px;padding:8px 10px"':'')+'>'+
-         '<span style="flex:1">'+stuLink(x.s.id,x.s.name)+' <span class="note">'+esc(x.s.cls)+'</span></span>'+
-         '<span><b>'+gem(x.b.d)+' ב'+esc(x.b.m)+'</b>'+(x.age?' <span class="note">· '+(x.s.gender==='f'?'בת ':'בן ')+x.age+'</span>':'')+'</span>'+
-         '<span class="note" style="min-width:70px;text-align:left">'+(x.i===0?'<b style="color:var(--accent)">היום!</b>':x.i===1?'מחר':'יום '+(DAYS[dow(x.d)]||'שבת'))+'</span></div>').join('')
-       :'<div class="empty">אין ימי הולדת בשבוע הקרוב.</div>','<button class="btn sm" data-v="ghost" data-act="goto-bdays">לכל ימי ההולדת</button>'):'')+
-     card('אירועים אחרונים',(evW.length?evW.slice().sort((a,b)=>(b.date+(b.time||''))>(a.date+(a.time||''))?1:-1).slice(0,6).map(e=>'<div class="alert"><span class="tag" data-s="'+(e.kind==='pos'?'present':e.sev>=3?'absent':'late')+'">'+esc(e.typeName||'')+'</span>'+
-         '<span style="flex:1">'+stuLink(e.sid,(studentById(e.sid)||{}).name||e.sname||'')+' <span class="note">'+esc(e.cls||'')+'</span></span><span class="note">'+shortDate(e.date)+'</span></div>').join('')
-       :'<div class="empty">לא דווחו אירועים השבוע.</div>')+
-       (posW.length?'<p style="margin-top:8px"><b style="color:var(--present)">לשבח השבוע:</b> '+Array.from(new Set(posW.map(e=>(studentById(e.sid)||{}).name||e.sname))).map(esc).join(', ')+'</p>':''),
-       '<button class="btn sm" data-v="ghost" data-act="goto-events-all">לכל האירועים</button>')+
-     card('משימות קרובות',(openTasks.length?openTasks.slice(0,5).map(t=>'<div class="alert"><span style="flex:1">'+esc(t.text)+'</span><span class="note"'+(t.due&&t.due<today?' style="color:var(--absent)"':'')+'>'+(t.due?shortDate(t.due):'')+'</span></div>').join('')
-       :'<div class="empty">אין משימות פתוחות.</div>'),'<button class="btn sm" data-v="ghost" data-act="goto-tasks">ליומן</button>')+
-     (lastMt?card('ישיבת הצוות האחרונה','<b>'+esc(lastMt.title||'ישיבת צוות')+'</b> <span class="note">'+esc(dual(lastMt.date))+'</span>'+
-       (lastMt.dec?'<div style="margin-top:6px"><span class="note">החלטות ומשימות:</span><div style="white-space:pre-wrap;max-height:9em;overflow:hidden">'+esc(lastMt.dec)+'</div></div>':''),
-       '<button class="btn sm" data-v="ghost" data-act="goto-meetings">לפרוטוקולים</button>'):'')+
-     card('תמונות מצב אחרונות',recent.length?recent.map(function(r){
-       const s=studentById(r.studentId);
-       return '<div class="alert"><span class="tag" data-s="'+r.light+'">'+LIGHTNAME[r.light]+'</span>'+
-       '<button class="link" style="flex:1" data-act="card" data-id="'+r.studentId+'">'+esc(s?s.name:'—')+'</button>'+
-       '<span class="note">'+shortDate(r.date)+'</span></div>';
-     }).join(''):'<div class="empty">עוד לא נרשמו תמונות מצב.</div>')+
-   '</div>';
+   '<div class="dash-mode seg" role="tablist" aria-label="תצוגת לוח הבקרה"><button role="tab" data-act="dash-mode" data-id="today" data-on="'+(mode==='today'?1:0)+'" aria-selected="'+(mode==='today')+'">היום</button><button role="tab" data-act="dash-mode" data-id="week" data-on="'+(mode==='week'?1:0)+'" aria-selected="'+(mode==='week')+'">השבוע</button></div>'+
+   (mode==='week'?dashWeek(O):dashToday(O));
 }
 
 /* ================= תמונת מצב ================= */
@@ -7675,6 +7774,12 @@ document.getElementById('main').addEventListener('click',async function(e){
       text:'שלום '+t+', לא סומנה היום נוכחות '+(ls.length>1?'בשיעורים: ':'בשיעור ')+ls.map(lessonTxt).join(', ')+'. נא לסמן בהקדם. תודה!'};
     window.scrollTo(0,0);return render();
   }
+  if(a==='dash-mode'){S.dashMode=id;try{localStorage.setItem('tt:dashMode',id);}catch(e){}render();return;}
+  if(a==='care-open'){S.careFor=id;render();const f=document.querySelector('.care-form');if(f){f.scrollIntoView({block:'center'});const i=document.getElementById('care-step');if(i)i.focus();}return;}
+  if(a==='care-cancel'){S.careFor=null;return render();}
+  if(a==='care-save'){const st=studentById(S.careFor);if(!st)return;const g=i=>document.getElementById(i).value,step=g('care-step').trim();if(!step)return toast('צריך לכתוב את הצעד הבא');
+    S.tasks.push({id:uid(),text:'טיפול ב'+st.name+' ('+st.cls+'): '+step,due:g('care-due'),status:'open',by:S.me.user,uid:g('care-uid')||S.me.id,sid:st.id,kind:'care'});
+    S.careFor=null;save(K.tasks,S.tasks);toast('הטיפול נפתח ונוסף ליומן');return render();}
   if(a==='tab-go'){goTab(id);window.scrollTo(0,0);return;}
   if(a==='dash-tier'){S.dashTier=(S.dashTier===id?'':id)||'';render();const t=document.querySelector('.dv-tiers');if(t&&id)t.scrollIntoView({block:'start',behavior:'smooth'});return;}
   if(a==='dash-ev'){goTab('events');S.evc=evDefaults();return render();}
