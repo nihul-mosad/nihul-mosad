@@ -381,6 +381,21 @@ table.mpt tbody tr{cursor:pointer}table.mpt tbody tr:hover td{background:var(--s
   #toast{display:none!important}
   #remSum .mpsum-d{break-inside:avoid}
 }
+.mpviews{display:inline-flex}
+.mpcb{width:30px;text-align:center}.mpcb input{width:17px;height:17px;cursor:pointer}
+.mpselbar{gap:8px;align-items:center;margin:0 0 10px;padding:8px 12px;border-radius:10px;background:var(--accent-soft)}
+.mptr{font-size:12px;font-weight:700;border-radius:6px;padding:1px 6px;white-space:nowrap}
+.mptr.up{color:#2F7A4F;background:#E3F1E8}.mptr.down{color:#AF3A2E;background:#F8DCD8}.mptr.mix{color:#8A6A12;background:#FBF1D3}.mptr.same{color:var(--muted);background:var(--surface2)}
+.mpweek{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:12px}
+@media (max-width:760px){.mpweek{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.mpday{border:1px solid var(--line);border-radius:10px;padding:8px;min-height:70px}
+.mpday-h{font-weight:700;font-size:13px;margin-bottom:6px;color:var(--muted)}
+.mpslot{display:flex;flex-direction:column;gap:1px;width:100%;text-align:right;border:1px solid var(--line);border-right:3px solid var(--accent);background:var(--surface);border-radius:8px;padding:5px 8px;margin-bottom:6px;cursor:pointer;font:inherit}
+.mpslot bdi{font-size:12px;color:var(--muted)}.mpslot b{font-size:13.5px}.mpslot span{font-size:11.5px;color:var(--muted)}
+.mpgcand{display:grid;gap:4px;max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px}
+.mpgc{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:5px 8px;border-radius:8px;cursor:pointer}
+.mpgc.on{background:var(--accent-soft)}.mpgc input{width:17px;height:17px}
+.mpprog td,.mpprog th{text-align:center}.mpprog td:first-child,.mpprog th:first-child{text-align:right}
 .mpc{border-right:3px solid var(--line);padding:6px 10px;margin:8px 0;background:var(--surface2);border-radius:6px}
 .mpc[data-k="object"]{border-right-color:var(--absent)}.mpc[data-k="add"]{border-right-color:var(--present)}
 @media print{table.mpt{min-width:0}table.mpt td,table.mpt th{font-size:11px;padding:3px}.mplv{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
@@ -2714,7 +2729,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=70;
+const APP_VER=71;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -6624,6 +6639,7 @@ async function loadRem(force){
     await inChunks(remClasses(),async function(c){const p='rem/'+ckOf(c);
       try{const d=await fsGet(p);const m=nn(d&&d.m);LD[p]=clone(m);R.d[c]=m;}
       catch(e){if(/permission/.test((e&&e.code)||''))R.err='perm';else throw e;}},6);
+    await loadRemGroups();
     R.at=Date.now();
   }catch(e){R.err=fbErr(e);}finally{R.busy=false;}
 }
@@ -6679,8 +6695,10 @@ function viewRem(){
   const all=remStudents(),seen=remSeenGet();
   const who=isAdmin()?'אתה רואה את כל התלמידים':isRemT()?'כמורה מתקנת את רואה את כל התלמידים':'אתה רואה את התלמידים של '+cls.join(', ');
   let h='<div class="head"><div><h2>מיפוי והוראה מתקנת</h2><div class="sub">לפי טופס המיפוי · '+who+' · מי שרואה תלמיד יכול גם לעדכן ולהוסיף הערות</div></div>'+
-    '<div class="row noprint"><button class="btn" data-v="ghost" data-act="mp-refresh">'+icon('refresh')+' רענון</button><button class="btn" data-v="ghost" data-act="mp-print-blank" title="טופס ריק לכל תלמיד ברשימה, למילוי ביד">'+icon('printer')+' טפסים ריקים</button><button class="btn" data-v="ghost" data-act="mp-print-list">'+icon('printer')+' טבלה</button>'+(isAdmin()?'<button class="btn" data-v="ghost" data-act="mp-setup">הגדרות</button>':'')+'</div></div>';
+    '<div class="row noprint"><button class="btn" data-v="ghost" data-act="mp-refresh">'+icon('refresh')+' רענון</button><button class="btn" data-v="ghost" data-act="mp-print-blank" title="טופס ריק למילוי ביד — לילדים שסומנו, או לכל הרשימה">'+icon('printer')+' טפסים ריקים'+(remSelN()?' ('+remSelN()+' נבחרו)':'')+'</button><button class="btn" data-v="ghost" data-act="mp-print-list">'+icon('printer')+' טבלה</button>'+(isAdmin()?'<button class="btn" data-v="ghost" data-act="mp-setup">הגדרות</button>':'')+'</div></div>';
   h+='<div class="warn noprint" style="margin-bottom:12px">'+icon('lock')+' מידע רגיש על ילדים. גלוי רק למנהל, למורה המתקנת ולמחנך הכיתה. לא להעביר הלאה ולא להדפיס בלי צורך.</div>';
+  if(canRemAll()){const V=S.remView||'list';h+='<div class="seg mpviews noprint" style="margin-bottom:12px"><button data-act="mp-view" data-id="list"'+(V==='list'?' data-on="1"':'')+'>תלמידים</button><button data-act="mp-view" data-id="groups"'+(V==='groups'?' data-on="1"':'')+'>קבוצות ופילוח</button></div>';
+    if(V==='groups'){if(R.err==='perm')return h+'<div class="warn">אין הרשאה לקרוא את נתוני המיפוי.</div>';return h+viewRemGroups();}}
   if(R.err==='perm')h+='<div class="warn">אין הרשאה לקרוא את נתוני המיפוי. צריך לעדכן את חוקי האבטחה ב-Firebase (החלק של "rem").</div>';
   else if(R.err)h+='<div class="warn">'+esc(R.err)+'</div>';
   if(S.remSetup&&isAdmin())h+=remSetupCard();
@@ -6696,14 +6714,174 @@ function viewRem(){
     '<select class="inp" data-remf="st">'+opt('כל הסטטוסים','',F.st)+Object.keys(REM_ST).map(k=>opt(REM_ST[k],k,F.st)).join('')+'</select>'+
     '<input class="inp" data-remf="q" id="remQ" placeholder="חיפוש שם" value="'+esc(F.q)+'" style="flex:1;min-width:120px"></div></div>';
   if(!all.length)return h+'<div class="card"><div class="empty">'+(R.busy?'טוען…':'אין תלמידים להצגה.')+'</div></div>';
-  h+='<div class="card mpprint"><div class="tt-wrap"><table class="mpt"><thead><tr><th>תלמיד</th>'+(cls.length>1&&!F.cls?'<th>כיתה</th>':'')+doms.map(d=>'<th title="'+esc((d.sub||[]).join(', '))+'">'+esc(d.name)+'</th>').join('')+'<th>סטטוס</th><th class="noprint">הערות</th></tr></thead><tbody>'+
+  const selAll=list.length&&list.every(s=>(S.remSel||{})[s.id]);
+  if(remSelN())h+='<div class="row noprint mpselbar"><b>'+remSelN()+' ילדים נבחרו</b><button class="btn sm" data-v="primary" data-act="mp-print-blank">'+icon('printer')+' הדפסת טפסים ריקים לנבחרים</button><button class="btn sm" data-v="ghost" data-act="mp-selclear">ניקוי הבחירה</button></div>';
+  h+='<div class="card mpprint"><div class="tt-wrap"><table class="mpt"><thead><tr><th class="noprint mpcb"><input type="checkbox" data-mpsel="__all"'+(selAll?' checked':'')+' title="בחירת כל הרשימה"></th><th>תלמיד</th>'+(cls.length>1&&!F.cls?'<th>כיתה</th>':'')+doms.map(d=>'<th title="'+esc((d.sub||[]).join(', '))+'">'+esc(d.name)+'</th>').join('')+'<th>סטטוס</th><th class="noprint">הערות</th></tr></thead><tbody>'+
     list.map(function(s){const r=remRec(s),nc=remComments(r).length,nw=remNew(s,seen);
-      return '<tr data-remopen="'+esc(s.id)+'"'+(S.remOpen===s.id?' class="sel"':'')+'><td><b>'+esc(s.name)+'</b>'+(nw?' <span class="mpdot" title="עדכון חדש">●</span>':'')+'</td>'+(cls.length>1&&!F.cls?'<td>'+esc(s.cls)+'</td>':'')+
+      return '<tr data-remopen="'+esc(s.id)+'"'+(S.remOpen===s.id?' class="sel"':'')+'><td class="noprint mpcb"><input type="checkbox" data-mpsel="'+esc(s.id)+'"'+((S.remSel||{})[s.id]?' checked':'')+'></td><td><b>'+esc(s.name)+'</b>'+(nw?' <span class="mpdot" title="עדכון חדש">●</span>':'')+'</td>'+(cls.length>1&&!F.cls?'<td>'+esc(s.cls)+'</td>':'')+
         doms.map(d=>{const sb=remSubs(r,d);return '<td>'+remLvCell(r['l_'+d.id])+(sb.length?'<div class="mpsb">'+esc(sb.join(', '))+'</div>':'')+(r['n_'+d.id]?' <span class="note" title="'+esc(r['n_'+d.id])+'">'+icon('note',14)+'</span>':'')+'</td>';}).join('')+
-        '<td><span class="note">'+esc(REM_ST[r.st||'wait'])+'</span></td><td class="noprint">'+(nc?icon('msg',14)+' '+nc:'')+'</td></tr>';}).join('')+
+        '<td><span class="note">'+esc(REM_ST[r.st||'wait'])+'</span> '+remTrendTag(remTrend(r))+(r.gq?'<div class="mpsb" style="color:var(--muted)" title="'+esc(r.gq)+'">'+esc(r.gq.split(' (')[0])+'</div>':'')+'</td><td class="noprint">'+(nc?icon('msg',14)+' '+nc:'')+'</td></tr>';}).join('')+
     '</tbody></table></div>'+(list.length<all.length?'<p class="note" style="margin-top:8px">מוצגים '+list.length+' מתוך '+all.length+'</p>':'')+
-    '<p class="note noprint" style="margin-top:8px">לחיצה על שורה פותחת את טופס המיפוי של התלמיד.</p></div>';
+    '<p class="note noprint" style="margin-top:8px">לחיצה על שורה פותחת את טופס המיפוי של התלמיד. לסימון ילדים להדפסת טפסים — התיבה שבתחילת השורה.</p></div>';
   return h;
+}
+/* ================= מיפוי: קבוצות, פילוח ומיפוי חוזר =================
+   קבוצות נשמרות ב-rem/_groups (g.<מזהה>) — גלוי רק למנהל ולמורה המתקנת לפי חוקי האבטחה הקיימים של rem.
+   לכל תלמיד בקבוצה נכתב גם שדה gq בטופס שלו (שם הקבוצה, ימים ושעות), כדי שהמחנך יראה את השיבוץ בלי לראות את כל הקבוצות.
+   מיפוי חוזר: לפני השמירה נשמר עותק של המיפוי הקודם בשדה r_<זמן>, וכך אפשר להשוות ולראות התקדמות. */
+const REM_DAYS=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳'];
+function remGroups(){return (S.rem&&S.rem.groups)||{};}
+function remGroupList(){const g=remGroups();return Object.keys(g).map(k=>Object.assign({id:k},g[k])).sort((a,b)=>String(a.name).localeCompare(String(b.name),'he'));}
+function remGrpWhen(g){return (g.days||[]).slice().sort((a,b)=>a.d-b.d||String(a.from).localeCompare(String(b.from))).map(x=>REM_DAYS[x.d]+' '+(x.from||'')+(x.to?'–'+x.to:'')).join(', ');}
+function remGrpText(sid){return remGroupList().filter(g=>(g.members||[]).indexOf(sid)>-1).map(g=>g.name+(remGrpWhen(g)?' ('+remGrpWhen(g)+')':'')).join('; ');}
+function remStudentGroups(sid){return remGroupList().filter(g=>(g.members||[]).indexOf(sid)>-1);}
+async function loadRemGroups(){
+  if(!canRemAll())return;
+  try{const d=await fsGet('rem/_groups');S.rem.groups=nn(d&&d.g);}catch(e){if(!/permission/.test((e&&e.code)||''))throw e;S.rem.groups={};}
+}
+async function remSaveGroup(gid,obj){
+  const ref=FS.doc(IB()+'rem/_groups'),FP=firebase.firestore.FieldPath;
+  await queued('rem/_groups',async function(){
+    const val=obj===null?firebase.firestore.FieldValue.delete():obj;
+    try{await ref.update(new FP('g',gid),val);}
+    catch(e){if(obj!==null&&e&&(e.code==='not-found'||e.code==='invalid_argument')){const f={g:{}};f.g[gid]=obj;await ref.set(f,{merge:true});}else throw e;}
+  });
+  const g=Object.assign({},remGroups());if(obj===null)delete g[gid];else g[gid]=obj;S.rem.groups=g;
+}
+/* מעדכן את שדה השיבוץ (gq) אצל התלמידים שהשיבוץ שלהם השתנה */
+async function remSyncGq(ids,label){
+  const all=remStudents();
+  for(const id of ids){const s=all.find(x=>x.id===id);if(!s)continue;const t=remGrpText(id);if((remRec(s).gq||'')===t)continue;
+    await remWrite(s,{gq:t||null},[label]);}
+}
+/* חפיפה בזמנים: תלמיד ששובץ לשתי קבוצות באותו יום בשעות חופפות */
+function remConflicts(){
+  const L=remGroupList(),out=[];const mins=t=>{const m=String(t||'').match(/(\d+):(\d+)/);return m?+m[1]*60+ +m[2]:null;};
+  for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){
+    const both=(L[i].members||[]).filter(x=>(L[j].members||[]).indexOf(x)>-1);if(!both.length)continue;
+    (L[i].days||[]).forEach(a=>(L[j].days||[]).forEach(b=>{if(a.d!==b.d)return;const a1=mins(a.from),a2=mins(a.to)||a1+1,b1=mins(b.from),b2=mins(b.to)||b1+1;
+      if(a1!=null&&b1!=null&&a1<b2&&b1<a2)out.push({g1:L[i],g2:L[j],day:a.d,ids:both});}));}
+  return out;
+}
+/* ---------- מיפוי חוזר: השוואה ומגמה ---------- */
+function remRounds(r){return Object.keys(r).filter(k=>k.indexOf('r_')===0&&r[k]).map(k=>Object.assign({id:k},r[k])).sort((a,b)=>String(a.md||'').localeCompare(String(b.md||''))||(a.at||0)-(b.at||0));}
+function remTrend(r){
+  const R=remRounds(r);if(!R.length)return null;const p=R[R.length-1],doms=remDomains();let up=0,down=0,same=0;const per={};
+  doms.forEach(d=>{const a=+((p.l||{})[d.id]||0),b=+(r['l_'+d.id]||0);if(!a||!b)return;if(b<a){up++;per[d.id]='up';}else if(b>a){down++;per[d.id]='down';}else{same++;per[d.id]='same';}});
+  return {prev:p,up:up,down:down,same:same,per:per,n:R.length};
+}
+function remTrendTag(t){if(!t)return '';if(t.up&&!t.down)return '<span class="mptr up" title="השתפר ב-'+t.up+' תחומים מאז המיפוי הקודם">↑ '+t.up+'</span>';
+  if(t.down&&!t.up)return '<span class="mptr down" title="הורע ב-'+t.down+' תחומים">↓ '+t.down+'</span>';
+  if(t.up||t.down)return '<span class="mptr mix" title="השתפר ב-'+t.up+', הורע ב-'+t.down+'">↑'+t.up+' ↓'+t.down+'</span>';return '<span class="mptr same" title="ללא שינוי">=</span>';}
+function remProgress(s){
+  const r=remRec(s),R=remRounds(r);if(!R.length)return '';
+  const doms=remDomains(),cols=R.concat([{id:'now',md:r.md,l:doms.reduce((o,d)=>{o[d.id]=r['l_'+d.id];return o;},{}),now:true}]);
+  const used=doms.filter(d=>cols.some(c=>+((c.l||{})[d.id]||0)));if(!used.length)return '';
+  const t=remTrend(r);
+  let h='<div class="card" id="remProg"><h3 style="margin:0 0 4px">מעקב התקדמות</h3><p class="note" style="margin:0 0 10px">'+R.length+' מיפויים קודמים. לעומת המיפוי הקודם'+(t.prev.md?' ('+esc(dual(t.prev.md))+')':'')+': '+
+    '<b style="color:var(--present)">השתפר ב-'+t.up+'</b> · ללא שינוי ב-'+t.same+' · <b style="color:var(--absent)">הורע ב-'+t.down+'</b></p>';
+  h+='<div class="tt-wrap"><table class="mpt mpprog"><thead><tr><th>תחום</th>'+cols.map(c=>'<th>'+(c.now?'עכשיו':'מיפוי '+(cols.indexOf(c)+1))+'<div class="note">'+(c.md?esc(c.md.split('-').reverse().join('/')):'')+'</div></th>').join('')+'<th>מגמה</th></tr></thead><tbody>'+
+    used.map(d=>'<tr><td><b>'+esc(d.name)+'</b></td>'+cols.map(c=>'<td>'+remLvCell((c.l||{})[d.id])+'</td>').join('')+'<td>'+({up:'<span class="mptr up">↑ השתפר</span>',down:'<span class="mptr down">↓ הורע</span>',same:'<span class="mptr same">= ללא שינוי</span>'}[t.per[d.id]]||'')+'</td></tr>').join('')+
+    '</tbody></table></div>';
+  if(isAdmin()||isRemT())h+='<details style="margin-top:8px"><summary class="note">פרטי המיפויים הקודמים</summary>'+R.slice().reverse().map(x=>'<div class="mpsum-d"><b>'+(x.md?esc(dual(x.md)):'ללא תאריך')+'</b>'+(x.by?' <span class="note">· '+esc(x.by)+'</span>':'')+
+      (x.fnd?'<div class="mpsum-n">'+esc(x.fnd)+'</div>':'')+'<div class="row noprint" style="justify-content:flex-end"><button class="link" data-act="mp-rdel" data-id="'+esc(s.id)+'" data-c="'+esc(x.id)+'">מחיקת מיפוי זה</button></div></div>').join('')+'</details>';
+  return h+'</div>';
+}
+/* ---------- דף "קבוצות ופילוח" ---------- */
+function viewRemGroups(){
+  const all=remStudents(),doms=remDomains(),G=remGroupList(),R=S.rem;
+  if(R.groups===undefined&&!R.gbusy){R.gbusy=true;loadRemGroups().then(()=>{R.gbusy=false;if(S.tab==='rem')render();});}
+  let h='';
+  if(S.remG)h+=remGroupEditor();
+  // פילוח
+  const inGrp={};G.forEach(g=>(g.members||[]).forEach(id=>inGrp[id]=1));
+  const lv=(s,d)=>+(remRec(s)['l_'+d.id]||0);
+  h+='<div class="card"><h3 style="margin:0 0 4px">פילוח לפי תחומים</h3><p class="note" style="margin:0 0 10px">כמה ילדים מתקשים בכל תחום, באילו היבטים, וכמה מהם עוד לא שובצו לקבוצה.</p><div class="tt-wrap"><table class="mpt mpseg-t"><thead><tr><th>תחום</th><th>קושי משמעותי</th><th>מתקשה</th><th>גבולי</th><th>היבטים</th><th>לא משובצים</th><th class="noprint"></th></tr></thead><tbody>'+
+    doms.map(function(d){const c4=all.filter(s=>lv(s,d)===4),c3=all.filter(s=>lv(s,d)===3),c2=all.filter(s=>lv(s,d)===2),hard=c4.concat(c3);
+      const subs=(d.sub||[]).map(x=>({x:x,n:all.filter(s=>remSubs(remRec(s),d).indexOf(x)>-1).length})).filter(o=>o.n).sort((a,b)=>b.n-a.n);
+      const un=hard.filter(s=>!inGrp[s.id]);
+      return '<tr><td><b>'+esc(d.name)+'</b></td><td>'+(c4.length||'')+'</td><td>'+(c3.length||'')+'</td><td>'+(c2.length||'')+'</td><td class="note">'+subs.map(o=>esc(o.x)+' '+o.n).join(' · ')+'</td>'+
+        '<td>'+(un.length?'<b style="color:var(--absent)">'+un.length+'</b>':(hard.length?'<span style="color:var(--present)">✓</span>':''))+'</td>'+
+        '<td class="noprint">'+(un.length?'<button class="btn sm" data-act="mp-gnew" data-id="'+esc(d.id)+'">+ קבוצה</button>':'')+'</td></tr>';}).join('')+
+    '</tbody></table></div></div>';
+  // התקדמות
+  const tr=all.map(s=>remTrend(remRec(s))).filter(Boolean);
+  if(tr.length)h+='<div class="card"><h3 style="margin:0 0 6px">התקדמות לפי מיפוי חוזר</h3><p style="margin:0">'+tr.length+' ילדים מופו יותר מפעם אחת: <b style="color:var(--present)">'+tr.filter(t=>t.up&&!t.down).length+' השתפרו</b> · '+tr.filter(t=>!t.up&&!t.down).length+' ללא שינוי · <b style="color:var(--absent)">'+tr.filter(t=>t.down&&!t.up).length+' הורעו</b>'+(tr.filter(t=>t.up&&t.down).length?' · '+tr.filter(t=>t.up&&t.down).length+' מעורב':'')+'</p></div>';
+  // מערכת שבועית
+  const cf=remConflicts();
+  h+='<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">מערכת הוראה מתקנת</h3><div class="row noprint"><button class="btn sm" data-v="primary" data-act="mp-gnew">+ קבוצה חדשה</button><button class="btn sm" data-v="ghost" data-act="mp-print-list">'+icon('printer')+' הדפסה</button></div></div>';
+  if(cf.length)h+='<div class="warn" style="margin-top:10px">'+icon('alert')+' חפיפה בשעות: '+cf.map(c=>esc(c.ids.map(id=>(all.find(s=>s.id===id)||{}).name||'').join(', '))+' — '+esc(c.g1.name)+' ו'+esc(c.g2.name)+' ביום '+REM_DAYS[c.day]).join(' · ')+'</div>';
+  if(!G.length)h+='<p class="note" style="margin-top:10px">עדיין אין קבוצות. אפשר ליצור קבוצה מטבלת הפילוח ("+ קבוצה" ליד תחום), והילדים המתקשים בו ייבחרו אוטומטית.</p>';
+  else{
+    h+='<div class="mpweek">'+REM_DAYS.map((dn,di)=>{const ss=[];G.forEach(g=>(g.days||[]).forEach(x=>{if(+x.d===di)ss.push({g:g,x:x});}));ss.sort((a,b)=>String(a.x.from).localeCompare(String(b.x.from)));
+      return '<div class="mpday"><div class="mpday-h">יום '+dn+'</div>'+(ss.length?ss.map(o=>'<button class="mpslot" data-act="mp-gedit" data-id="'+esc(o.g.id)+'"><bdi dir="ltr">'+esc(o.x.from||'')+(o.x.to?'–'+esc(o.x.to):'')+'</bdi><b>'+esc(o.g.name)+'</b><span>'+(o.g.members||[]).length+' ילדים</span></button>').join(''):'<div class="note" style="padding:6px 0">—</div>')+'</div>';}).join('')+'</div>';
+  }
+  h+='</div>';
+  // כרטיסי קבוצות
+  G.forEach(function(g){const ms=(g.members||[]).map(id=>all.find(s=>s.id===id)).filter(Boolean),fd=doms.filter(d=>(g.focus||[]).indexOf(d.id)>-1);
+    const tt=ms.map(s=>remTrend(remRec(s))).filter(Boolean);
+    h+='<div class="card mpgrp"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3 style="margin:0">'+esc(g.name)+'</h3><div class="note">'+(remGrpWhen(g)?esc(remGrpWhen(g)):'לא נקבעו ימים ושעות')+(g.staff?' · '+esc(g.staff):'')+'</div>'+
+      (fd.length?'<div class="row" style="gap:4px;margin-top:4px">'+fd.map(d=>'<span class="chip" style="cursor:default">'+esc(d.name)+'</span>').join('')+'</div>':'')+'</div>'+
+      '<button class="btn sm noprint" data-v="ghost" data-act="mp-gedit" data-id="'+esc(g.id)+'">עריכה</button></div>'+
+      (g.note?'<p class="note" style="margin:6px 0 0">'+esc(g.note)+'</p>':'')+
+      '<table class="mpt" style="min-width:0;margin-top:8px"><tbody>'+ms.map(s=>'<tr data-remopen="'+esc(s.id)+'"><td><b>'+esc(s.name)+'</b> <span class="note">'+esc(s.cls)+'</span></td><td>'+fd.map(d=>remLvCell(remRec(s)['l_'+d.id])).join(' ')+'</td><td>'+remTrendTag(remTrend(remRec(s)))+'</td></tr>').join('')+'</tbody></table>'+
+      (tt.length?'<p class="note" style="margin:6px 0 0">מיפוי חוזר: '+tt.filter(t=>t.up&&!t.down).length+' מתוך '+tt.length+' השתפרו</p>':'')+'</div>';});
+  // לא משובצים
+  const un=all.filter(s=>!inGrp[s.id]&&doms.some(d=>lv(s,d)>=3));
+  if(un.length)h+='<div class="card"><h3 style="margin:0 0 6px">מתקשים שעוד לא שובצו ('+un.length+')</h3><table class="mpt" style="min-width:0"><tbody>'+un.map(s=>'<tr data-remopen="'+esc(s.id)+'"><td><b>'+esc(s.name)+'</b> <span class="note">'+esc(s.cls)+'</span></td><td>'+doms.filter(d=>lv(s,d)>=3).map(d=>remLvCell(lv(s,d))+' <span class="note">'+esc(d.name)+'</span>').join(' ')+'</td></tr>').join('')+'</tbody></table></div>';
+  return h;
+}
+function remGroupEditor(){
+  const E=S.remG,doms=remDomains(),all=remStudents(),G=remGroupList();
+  const score=s=>Math.max(0,...(E.focus||[]).map(f=>+(remRec(s)['l_'+f]||0)));
+  const q=(E.q||'').trim();
+  let cand=all.filter(s=>!q||String(s.name).indexOf(q)>-1);
+  cand.sort((a,b)=>(E.members.indexOf(b.id)>-1)-(E.members.indexOf(a.id)>-1)||score(b)-score(a)||String(a.name).localeCompare(String(b.name),'he'));
+  if(!q&&!E.showAll)cand=cand.filter(s=>E.members.indexOf(s.id)>-1||score(s)>=2);
+  let h='<div class="card evc" id="remGEd"><div class="row" style="justify-content:space-between"><h3 style="margin:0">'+(E.id?'עריכת קבוצה':'קבוצה חדשה')+'</h3><button class="btn sm" data-v="ghost" data-act="mp-gcancel">ביטול</button></div>';
+  h+='<div class="grid g2" style="margin-top:10px"><label class="field"><span>שם הקבוצה</span><input id="mpg-name" value="'+esc(E.name||'')+'" placeholder="למשל: קבוצת פענוח א׳"></label>'+
+    '<label class="field"><span>מי מעביר</span><input id="mpg-staff" value="'+esc(E.staff||'')+'" placeholder="למשל: המורה המתקנת"></label></div>';
+  h+='<div class="field"><span>תחומי המיקוד</span><div class="row" style="gap:5px">'+doms.map(d=>'<button type="button" class="chip" data-act="mp-gfocus" data-id="'+esc(d.id)+'"'+((E.focus||[]).indexOf(d.id)>-1?' data-on="1"':'')+'>'+esc(d.name)+'</button>').join('')+'</div></div>';
+  h+='<div class="field"><span>ימים ושעות</span>'+(E.days||[]).map((x,i)=>'<div class="row" style="gap:6px;margin-bottom:6px"><select class="inp" data-mpgd="'+i+'" data-k="d">'+REM_DAYS.map((dn,di)=>opt('יום '+dn,String(di),String(x.d))).join('')+'</select>'+
+      '<input class="inp" type="time" data-mpgd="'+i+'" data-k="from" value="'+esc(x.from||'')+'"><span>עד</span><input class="inp" type="time" data-mpgd="'+i+'" data-k="to" value="'+esc(x.to||'')+'"><button class="btn sm" data-v="ghost" data-act="mp-gdaydel" data-id="'+i+'">✕</button></div>').join('')+
+    '<div><button class="btn sm" data-act="mp-gdayadd">+ מפגש בשבוע</button></div></div>';
+  h+='<label class="field"><span>הערה</span><input id="mpg-note" value="'+esc(E.note||'')+'" placeholder="למשל: בחדר ההוראה המתקנת"></label>';
+  h+='<div class="field"><span>ילדים בקבוצה ('+E.members.length+')</span><div class="row" style="gap:6px;margin-bottom:6px"><input class="inp" id="mpg-q" placeholder="חיפוש שם" value="'+esc(q)+'" style="flex:1">'+
+    (!q?'<label class="row" style="gap:4px;cursor:pointer"><input type="checkbox" data-act="mp-gall"'+(E.showAll?' checked':'')+'> <span class="note">הצג את כל הילדים</span></label>':'')+'</div>'+
+    (!q&&!E.showAll&&!(E.focus||[]).length?'<p class="note">בחרו תחום מיקוד כדי לראות את הילדים המתאימים, או סמנו "הצג את כל הילדים".</p>':'')+
+    '<div class="mpgcand">'+cand.map(s=>{const on=E.members.indexOf(s.id)>-1,og=remStudentGroups(s.id).filter(g=>g.id!==E.id);
+      return '<label class="mpgc'+(on?' on':'')+'"><input type="checkbox" data-mpgm="'+esc(s.id)+'"'+(on?' checked':'')+'><b>'+esc(s.name)+'</b> <span class="note">'+esc(s.cls)+'</span> '+(E.focus||[]).map(f=>remLvCell(remRec(s)['l_'+f])).join(' ')+(og.length?' <span class="note">· כבר ב'+esc(og.map(g=>g.name).join(', '))+'</span>':'')+'</label>';}).join('')+'</div></div>';
+  h+='<div class="row" style="margin-top:10px"><button class="btn" data-v="primary" data-act="mp-gsave">שמירת הקבוצה</button>'+(E.id?'<button class="btn" data-v="ghost" data-act="mp-gdel" style="color:var(--absent)">מחיקת הקבוצה</button>':'')+'</div></div>';
+  return h;
+}
+function remGCapture(){
+  const E=S.remG;if(!E)return;const v=id=>{const el=document.getElementById(id);return el?el.value:undefined;};
+  ['name','staff','note'].forEach(k=>{const x=v('mpg-'+k);if(x!==undefined)E[k]=x;});const q=v('mpg-q');if(q!==undefined)E.q=q;
+  document.querySelectorAll('[data-mpgd]').forEach(el=>{const i=+el.dataset.mpgd;if(E.days[i])E.days[i][el.dataset.k]=el.dataset.k==='d'?+el.value:el.value;});
+}
+async function remGAct(a,el,id){
+  if(!canRemAll())return;
+  if(a==='mp-gnew'){const d=remDomains().find(x=>x.id===id),inG={};remGroupList().forEach(g=>(g.members||[]).forEach(m=>inG[m]=1));
+    const mem=d?remStudents().filter(s=>+(remRec(s)['l_'+d.id]||0)>=3&&!inG[s.id]).map(s=>s.id):[];
+    S.remG={name:d?'קבוצת '+d.name:'',staff:'',note:'',focus:d?[d.id]:[],days:[{d:0,from:'',to:''}],members:mem};render();window.scrollTo(0,0);return;}
+  if(a==='mp-gedit'){const g=remGroups()[id];if(!g)return;S.remG=Object.assign({id:id},clone(g));S.remG.members=S.remG.members||[];S.remG.days=S.remG.days||[];S.remG.focus=S.remG.focus||[];render();window.scrollTo(0,0);return;}
+  if(!S.remG)return;remGCapture();const E=S.remG;
+  if(a==='mp-gcancel'){S.remG=null;return render();}
+  if(a==='mp-gfocus'){const i=E.focus.indexOf(id);if(i>-1)E.focus.splice(i,1);else E.focus.push(id);return render();}
+  if(a==='mp-gall'){E.showAll=!E.showAll;return render();}
+  if(a==='mp-gdayadd'){const last=E.days[E.days.length-1];E.days.push({d:last?Math.min(5,+last.d+1):0,from:last?last.from:'',to:last?last.to:''});return render();}
+  if(a==='mp-gdaydel'){E.days.splice(+id,1);return render();}
+  if(a==='mp-gsave'){
+    if(!String(E.name||'').trim())return toast('תנו שם לקבוצה');
+    const gid=E.id||('g'+Date.now().toString(36)),old=E.id?((remGroups()[E.id]||{}).members||[]):[];
+    const obj={name:E.name.trim(),staff:String(E.staff||'').trim(),note:String(E.note||'').trim(),focus:E.focus.slice(),days:E.days.filter(x=>x.from).map(x=>({d:+x.d,from:x.from,to:x.to||''})),members:E.members.slice(),by:S.me.teacher||S.me.user||'',at:Date.now()};
+    try{await remSaveGroup(gid,obj);}catch(e){saveFailed(e);return;}
+    const aff=old.concat(obj.members).filter((x,i,arr)=>arr.indexOf(x)===i);
+    await remSyncGq(aff,'שיבוץ: '+obj.name);
+    logAct('קבוצת הוראה מתקנת',obj.name+' · '+obj.members.length+' ילדים');S.remG=null;toast('הקבוצה נשמרה');return render();}
+  if(a==='mp-gdel'){if(!E.id||!confirm('למחוק את הקבוצה "'+E.name+'"? השיבוץ יוסר מהטפסים של הילדים.'))return;
+    const mem=(remGroups()[E.id]||{}).members||[];try{await remSaveGroup(E.id,null);}catch(e){saveFailed(e);return;}
+    await remSyncGq(mem,'הקבוצה '+E.name+' נמחקה');S.remG=null;toast('נמחקה');return render();}
 }
 /* דף נפרד לטופס של תלמיד: חזרה לרשימה, ומעבר לתלמיד הקודם/הבא ברשימה המסוננת */
 function remPage(s){
@@ -6715,13 +6893,14 @@ function remPage(s){
     (next?'<button class="btn sm" data-v="ghost" data-act="mp-nav" data-id="'+esc(next)+'" title="'+esc(nm(next))+'">הבא ←</button>':'')+'</div></div>'+
     '<div class="head" style="margin-top:4px"><div><h2>'+esc(s.name)+'</h2><div class="sub">'+esc(s.cls)+' · מיפוי והוראה מתקנת</div></div></div>'+
     '<div class="warn noprint" style="margin-bottom:12px">'+icon('lock')+' מידע רגיש. גלוי רק למנהל, למורה המתקנת ולמחנך הכיתה.</div>'+
-    (S.remEdit||!remHasData(remRec(s))?remCard(s):remSummary(s))+remThread(s);
+    (S.remEdit||!remHasData(remRec(s))?remCard(s):remSummary(s)+remProgress(s))+remThread(s);
 }
 function remCard(s){
   const r=remRec(s),doms=remDomains(),cm=remComments(r),hs=remHist(r),D=S.remDraft||{};
   const val=k=>D[k]!==undefined?D[k]:(r[k]||'');
-  let h='<div class="card evc" id="remCard"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3 style="margin:0">טופס מיפוי</h3><div class="note">'+
+  let h='<div class="card evc" id="remCard"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3 style="margin:0">'+(S.remRound?'מיפוי חוזר':'טופס מיפוי')+'</h3><div class="note">'+
     (r.u?'עודכן לאחרונה ע״י '+esc(r.u.by)+' · '+esc(tsLine(r.u.t)):'עדיין לא מולא')+'</div></div><div class="row"><button class="btn sm" data-v="ghost" data-act="mp-print-one" data-id="'+esc(s.id)+'">'+icon('printer')+' הדפסת הטופס</button></div></div>';
+  if(S.remRound)h+='<div class="warn" style="margin-top:10px">מיפוי חוזר. הטופס מתחיל מהרמות של המיפוי הקודם'+(r.md?' ('+esc(dual(r.md))+')':'')+' — עדכנו רק מה שהשתנה. ההערות התרוקנו לתצפיות חדשות. המיפוי הקודם נשמר, ואחרי השמירה תוצג השוואה.</div>';
   h+='<div class="mpform-hd"><div><span>שם הילד</span><b>'+esc(s.name)+'</b></div><div><span>כיתה</span><b>'+esc(s.cls)+'</b></div><div><span>שם מחנך</span><b>'+esc(remHomeroom(s.cls)||'—')+'</b></div></div>';
   h+='<div class="grid g2" style="margin-top:10px"><label class="field"><span>סטטוס</span><select id="mp-st">'+Object.keys(REM_ST).map(k=>opt(REM_ST[k],k,val('st')||'wait')).join('')+'</select></label>'+
     '<label class="field"><span>תאריך המיפוי</span><input type="date" id="mp-md" value="'+esc(val('md'))+'"></label></div>';
@@ -6735,11 +6914,13 @@ function remCard(s){
   if(old.length)h+='<p class="note" style="margin:6px 0">מגרסה קודמת של הטופס: '+old.map(k=>{const o=REM_OLD[k.slice(2)]||k.slice(2);const L=REM_LV.find(x=>x.v===+r[k]);return esc(o)+' — '+(L?L.n:'');}).join(' · ')+'</p>';
   h+='<label class="field"><span>סיכום הממצאים</span><textarea id="mp-fnd" style="min-height:70px" placeholder="התמונה הכוללת">'+esc(val('fnd'))+'</textarea></label>'+
     '<label class="field"><span>המלצות</span><textarea id="mp-rec" style="min-height:60px" placeholder="מה מומלץ לעשות — בכיתה, בבית, בהוראה מתקנת">'+esc(val('rec'))+'</textarea></label>'+
-    '<label class="field"><span>שיבוץ להוראה מתקנת</span><input id="mp-grp" value="'+esc(val('grp'))+'" placeholder="למשל: קבוצת פענוח, פעמיים בשבוע"></label>'+
-    '<div class="row"><button class="btn" data-v="primary" data-act="mp-save" data-id="'+esc(s.id)+'">שמירה</button>'+(remHasData(r)?'<button class="btn" data-v="ghost" data-act="mp-cancel-edit">ביטול</button>':'')+(S.remDirty?'<span class="note" style="color:var(--late)">יש שינויים שלא נשמרו</span>':'')+'</div>';
+    '<div class="field"><span>שיבוץ לקבוצה</span><div>'+(r.gq?esc(r.gq):'<span class="note">לא משובץ</span>')+(canRemAll()?' · <button class="link" data-act="mp-view" data-id="groups">לדף הקבוצות</button>':'')+'</div></div>'+
+    '<label class="field"><span>הערה לשיבוץ</span><input id="mp-grp" value="'+esc(val('grp'))+'" placeholder="למשל: עדיף בשעה הראשונה"></label>'+
+    '<div class="row"><button class="btn" data-v="primary" data-act="mp-save" data-id="'+esc(s.id)+'">'+(S.remRound?'שמירת המיפוי החוזר':'שמירה')+'</button>'+(remHasData(r)?'<button class="btn" data-v="ghost" data-act="mp-cancel-edit">ביטול</button>':'')+(S.remDirty?'<span class="note" style="color:var(--late)">יש שינויים שלא נשמרו</span>':'')+'</div>';
   return h+'</div>';
 }
 /* האם כבר נרשם משהו בטופס */
+function remSelN(){return Object.keys(S.remSel||{}).filter(k=>S.remSel[k]).length;}
 function remHasData(r){return Object.keys(r).some(k=>(/^[lsn]_/.test(k)&&r[k])||(['fnd','rec','grp','md'].indexOf(k)>-1&&r[k]))||(r.st&&r.st!=='wait');}
 /* מסך הסיכום — מה שרואים אחרי השמירה: רק מה שדורש התייחסות, ובשורה אחת את מה שתקין */
 function remSummary(s){
@@ -6747,7 +6928,7 @@ function remSummary(s){
   const lv=d=>+(r['l_'+d.id]||0),hard=doms.filter(d=>lv(d)>=2).sort((a,b)=>lv(b)-lv(a)),ok=doms.filter(d=>lv(d)===1),none=doms.filter(d=>!lv(d)&&!remSubs(r,d).length&&!r['n_'+d.id]);
   const noted=doms.filter(d=>lv(d)<2&&(remSubs(r,d).length||r['n_'+d.id]));
   let h='<div class="card" id="remSum"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3 style="margin:0">סיכום המיפוי</h3><div class="note">'+(r.u?'עודכן ע״י '+esc(r.u.by)+' · '+esc(tsLine(r.u.t)):'')+'</div></div>'+
-    '<div class="row noprint"><button class="btn sm" data-v="primary" data-act="mp-edit">'+icon('note')+' עריכת הטופס</button><button class="btn sm" data-v="ghost" data-act="mp-print-one" data-id="'+esc(s.id)+'">'+icon('printer')+' הדפסה</button></div></div>';
+    '<div class="row noprint"><button class="btn sm" data-v="primary" data-act="mp-edit">'+icon('note')+' תיקון המיפוי</button><button class="btn sm" data-act="mp-round" data-id="'+esc(s.id)+'" title="מיפוי נוסף אחרי תקופה — המיפוי הנוכחי נשמר להשוואה">'+icon('plus')+' מיפוי חוזר</button><button class="btn sm" data-v="ghost" data-act="mp-print-one" data-id="'+esc(s.id)+'">'+icon('printer')+' הדפסה</button></div></div>';
   h+='<div class="mpform-hd"><div><span>כיתה</span><b>'+esc(s.cls)+'</b></div><div><span>מחנך</span><b>'+esc(remHomeroom(s.cls)||'—')+'</b></div><div><span>תאריך המיפוי</span><b>'+(r.md?esc(dual(r.md)):'—')+'</b></div><div><span>סטטוס</span><b>'+esc(REM_ST[st])+'</b></div></div>';
   const block=d=>{const sb=remSubs(r,d),n=r['n_'+d.id];
     return '<div class="mpsum-d"><div class="row" style="gap:8px;align-items:center">'+remLvCell(r['l_'+d.id])+'<b>'+esc(d.name)+'</b>'+(sb.length?'<span class="mpsb" style="margin:0">קושי ב'+esc(sb.join(', '))+'</span>':'')+'</div>'+(n?'<div class="mpsum-n">'+esc(n)+'</div>':'')+'</div>';};
@@ -6757,7 +6938,8 @@ function remSummary(s){
   if(none.length)h+='<p class="mpsum-line note">לא נבדק: '+none.map(d=>esc(d.name)).join(' · ')+'</p>';
   const old=Object.keys(r).filter(k=>k.indexOf('l_')===0&&!doms.some(d=>'l_'+d.id===k)&&r[k]);
   if(old.length)h+='<p class="note">מגרסה קודמת של הטופס: '+old.map(k=>{const L=REM_LV.find(x=>x.v===+r[k]);return esc(REM_OLD[k.slice(2)]||k.slice(2))+' — '+(L?L.n:'');}).join(' · ')+'</p>';
-  [['fnd','סיכום הממצאים'],['rec','המלצות'],['grp','שיבוץ להוראה מתקנת']].forEach(p=>{if(r[p[0]])h+='<h4 class="mpsum-h">'+p[1]+'</h4><div class="mpsum-n" style="margin:0">'+esc(r[p[0]])+'</div>';});
+  if(r.gq)h+='<h4 class="mpsum-h">קבוצת הוראה מתקנת</h4><div class="mpsum-n" style="margin:0">'+esc(r.gq)+'</div>';
+  [['fnd','סיכום הממצאים'],['rec','המלצות'],['grp','הערה לשיבוץ']].forEach(p=>{if(r[p[0]])h+='<h4 class="mpsum-h">'+p[1]+'</h4><div class="mpsum-n" style="margin:0">'+esc(r[p[0]])+'</div>';});
   return h+'</div>';
 }
 function remThread(s){
@@ -6810,7 +6992,8 @@ async function remAct(a,el,id){
   const all=remStudents();
   if(a==='mp-refresh'){await loadRem(true);toast('עודכן');return render();}
   if(a==='mp-print-list'){window.print();return;}
-  if(a==='mp-print-blank'){const ids=(S.remList||[]).slice();if(!ids.length)return toast('אין תלמידים ברשימה');if(ids.length>40&&!confirm('להדפיס '+ids.length+' טפסים?'))return;return remDoPrint({ids:ids,blank:true});}
+  if(a==='mp-print-blank'){const sel=Object.keys(S.remSel||{}).filter(k=>S.remSel[k]),ids=sel.length?(S.remList||[]).filter(x=>sel.indexOf(x)>-1).concat(sel.filter(x=>(S.remList||[]).indexOf(x)<0)):(S.remList||[]).slice();if(!ids.length)return toast('אין תלמידים ברשימה');
+    if(!sel.length&&ids.length>1&&!confirm('לא סומנו ילדים, ולכן יודפסו טפסים לכל '+ids.length+' הילדים ברשימה. להמשיך?\n(לבחירת ילדים מסוימים — סמנו את התיבה שבתחילת השורה)'))return;if(ids.length>40&&!confirm('להדפיס '+ids.length+' טפסים?'))return;return remDoPrint({ids:ids,blank:true});}
   if(a==='mp-setup'){if(!isAdmin())return;S.remSetup=!S.remSetup;return render();}
   if(a==='mp-domadd'){if(!isAdmin())return;const v=((document.getElementById('remNewDom')||{}).value||'').trim(),sb=((document.getElementById('remNewSub')||{}).value||'').split(/[,،]/).map(x=>x.trim()).filter(Boolean);if(!v)return toast('כתבו שם תחום');
     S.config.remForm=remDomains().concat([{id:'d'+uid().slice(0,6),name:v,sub:sb}]);await save(K.config,S.config);return render();}
@@ -6818,15 +7001,24 @@ async function remAct(a,el,id){
     S.config.remForm=remDomains().filter(x=>x.id!==id);await save(K.config,S.config);return render();}
   if(a==='mp-domreset'){if(!isAdmin()||!confirm('לחזור לשבעת התחומים של טופס המיפוי?'))return;delete S.config.remForm;await save(K.config,S.config);return render();}
   if(a==='mp-fdom'){const F=S.remF;if(F.dom===id&&F.min==='3'){F.dom='';F.min='';F.sub='';}else{F.dom=id;F.min='3';F.sub='';}return render();}
-  if(a==='mp-edit'){S.remEdit=true;S.remDraft=null;S.remDirty=false;render();window.scrollTo(0,0);return;}
-  if(a==='mp-cancel-edit'){if(S.remDirty&&!confirm('לבטל את השינויים?'))return;S.remEdit=false;S.remDraft=null;S.remDirty=false;render();window.scrollTo(0,0);return;}
+  if(a.indexOf('mp-g')===0&&a!=='mp-gx')return remGAct(a,el,id);
+  if(a==='mp-view'){if(S.remDirty&&!confirm('יש שינויים שלא נשמרו. לצאת בלי לשמור?'))return;S.remView=id==='groups'?'groups':'list';S.remOpen=null;S.remEdit=false;S.remRound=false;S.remDraft=null;S.remDirty=false;render();window.scrollTo(0,0);return;}
+  if(a==='mp-selclear'){S.remSel={};return render();}
+  if(a==='mp-edit'){S.remEdit=true;S.remRound=false;S.remDraft=null;S.remDirty=false;render();window.scrollTo(0,0);return;}
+  if(a==='mp-cancel-edit'){if(S.remDirty&&!confirm('לבטל את השינויים?'))return;S.remEdit=false;S.remRound=false;S.remDraft=null;S.remDirty=false;render();window.scrollTo(0,0);return;}
   if(a==='mp-close'){if(S.remDirty&&!confirm('יש שינויים שלא נשמרו. לצאת בלי לשמור?'))return;S.remOpen=null;S.remDraft=null;S.remDirty=false;render();const y=S.remScroll||0;setTimeout(()=>window.scrollTo(0,y),0);return;}
-  if(a==='mp-nav'){if(S.remDirty&&!confirm('יש שינויים שלא נשמרו. לעבור בלי לשמור?'))return;S.remOpen=id;S.remEdit=false;S.remDraft=null;S.remDirty=false;remSeenSet(id);render();window.scrollTo(0,0);return;}
+  if(a==='mp-nav'){if(S.remDirty&&!confirm('יש שינויים שלא נשמרו. לעבור בלי לשמור?'))return;S.remOpen=id;S.remEdit=false;S.remRound=false;S.remDraft=null;S.remDirty=false;remSeenSet(id);render();window.scrollTo(0,0);return;}
   const s=all.find(x=>x.id===id);if(!s||!remCanSee(s))return;
+  if(a==='mp-round'){const r=remRec(s),D={md:iso(new Date())};if(r.fnd)D.fnd='';remDomains().forEach(d=>{if(r['n_'+d.id])D['n_'+d.id]='';});
+    S.remEdit=true;S.remRound=true;S.remDraft=D;S.remDirty=true;render();window.scrollTo(0,0);return;}
+  if(a==='mp-rdel'){const c=el.dataset.c,r=remRec(s);if(!r[c]||!canRemAll())return;if(!confirm('למחוק את המיפוי הקודם מ-'+(r[c].md||'')+'? אי אפשר לשחזר.'))return;
+    const ch={};ch[c]=null;if(await remWrite(s,ch,['נמחק מיפוי קודם '+(r[c].md||'')]))toast('נמחק');return render();}
   if(a==='mp-print-one'){if(S.remDirty)return toast('קודם שמרו את השינויים');return remDoPrint({ids:[s.id],blank:false});}
   if(a==='mp-save'){
-    const D=remCapture(s),doms=remDomains(),keys=Object.keys(D);
-    if(!keys.length){toast('אין שינויים');return;}
+    const D=remCapture(s),doms=remDomains();
+    {const r0=remRec(s),st=D.st!==undefined?D.st:(r0.st||'wait');if(st==='wait'&&doms.some(d=>+(D['l_'+d.id]!==undefined?D['l_'+d.id]:r0['l_'+d.id]||0)))D.st='mapped';}
+    const keys=Object.keys(D);
+    if(!keys.length&&!S.remRound){toast('אין שינויים');return;}
     const dn=k=>{const d=doms.find(x=>x.id===k.slice(2));return d?d.name:k;};
     const lab=keys.map(function(k){const v=D[k];
       if(k.indexOf('l_')===0){const L=REM_LV.find(x=>x.v===+v);return dn(k)+': '+(L?L.n:'לא נבדק');}
@@ -6835,7 +7027,10 @@ async function remAct(a,el,id){
       if(k==='st')return 'סטטוס: '+REM_ST[v];if(k==='md')return 'תאריך מיפוי: '+(v||'—');
       const nm={fnd:'סיכום הממצאים',rec:'המלצות',grp:'שיבוץ'}[k]||k;return nm+(String(v).trim()?' עודכנו':' נמחקו');});
     const ch={};keys.forEach(k=>ch[k]=k.indexOf('l_')===0?(+D[k]||null):(String(D[k]).trim()||null));
-    if(await remWrite(s,ch,lab)){S.remDraft=null;S.remDirty=false;S.remEdit=false;remSeenSet(s.id);logAct('עדכון מיפוי',s.name);toast('נשמר');render();window.scrollTo(0,0);return;}
+    if(S.remRound){const r0=remRec(s),snap={md:r0.md||'',at:(r0.u&&r0.u.t)||0,by:(r0.u&&r0.u.by)||'',l:{},s:{},n:{},fnd:r0.fnd||'',rec:r0.rec||'',st:r0.st||''};
+      doms.forEach(d=>{if(r0['l_'+d.id])snap.l[d.id]=r0['l_'+d.id];if(r0['s_'+d.id])snap.s[d.id]=r0['s_'+d.id];if(r0['n_'+d.id])snap.n[d.id]=r0['n_'+d.id];});
+      ch['r_'+Date.now().toString(36)]=snap;lab.unshift('מיפוי חוזר (הקודם מ-'+(r0.md||'ללא תאריך')+' נשמר להשוואה)');}
+    if(await remWrite(s,ch,lab)){S.remDraft=null;S.remDirty=false;S.remEdit=false;S.remRound=false;remSeenSet(s.id);logAct('עדכון מיפוי',s.name);toast('נשמר');render();window.scrollTo(0,0);return;}
     return render();}
   if(a==='mp-cadd'){
     const x=((document.getElementById('mp-cx')||{}).value||'').trim(),k=(document.getElementById('mp-ck')||{}).value||'note';
@@ -7572,13 +7767,18 @@ document.getElementById('main').addEventListener('click',function(e){
   const lv=e.target.closest('[data-mplv]');
   if(lv&&S.remOpen){const s=remStudents().find(x=>x.id===S.remOpen);if(!s)return;remCapture(s);const k='l_'+lv.dataset.mplv,v=+lv.dataset.v2,cur=+(remRec(s)[k]||0);
     if(v===cur)delete S.remDraft[k];else S.remDraft[k]=v;S.remDirty=Object.keys(S.remDraft).length>0;return render();}
+  const ms=e.target.closest('[data-mpsel]');
+  if(ms){e.stopPropagation();const sel=S.remSel=S.remSel||{};if(ms.dataset.mpsel==='__all'){const on=ms.checked;(S.remList||[]).forEach(id=>{if(on)sel[id]=1;else delete sel[id];});}else{if(ms.checked)sel[ms.dataset.mpsel]=1;else delete sel[ms.dataset.mpsel];}return render();}
+  if(e.target.closest('.mpcb'))return;
+  const gm=e.target.closest('[data-mpgm]');
+  if(gm&&S.remG){remGCapture();const m=S.remG.members,i=m.indexOf(gm.dataset.mpgm);if(gm.checked&&i<0)m.push(gm.dataset.mpgm);if(!gm.checked&&i>-1)m.splice(i,1);return render();}
   const sb=e.target.closest('[data-mpsub]');
   if(sb&&S.remOpen){const s=remStudents().find(x=>x.id===S.remOpen);if(!s)return;remCapture(s);const k='s_'+sb.dataset.mpsub,cur=String(S.remDraft[k]!==undefined?S.remDraft[k]:(remRec(s)[k]||'')).split('|').filter(Boolean),v=sb.dataset.sv,i=cur.indexOf(v);
     if(i>-1)cur.splice(i,1);else cur.push(v);const d=remDomains().find(x=>x.id===sb.dataset.mpsub),ord=(d&&d.sub)||[];cur.sort((x,y)=>ord.indexOf(x)-ord.indexOf(y));
     const nv=cur.join('|');if(nv===(remRec(s)[k]||''))delete S.remDraft[k];else S.remDraft[k]=nv;S.remDirty=Object.keys(S.remDraft).length>0;return render();}
   const tr=e.target.closest('[data-remopen]');
   if(tr){const id=tr.dataset.remopen;if(S.remOpen===id)return;if(S.remDirty&&!confirm('יש שינויים שלא נשמרו. לעבור בלי לשמור?'))return;
-    S.remScroll=window.scrollY;S.remOpen=id;S.remEdit=false;S.remDraft=null;S.remDirty=false;remSeenSet(id);render();window.scrollTo(0,0);}
+    S.remScroll=window.scrollY;S.remOpen=id;S.remEdit=false;S.remRound=false;S.remDraft=null;S.remDirty=false;remSeenSet(id);render();window.scrollTo(0,0);}
 });
 document.getElementById('main').addEventListener('click',async function(e){
   const el=e.target.closest('[data-act]');if(!el)return;
@@ -8005,6 +8205,7 @@ document.getElementById('main').addEventListener('change',function(e){
 
 document.getElementById('main').addEventListener('input',function(e){
   const t=e.target;
+  if(t.id==='mpg-q'&&S.remG){remGCapture();S.focus='mpg-q';return render();}
   if(t.dataset&&t.dataset.remf){S.remF[t.dataset.remf]=t.value;if(t.dataset.remf==='dom')S.remF.sub='';if(t.dataset.remf==='q')S.focus='remQ';return render();}
   if(t.id&&t.id.indexOf('mp-')===0&&t.id!=='mp-cx'&&t.id!=='mp-ck'){S.remDirty=true;return;}
   if(t.dataset&&t.dataset.asq&&S.as){S.as.q=t.value;S.as.page=0;S.focus='asQ';return render();}
@@ -8108,7 +8309,7 @@ window.addEventListener('popstate',function(e){
   if(!st||!st.tab)return;
   if(S.tab==='mark'&&S.dirty&&!confirm('יש שינויים בנוכחות שלא נשמרו. לצאת בכל זאת?')){try{history.pushState({tab:S.tab},'','#'+S.tab);}catch(x){}return;}
   if(S.tab==='rem'&&st.tab==='rem'){if(S.remDirty&&!confirm('יש שינויים שלא נשמרו. לצאת בלי לשמור?')){try{history.pushState({tab:'rem',rem:S.remOpen},'','#rem');}catch(x){}return;}
-    fromPop=true;S.remOpen=st.rem||null;S.remEdit=false;S.remDraft=null;S.remDirty=false;render();fromPop=false;window.scrollTo(0,st.rem?0:(S.remScroll||0));return;}
+    fromPop=true;S.remOpen=st.rem||null;S.remEdit=false;S.remRound=false;S.remDraft=null;S.remDirty=false;render();fromPop=false;window.scrollTo(0,st.rem?0:(S.remScroll||0));return;}
   fromPop=true;
   if(st.tab==='card'){if(st.cardId&&studentById(st.cardId)){S.cardId=st.cardId;S.tab='card';render();}else goTab('dash');}
   else goTab(st.tab);
