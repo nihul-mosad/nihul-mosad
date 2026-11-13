@@ -4,7 +4,7 @@
   "description": "רשת ביטחון: סביבת ניסוי ובדיקות אוטומטיות למערכת ניהול המוסד",
   "scripts": {
     "build": "node build-staging.mjs",
-    "test": "npm run build && node --test tests/smoke.test.mjs tests/flows.test.mjs tests/save-safety.test.mjs tests/student-summary.test.mjs tests/summary-server.test.mjs tests/smart-card.test.mjs tests/mapping.test.mjs tests/mapping-groups.test.mjs tests/readability.test.mjs tests/sidebar.test.mjs tests/dashboard.test.mjs tests/pro-look.test.mjs tests/stage2.test.mjs tests/staff.test.mjs",
+    "test": "npm run build && node --test tests/smoke.test.mjs tests/flows.test.mjs tests/save-safety.test.mjs tests/student-summary.test.mjs tests/summary-server.test.mjs tests/smart-card.test.mjs tests/mapping.test.mjs tests/mapping-groups.test.mjs tests/readability.test.mjs tests/sidebar.test.mjs tests/dashboard.test.mjs tests/pro-look.test.mjs tests/stage2.test.mjs tests/staff.test.mjs tests/att-calc.test.mjs",
     "test:rules": "cp ../firestore.rules firestore.rules.copy && firebase emulators:exec --project demo-nihul --only firestore \"node --test tests/rules.test.mjs\"",
     "emulator": "cp ../firestore.rules firestore.rules.copy && firebase emulators:start --project demo-nihul --only auth,firestore",
     "seed:emulator": "node seed-emulator.mjs",
