@@ -48,12 +48,12 @@ test('לוח בקרה "היום": משפט פתיחה, חסרים עם חיוג/
     LIDX = null; render();
     const h3 = [...document.querySelectorAll('#main h3')].map(x => x.textContent);
     return { h3, sum: document.querySelector('.dsum').textContent, absName: studentById(ids[0]).name,
-      absCard: [...document.querySelectorAll('#main .card')].find(c => /^חסרים היום/.test(c.querySelector('h3').textContent)).innerText,
+      absCard: [...document.querySelectorAll('#main .card')].find(c => /^חסרים כל היום/.test(c.querySelector('h3').textContent)).innerText,
       wa: !!document.querySelector('#main a[href^="https://wa.me/"]'), tel: !!document.querySelector('#main a[href^="tel:"]'), evst: !!document.querySelector('.ev-st'),
       task: document.body.innerText.includes('משימה בדיקה'), saved: localStorage.getItem('tt:dashMode') };
   });
-  for (const t of ['מה לעשות עכשיו', 'חסרים היום', 'אירועים לטיפול', 'המשימות שלי']) assert.ok(r.h3.some(x => x.includes(t)), 'חסר: ' + t);
-  assert.match(r.sum, /חסרים היום|אין חסרים|עוד לא סומנה/);
+  for (const t of ['מה לעשות עכשיו', 'חסרים כל היום', 'אירועים לטיפול', 'המשימות שלי']) assert.ok(r.h3.some(x => x.includes(t)), 'חסר: ' + t);
+  assert.match(r.sum, /חסר(ים)? כל היום|אין חסרים|עוד לא סומנה/);
   assert.match(r.sum, /משימה אחת באיחור|משימות באיחור/);
   assert.ok(r.absCard.includes(r.absName));
   assert.ok(r.wa && r.tel && r.evst && r.task);
