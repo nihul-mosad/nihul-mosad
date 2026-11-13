@@ -2748,7 +2748,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=71;
+const APP_VER=72;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -2805,7 +2805,7 @@ function userOfTeacher(t){return t?S.config.users.find(u=>u.teacher===t&&u.id!==
 function lessonTxt(l){return l.period+' ('+l.subject+', '+(l.classes||[]).join(', ')+')';}
 function missedLessonsOf(t){
   const today=iso(new Date()),hm=nowHM();
-  return lessonsOn(today).filter(l=>l.teacher===t&&!lessonMarked(today,l).done&&(periods().find(p=>p.n===l.period)||{}).end<=hm).sort((a,b)=>a.period-b.period);
+  return lessonsOn(today).filter(l=>l.teacher===t&&lessonReported(today,l).miss&&(periods().find(p=>p.n===l.period)||{}).end<=hm).sort((a,b)=>a.period-b.period);
 }
 function remComposer(){
   const c=S.remc,us=S.config.users.filter(u=>u.id!==S.me.id).sort((a,b)=>String(a.teacher||a.user).localeCompare(String(b.teacher||b.user),'he'));
@@ -2875,7 +2875,7 @@ function myMissedLessons(){
   if(!S.me||!S.inst||!S.me.teacher||!(S.timetable||[]).length)return [];
   const today=iso(new Date()),hm=nowHM();
   return lessonsOn(today).filter(function(l){if(l.teacher!==S.me.teacher)return false;const p=periods().find(x=>x.n===l.period);if(!p||!p.end||p.end>hm)return false;
-    const m=lessonMarked(today,l);return m.n>0&&!m.done;}).sort((a,b)=>a.period-b.period);
+    return lessonReported(today,l).miss;}).sort((a,b)=>a.period-b.period);
 }
 function openLessonMark(id){
   goTab('mark');S.markDate=iso(new Date());S.markLesson=id;const day=S.latt[S.markDate]||{};S.ldraft={};
@@ -3151,7 +3151,7 @@ function dashWeek(o){
   const sun=new Date();sun.setDate(sun.getDate()-sun.getDay());const T={},hm=nowHM();
   for(let d=new Date(sun);iso(d)<=today;d.setDate(d.getDate()+1)){const ds=iso(d);if(d.getDay()>5)continue;
     markableLessons(ds).forEach(function(l){if(!l.teacher)return;if(ds===today){const p=periods().find(x=>x.n===l.period);if(!p||!p.end||p.end>hm)return;}
-      const t=T[l.teacher]||(T[l.teacher]={n:0,d:0});t.n++;if(lessonMarked(ds,l).done)t.d++;});}
+      const R=lessonReported(ds,l);if(R.skip||!R.mk.n)return;const t=T[l.teacher]||(T[l.teacher]={n:0,d:0});t.n++;if(R.rep)t.d++;});}
   const TL=Object.keys(T).sort((a,b)=>T[a].d/T[a].n-T[b].d/T[b].n);
   const teachBody=TL.length?TL.map(function(t){const p=Math.round(T[t].d/T[t].n*100);
     return '<div class="dcls"><b style="min-width:120px">'+esc(t)+'</b><div class="bar" style="flex:1"><i style="width:'+p+'%" data-low="'+(p<70?2:p<90?1:0)+'"></i></div><span class="note" style="min-width:90px;text-align:left">'+p+'% · '+T[t].d+'/'+T[t].n+'</span></div>';}).join('')
@@ -3202,9 +3202,9 @@ function viewDash(){
   const lessons=S.timetable.length?markableLessons(today).slice().sort((a,b)=>a.period-b.period):[];
   const endOf=l=>{const p=periods().find(x=>x.n===l.period);return p&&p.end?p.end:'';};
   const startOf=l=>{const p=periods().find(x=>x.n===l.period);return p&&p.start?p.start:'';};
-  const lst=lessons.map(l=>{const m=lessonMarked(today,l),e=endOf(l),st=startOf(l);
-    return {l:l,m:m,state:m.done?'done':m.m?'part':(e&&e<=hm)?'miss':(st&&st<=hm)?'now':'wait'};});
-  const missed=lst.filter(x=>x.state==='miss'||(x.state==='part'&&endOf(x.l)<=hm));
+  const lst=lessons.map(l=>{const R=lessonReported(today,l),m=R.mk,e=endOf(l),st=startOf(l);
+    return {l:l,m:m,state:R.skip&&!m.m?'skip':m.done?'done':m.m?'part':(e&&e<=hm)?'miss':(st&&st<=hm)?'now':'wait'};});
+  const missed=lst.filter(x=>x.state==='miss');
   if(missed.length)alerts.push({t:'נוכחות',x:missed.length+' שיעורים שהסתיימו היום ועוד לא סומנה בהם נוכחות מלאה',act:'goto-mark',l:'לסימון'});
   if(!S.timetable.length)myClasses().forEach(function(cls){
     const inC=list.filter(s=>s.cls===cls),m=inC.filter(s=>day[s.id]).length;
@@ -3239,15 +3239,15 @@ function viewDash(){
     return '<div class="dcls"><b>'+esc(cl)+'</b><div class="bar" style="flex:1"><i style="width:'+(pct||0)+'%" data-low="'+(pct===null?0:pct<80?2:pct<90?1:0)+'"></i></div>'+
       '<span class="note" style="min-width:110px;text-align:left">'+(m?pct+'% · '+ab+' חסרים':'טרם סומן')+'</span></div>';}).join('');
 
-  const stIcon={done:['present','✓ סומן'],part:['late','חלקי'],miss:['absent','לא סומן'],now:['admin','מתקיים עכשיו'],wait:['excused','בהמשך']};
-  const lessonRows=lst.filter(x=>!adm||x.state!=='done'&&x.state!=='wait').map(x=>{const l=x.l,i=stIcon[x.state];
+  const stIcon={done:['present','סומן'],part:['present','סומן · חלקי'],skip:['excused','הוחרג'],miss:['absent','לא סומן'],now:['admin','מתקיים עכשיו'],wait:['excused','בהמשך']};
+  const lessonRows=lst.filter(x=>!adm||x.state==='miss'||x.state==='now'||x.state==='part').map(x=>{const l=x.l,i=stIcon[x.state];
     return '<div class="alert"><b style="min-width:20px">'+l.period+'</b><span style="flex:1">'+esc(l.subject)+' <span class="note">· '+esc((l.classes||[]).join(', '))+(l.teacher&&l.teacher!==S.me.teacher?' · '+esc(l.teacher):'')+'</span></span>'+
-      '<span class="tag" data-s="'+i[0]+'">'+i[1]+(x.state==='part'?' '+x.m.m+'/'+x.m.n:'')+'</span>'+
+      '<span class="tag" data-s="'+i[0]+'">'+i[1]+(x.state==='part'?' '+x.m.m+'/'+x.m.n:'')+'</span>'+(x.state==='part'?'<span class="note" title="השיעור דווח; לא נשלחת תזכורת">'+(x.m.n-x.m.m)+' לא סומנו</span>':'')+
       '<button class="btn sm" data-v="ghost" data-act="dash-lesson" data-id="'+l.id+'">סימון</button></div>';}).join('');
   const missT={};if(adm)missed.forEach(x=>{if(x.l.teacher)missT[x.l.teacher]=(missT[x.l.teacher]||0)+1;});
   const missTL=Object.keys(missT).sort((a,b)=>missT[b]-missT[a]);
 
-  const lDone=lst.filter(x=>x.state==='done').length;
+  const lDone=lst.filter(x=>x.state==='done'||x.state==='part'||x.state==='skip').length;
   const attSegs=[{label:'נוכחים',n:c.present,color:'var(--present)'},{label:'איחור',n:c.late,color:'var(--late)'},{label:'חיסור',n:c.absent,color:'var(--absent)'},{label:'מוצדק',n:c.excused,color:'var(--excused)'},{label:'טרם סומן',n:c.none,color:'var(--au-track,#E3E8FB)'}].filter(x=>x.n||x.label!=='מוצדק');
   const byT={};evW.forEach(e=>{const t=e.typeName||'אחר';byT[t]=(byT[t]||0)+1;});
   let evT=Object.keys(byT).sort((a,b)=>byT[b]-byT[a]).map(t=>({label:t,n:byT[t]}));
@@ -4705,6 +4705,12 @@ function lessonMarked(date,l){
   const m=st.filter(s=>day[l.id+':'+s.id]).length;
   return {m:m,n:st.length,done:st.length>0&&m>=st.length};
 }
+/* כלל אחד בכל המערכת (v72): שיעור "דווח" אם סומן בו תלמיד אחד לפחות, או שהוחרג במסך "שיעורים שלא דווחו".
+   שיעור שדווח וחסרים בו סימונים — "חלקי": לא נחשב "לא דווח", לא שולחים עליו תזכורת ולא מוריד מההתמדה. */
+function lessonReported(date,l){
+  const mk=lessonMarked(date,l),sk=gapSkipOf(date,l.id);
+  return {mk:mk,skip:!!sk,rep:!!sk||mk.m>0,part:!sk&&mk.m>0&&!mk.done,miss:!sk&&mk.n>0&&mk.m===0};
+}
 function perLabel(n){const p=periods().find(x=>x.n===n);return p&&p.start?'\u2066'+p.start+(p.end?'–'+p.end:'')+'\u2069':'';}
 function viewMarkLessons(){
   if(S.markLesson){const l=S.timetable.find(x=>x.id===S.markLesson);if(l)return viewMarkLesson(l);S.markLesson=null;}
@@ -4731,12 +4737,12 @@ function viewMarkLessons(){
   if(!ls.length)return top+'<div class="card"><div class="empty">'+(S.me.teacher||isAdmin()?'אין שיעורים ביום הזה.':'החשבון שלך עוד לא קושר למורה במערכת השעות. בקשו מהמנהל לקשר אותו בהגדרות.')+'</div></div>';
   let lastP=null,html='',nowHtml='';
   if(date===today){const P=periods();ls.filter(l=>{const p=P.find(x=>x.n===l.period)||{};return p.start&&p.start<=hm&&(!p.end||hm<p.end)&&(isAdmin()?false:true);}).forEach(function(l){
-    const mk=lessonMarked(date,l);nowHtml+='<button class="lrow" data-act="lm-open" data-id="'+l.id+'" data-now="1"><div class="lr-main"><b>'+esc(l.subject||'(ללא מקצוע)')+'</b><span>'+esc((l.classes||[]).join(', '))+' · שיעור '+l.period+'</span></div>'+(mk.done?'<span class="tag" data-s="present">סומן</span>':'<span class="btn sm" data-v="primary">לסימון</span>')+'</button>';});}
+    const mk=lessonMarked(date,l);nowHtml+='<button class="lrow" data-act="lm-open" data-id="'+l.id+'" data-now="1"><div class="lr-main"><b>'+esc(l.subject||'(ללא מקצוע)')+'</b><span>'+esc((l.classes||[]).join(', '))+' · שיעור '+l.period+'</span></div>'+(mk.m?'<span class="tag" data-s="present">סומן</span>':'<span class="btn sm" data-v="primary">לסימון</span>')+'</button>';});}
   ls.forEach(function(l){
     if(l.period!==lastP){html+='<div class="note" style="margin:14px 0 6px;font-weight:700">שיעור '+l.period+' · '+perLabel(l.period)+'</div>';lastP=l.period;}
-    const mk=lessonMarked(date,l),p=periods().find(x=>x.n===l.period)||{};
+    const LR=lessonReported(date,l),mk=LR.mk,p=periods().find(x=>x.n===l.period)||{};
     const past=date<today||(date===today&&p.end&&p.end<=hm),nowOn=date===today&&p.start&&p.start<=hm&&(!p.end||hm<p.end);
-    const tag=mk.done?'<span class="tag" data-s="present">סומן</span>':mk.m?'<span class="tag" data-s="late">'+mk.m+'/'+mk.n+'</span>':
+    const tag=LR.skip&&!mk.m?'<span class="tag" data-s="excused">הוחרג</span>':mk.done?'<span class="tag" data-s="present">סומן</span>':mk.m?'<span class="tag" data-s="present" title="'+(mk.n-mk.m)+' תלמידים לא סומנו">סומן · '+mk.m+'/'+mk.n+'</span>':
       (past?'<span class="tag" data-s="absent">לא סומן</span>':'<span class="note">'+(mk.n?mk.n+' תלמידים':'')+'</span>');
     html+='<button class="lrow" data-act="lm-open" data-id="'+l.id+'"'+(nowOn?' data-now="1"':'')+'><div class="lr-main"><b>'+esc(l.subject||'(ללא מקצוע)')+
       (l.type==='private'?' <em class="bd">פרטני</em>':'')+(nowOn?' <em class="bd" style="color:var(--accent)">עכשיו</em>':'')+'</b><span>'+
@@ -5535,7 +5541,7 @@ function dlCapture(){
   document.querySelectorAll('#main [data-dlt]').forEach(t=>{const v=t.value.trim();if(v)x.t[t.dataset.dlt]=v;else delete x.t[t.dataset.dlt];});
 }
 function dlTeacherFacts(t,d){
-  const ls=lessonsOn(d).filter(l=>l.teacher===t),done=ls.filter(l=>lessonMarked(d,l).done).length;
+  const ls=lessonsOn(d).filter(l=>l.teacher===t),done=ls.filter(l=>lessonReported(d,l).rep).length;
   const ev=S.events.filter(e=>e.date===d&&e.by===t),ex=S.exams.filter(x=>x.date===d&&x.by===t);
   const out=[];if(ls.length)out.push('שיעורים: '+ls.length+', סומנה נוכחות ב-'+done);
   if(ev.length)out.push('דיווחת '+ev.length+' אירועים');if(ex.length)out.push('מבחנים: '+ex.map(x=>x.subject+' ('+x.cls+')').join(', '));
@@ -5552,7 +5558,7 @@ function viewDaylog(){
       ab.length?'<span style="color:var(--absent)">'+esc(ab.join(', '))+'</span>':'—',lt.length?'<span style="color:var(--late)">'+esc(lt.join(', '))+'</span>':'—'];
   }).filter(Boolean);
   const evs=S.events.filter(e=>e.date===d).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
-  const ls=lessonsOn(d),miss=d>today?[]:ls.filter(l=>{if(l.type==='private'&&!(l.students||[]).length)return false;const p=periods().find(q=>q.n===l.period);return !lessonMarked(d,l).done&&(d<today||(p&&p.end&&p.end<=hm));});
+  const ls=lessonsOn(d),miss=d>today?[]:ls.filter(l=>{if(l.type==='private'&&!(l.students||[]).length)return false;const p=periods().find(q=>q.n===l.period);return lessonReported(d,l).miss&&(d<today||(p&&p.end&&p.end<=hm));});
   const missT={};miss.forEach(l=>{const t=l.teacher||'ללא מורה';(missT[t]=missT[t]||[]).push(l.period);});
   const exs=S.exams.filter(e=>e.date===d);
   const tchs=Array.from(new Set(ls.map(l=>l.teacher).filter(Boolean).concat(Object.keys(x.t||{})))).sort((a,b)=>a.localeCompare(b,'he'));
