@@ -5158,7 +5158,9 @@ function viewTasks(){
   return '<div class="head"><div><h2>יומן משימות</h2><div class="sub">'+
     base.filter(t=>t.status!=='done').length+' פתוחות · '+
     base.filter(t=>t.status!=='done'&&t.due&&t.due<today).length+' באיחור'+
-    (adm?'':' · המשימות שלך גלויות רק לך ולהנהלה')+'</div></div></div>'+dmCard()+
+    (adm?'':' · המשימות שלך גלויות רק לך ולהנהלה')+'</div></div>'+
+    (adm?'<button class="btn" data-act="task-export" title="כולל משימות פתוחות ומשימות שבוצעו, מכל המשתמשים">ייצוא כל המשימות (JSON)</button>':'')+
+    '</div>'+dmCard()+
    '<div class="card"><div class="row">'+
      '<input class="inp" id="taskText" data-in="taskText" style="flex:1;min-width:200px" placeholder="משימה חדשה…">'+
      '<input class="inp" type="date" id="taskDue" value="'+today+'">'+
@@ -7893,6 +7895,11 @@ document.getElementById('main').addEventListener('click',async function(e){
     if(!t)return toast('צריך לכתוב משימה');
     S.tasks.push({id:uid(),text:t,due:document.getElementById('taskDue').value,status:'open',by:S.me.user,uid:S.me.id});
     S.taskText='';save(K.tasks,S.tasks);toast('המשימה נוספה');return render();
+  }
+  if(a==='task-export'){
+    if(!isAdmin())return;
+    download('משימות '+iso(new Date())+'.json',JSON.stringify({tasks:S.tasks},null,2),'application/json');
+    return;
   }
   if(a==='task-toggle'){
     S.tasks=S.tasks.map(t=>t.id===id?Object.assign({},t,{status:t.status==='done'?'open':'done'}):t);
