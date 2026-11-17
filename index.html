@@ -1989,6 +1989,19 @@ a.tel{color:inherit;text-decoration:none}a.tel:hover{color:var(--accent);text-de
 .tag.care[data-c="done"]{background:var(--tag-g,#DFF5E6);color:var(--tag-g-ink,#13843A)}
 .care-form{border:1px solid var(--accent)!important}
 .grid.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+/* רמזור התנהגות */
+.lt-b{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.lt-b i{width:12px;height:12px;border-radius:50%;background:var(--lt)}
+.lt-cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:2px 0 10px}
+.lt-cmp>div{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.lt-why{margin-bottom:12px}.lt-why summary{cursor:pointer;color:var(--accent);font-weight:500;font-size:14px}
+.lt-ev{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:14px}.lt-ev>span:first-child{flex:1}
+.lt-red{font-size:11.5px;background:#D9473A;color:#fff;border-radius:99px;padding:1px 7px}
+.lt-h{margin:16px 0 8px;font-size:14.5px}
+.lt-lv{display:grid;gap:8px}.lt-lv>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lt-lv i{width:16px;height:16px;border-radius:50%}.lt-lv .inp{width:120px}
+.lt-n{width:72px!important;min-width:0}.lt-cnt{font-size:13px;color:var(--muted);margin-inline-start:6px}
+.lt-tb td,.lt-tb th{padding:6px 8px}
 </style>
 <style id="aura-readability-fix">
 /* תיקון קריאות לשכבת העיצוב (באג): צבעי המצב של העיצוב (צהוב #F5B800, ירוק #22B04B) בהירים מדי לטקסט על רקע בהיר
@@ -2748,7 +2761,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=72;
+const APP_VER=73;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -3727,7 +3740,7 @@ function viewCard360(s){
    '<section class="au-banner s3-hero">'+
      '<span class="s3-av">'+esc(ini)+'</span>'+
      '<div class="s3-id"><h2>'+esc(s.name)+'</h2><div class="s3-chips"><span>'+esc(s.cls||'')+'</span>'+(homeroom?'<span>מחנך: '+esc(homeroom)+'</span>':'')+
-       (last?'<span class="tag" data-s="'+last.light+'">רמזור '+LIGHTNAME[last.light]+' · '+shortDate(last.date)+'</span>':'<span>ללא תמונת מצב</span>')+'</div>'+
+       (last?'<span class="tag" data-s="'+last.light+'">רמזור '+LIGHTNAME[last.light]+' · '+shortDate(last.date)+'</span>':'<span>ללא תמונת מצב</span>')+(ltPolicy().on?'<span>התנהגות: '+ltBadge(autoLight(s.id))+'</span>':'')+'</div>'+
        '<div class="s3-par">'+(s.father?'<span>אב: '+esc(s.father)+(s.fatherPhone?' · <a class="ltr" href="tel:'+esc(s.fatherPhone)+'">'+esc(s.fatherPhone)+'</a>':'')+'</span>':'')+
          (s.mother?'<span>אם: '+esc(s.mother)+(s.motherPhone?' · <a class="ltr" href="tel:'+esc(s.motherPhone)+'">'+esc(s.motherPhone)+'</a>':'')+'</span>':'')+'</div></div>'+
      '<div class="s3-acts">'+acts.map((a,i)=>'<button class="btn" '+(i===0?'data-v="primary" ':'')+'data-act="'+a[0]+'" data-id="'+s.id+'">'+a[1]+'</button>').join('')+
@@ -3750,7 +3763,7 @@ function viewCard360(s){
      '<div class="au-c s3-evs"><h3>אירועים לפי שבוע <small>– 8 שבועות</small></h3><div class="s3-evleg"><span><i style="background:var(--ch-present)"></i>לשבח</span><span><i style="background:var(--ch-1)"></i>לשיפור</span></div>'+
        '<div role="img" aria-label="'+esc('אירועים לפי שבוע: '+wEv.map((x,i)=>(i===7?'השבוע':'לפני '+(7-i))+' '+x.p+' לשבח '+x.n+' לשיפור').join(', '))+'">'+SVG('0 0 '+EW+' '+EH,eg)+'</div>'+
        (types.length?'<div class="s3-types">'+types.map(k=>'<span class="tag" data-s="'+(byType[k].pos?'present':'late')+'">'+esc(k)+' · '+byType[k].n+'</span>').join('')+'</div>':'')+'</div>'+
-     '<div class="au-c s3-dom"><h3>תמונת מצב אישית <small>'+(last?'– עודכן '+last.date.slice(8,10)+'.'+last.date.slice(5,7):'')+'</small></h3>'+
+     '<div class="au-c s3-dom"><h3>תמונת מצב אישית <small>'+(last?'– עודכן '+last.date.slice(8,10)+'.'+last.date.slice(5,7):'')+'</small></h3>'+ltCardBlock(s.id,last)+
        (last?doms.map(x=>'<div class="s3-d"><span class="n">'+esc(x.d.name)+'</span><div class="tr"><i style="width:'+((x.now||0)/5*100)+'%"></i></div><b>'+(x.now||'—')+'</b>'+
          (x.now&&x.was?(x.now>x.was?'<em data-s="good">▲</em>':x.now<x.was?'<em data-s="bad">▼</em>':'<em>=</em>'):'<em></em>')+spark(x.hist)+'</div>').join('')+
          (last.note?'<p class="s3-note">“'+esc(last.note)+'”</p>':''):'<div class="empty">עוד לא נרשמה תמונת מצב.</div>')+
@@ -7584,6 +7597,68 @@ async function handleImportFile(file){
 }
 
 /* ================= הגדרות ================= */
+/* ===== רמזור התנהגות אוטומטי (v73) — מחושב מהאירועים, 4 צבעים, ההגדרות אצל המנהל =====
+   הדיווח לא משתנה. הרמזור הידני של המחנך (תמונת מצב) נשאר כמו שהוא ומוצג לידו בכרטיס התלמיד. */
+const LT_COLORS=['#2E9E57','#E0A800','#F08A3C','#D9473A'];
+function ltPolicy(){
+  const d={on:false,days:14,posPer:2,posCap:3,levels:[{n:'ירוק',from:0},{n:'צהוב',from:4},{n:'כתום',from:7},{n:'אדום',from:10}],w:{},red:{}};
+  const p=Object.assign({},d,S.config.lightPolicy||{});
+  p.levels=(p.levels&&p.levels.length===4?p.levels:d.levels).map((l,i)=>({n:l.n||d.levels[i].n,from:Number(l.from)||0,c:LT_COLORS[i]}));
+  p.w=p.w||{};p.red=p.red||{};return p;
+}
+function ltPts(e,P){const t=evTypes().find(x=>x.id===e.type);const id=t?t.id:'';
+  if(id&&P.w[id]!=null&&P.w[id]!=='')return Number(P.w[id])||0;
+  return e.kind==='pos'?1:(Number(e.sev)||1);}
+function ltLevel(score,P){let i=0;P.levels.forEach((l,k)=>{if(score>=l.from)i=k;});return i;}
+function autoLight(sid,P){
+  P=P||ltPolicy();const today=iso(new Date()),from=daysAgo(P.days-1);
+  const evs=S.events.filter(e=>e.sid===sid&&e.date>=from&&e.date<=today).sort((a,b)=>a.date<b.date?1:-1);
+  let neg=0,pos=0,redLine=null;
+  evs.forEach(e=>{const p=ltPts(e,P);if(e.kind==='pos')pos+=p;else{neg+=p;if(P.red[e.type]&&!redLine)redLine=e;}});
+  const offset=Math.min(Math.floor(pos/Math.max(1,P.posPer)),P.posCap),score=Math.max(0,neg-offset);
+  const i=redLine?3:ltLevel(score,P);
+  return {i:i,lv:P.levels[i],score:score,neg:neg,pos:pos,offset:offset,redLine:redLine,evs:evs};
+}
+function ltBadge(L){return '<span class="lt-b" style="--lt:'+L.lv.c+'"><i></i>'+esc(L.lv.n)+'</span>';}
+function ltCardBlock(sid,last){
+  const P=ltPolicy();if(!P.on)return '';
+  const L=autoLight(sid,P);
+  return '<div class="lt-cmp"><div><span class="note">הערכת המחנך (ידני)</span>'+(last?'<span class="tag" data-s="'+last.light+'">'+LIGHTNAME[last.light]+' · '+shortDate(last.date)+'</span>':'<span class="note">אין</span>')+'</div>'+
+    '<div><span class="note">רמזור התנהגות (אוטומטי · '+P.days+' יום)</span>'+ltBadge(L)+'<span class="note">'+L.score+' נק׳'+(L.redLine?' · קו אדום':'')+'</span></div></div>'+
+    '<details class="lt-why"><summary>מה השפיע על הרמזור</summary>'+(L.evs.length?L.evs.map(e=>{const p=ltPts(e,P),pos=e.kind==='pos';
+      return '<div class="lt-ev"><span>'+esc(e.typeName||'אירוע')+(P.red[e.type]&&!pos?' <b class="lt-red">קו אדום</b>':'')+'</span><span class="note">'+shortDate(e.date)+'</span><b style="color:'+(pos?'var(--tag-g-ink,#13843A)':'var(--tag-r-ink,#C2272C)')+'" dir="ltr">'+(pos?'+':'−')+p+'</b></div>';}).join('')+
+      '<p class="note" style="margin:6px 0 0">לשיפור '+L.neg+' נק׳ − קיזוז שבח '+L.offset+' (מתוך '+L.pos+' נק׳ שבח) = '+L.score+'</p>':'<p class="note">אין אירועים ב־'+P.days+' הימים האחרונים.</p>')+'</details>';
+}
+function ltSettingsCard(){
+  const P=ltPolicy(),cnt=[0,0,0,0];S.students.forEach(s=>cnt[autoLight(s.id,P).i]++);
+  const num=(id,v,min,max)=>'<input class="inp lt-n" type="number" id="'+id+'" value="'+v+'" min="'+min+'" max="'+max+'">';
+  return '<div class="card" id="lt-card"><h3>רמזור התנהגות (אוטומטי)</h3>'+
+    '<p class="note" style="margin-bottom:12px">הרמזור מחושב מהאירועים שמדווחים, ומוצג בכרטיס התלמיד ליד הערכת המחנך. מוצג רק למנהל ולמחנך הכיתה.</p>'+
+    '<label class="chk"><input type="checkbox" id="lt-on"'+(P.on?' checked':'')+'> להציג את הרמזור בכרטיסי התלמידים</label>'+
+    '<h4 class="lt-h">1. ארבעת הצבעים — מאיזה ניקוד מתחיל כל צבע</h4><div class="lt-lv">'+P.levels.map((l,i)=>
+      '<div><i style="background:'+l.c+'"></i><input class="inp" id="lt-n'+i+'" value="'+esc(l.n)+'" aria-label="שם הצבע">'+
+      (i===0?'<span class="note">מ־0</span>':'<span class="note">מ־</span>'+num('lt-f'+i,l.from,1,200))+'<span class="lt-cnt">'+cnt[i]+' תלמידים</span></div>').join('')+'</div>'+
+    '<h4 class="lt-h">2. החישוב</h4><div class="row" style="gap:16px">'+
+      '<label class="row" style="gap:6px">סופרים אירועים מ־'+num('lt-days',P.days,3,90)+' הימים האחרונים</label>'+
+      '<label class="row" style="gap:6px">כל '+num('lt-pp',P.posPer,1,20)+' נק׳ שבח מקזזות נקודה</label>'+
+      '<label class="row" style="gap:6px">קיזוז מקסימלי '+num('lt-cap',P.posCap,0,50)+' נק׳</label></div>'+
+    '<h4 class="lt-h">3. נקודות לכל סוג אירוע</h4><p class="note" style="margin:0 0 8px">ריק = ברירת מחדל (לשיפור: לפי החומרה; לשבח: 1). "קו אדום" מעביר מיד לצבע הרביעי לכל תקופת הספירה.</p>'+
+    '<div class="scroll"><table class="lt-tb"><thead><tr><th>סוג</th><th>לשבח / לשיפור</th><th>נקודות</th><th>קו אדום</th></tr></thead><tbody>'+
+      evTypes().map(t=>'<tr><td>'+esc(t.name)+'</td><td><span class="tag" data-s="'+(t.kind==='pos'?'present':'absent')+'">'+(t.kind==='pos'?'לשבח':'לשיפור')+'</span></td>'+
+        '<td><input class="inp lt-n" type="number" min="0" max="20" data-ltw="'+t.id+'" value="'+(P.w[t.id]!=null?P.w[t.id]:'')+'" placeholder="'+(t.kind==='pos'?1:(t.sev||1))+'"></td>'+
+        '<td>'+(t.kind==='pos'?'':'<input type="checkbox" data-ltr="'+t.id+'"'+(P.red[t.id]?' checked':'')+' aria-label="קו אדום">')+'</td></tr>').join('')+'</tbody></table></div>'+
+    '<div class="row" style="margin-top:12px"><button class="btn" data-v="primary" data-act="lt-save">שמירה</button><button class="btn" data-v="ghost" data-act="lt-preview">חישוב מחדש (בלי לשמור)</button>'+
+    '<span class="note">התלמידים בכל צבע מחושבים לפי מה שכתוב כרגע בטופס.</span></div></div>';
+}
+function ltRead(){
+  const g=id=>document.getElementById(id),P=ltPolicy(),n=(id,d)=>{const v=parseInt((g(id)||{}).value,10);return isNaN(v)?d:v;};
+  const out={on:!!(g('lt-on')||{}).checked,days:Math.max(3,n('lt-days',P.days)),posPer:Math.max(1,n('lt-pp',P.posPer)),posCap:Math.max(0,n('lt-cap',P.posCap)),
+    levels:[0,1,2,3].map(i=>({n:((g('lt-n'+i)||{}).value||P.levels[i].n).trim().slice(0,20),from:i?Math.max(1,n('lt-f'+i,P.levels[i].from)):0})),w:{},red:{}};
+  for(let i=2;i<4;i++)if(out.levels[i].from<=out.levels[i-1].from)out.levels[i].from=out.levels[i-1].from+1;
+  document.querySelectorAll('[data-ltw]').forEach(x=>{if(x.value!=='')out.w[x.dataset.ltw]=Math.max(0,parseInt(x.value,10)||0);});
+  document.querySelectorAll('[data-ltr]').forEach(x=>{if(x.checked)out.red[x.dataset.ltr]=true;});
+  return out;
+}
 function viewSettings(){
   return '<div class="head"><h2>הגדרות</h2></div>'+
   '<div class="card"><h3>שם המוסד ולוגו</h3>'+
@@ -7598,7 +7673,7 @@ function viewSettings(){
     '<div class="row" style="margin-bottom:12px">'+domains().map(d=>'<span class="chip" style="cursor:default">'+esc(d.name)+
       '<button class="btn sm" data-v="ghost" style="padding:0 4px" data-act="del-dom" data-id="'+d.id+'">✕</button></span>').join('')+'</div>'+
     '<div class="row"><input class="inp" id="newDom" placeholder="למשל: שקידה"><button class="btn" data-act="add-dom">הוספה</button></div></div>'+
-  evTypesCard()+
+  evTypesCard()+ltSettingsCard()+
   joinCard()+requestsCard()+
   '<div class="card"><h3>משתמשים והרשאות</h3>'+
     '<p class="note" style="margin-bottom:12px">מנהל רואה את כל המוסד. מורה רואה את השיעורים שלו, ואם הוא מחנך גם את כל מה שקורה בכיתה שלו. מחנכים מגדירים בלשונית "מערכת שעות".</p>'+
@@ -8009,6 +8084,8 @@ document.getElementById('main').addEventListener('click',async function(e){
       text:'שלום '+t+', לא סומנה היום נוכחות '+(ls.length>1?'בשיעורים: ':'בשיעור ')+ls.map(lessonTxt).join(', ')+'. נא לסמן בהקדם. תודה!'};
     window.scrollTo(0,0);return render();
   }
+  if(a==='lt-preview'){const keep=S.config.lightPolicy;S.config.lightPolicy=ltRead();const html=ltSettingsCard();S.config.lightPolicy=keep;const c=document.getElementById('lt-card');if(c)c.outerHTML=html;return;}
+  if(a==='lt-save'){S.config.lightPolicy=ltRead();save(K.config,S.config);toast('הגדרות הרמזור נשמרו');return render();}
   if(a==='dash-mode'){S.dashMode=id;try{localStorage.setItem('tt:dashMode',id);}catch(e){}render();return;}
   if(a==='care-open'){S.careFor=id;render();const f=document.querySelector('.care-form');if(f){f.scrollIntoView({block:'center'});const i=document.getElementById('care-step');if(i)i.focus();}return;}
   if(a==='care-cancel'){S.careFor=null;return render();}
