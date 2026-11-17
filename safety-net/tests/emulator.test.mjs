@@ -81,6 +81,7 @@ test('אמולטור: מורה מקצועי מדווח אירוע בזמן שה�
     await m.click(`[data-act="ev-cls"][data-c="${CLASSES[0]}"]`);
     await m.click('[data-act="ev-stu"][data-id="s2"]');
     await m.click('[data-act="ev-type"][data-t="e3"]');
+    await m.click('[data-act="ev-lv"][data-n="2"]');
     await m.fill('#ev-note', 'בדיקה במקביל');
     await m.click('[data-act="ev-save"]');
   })();

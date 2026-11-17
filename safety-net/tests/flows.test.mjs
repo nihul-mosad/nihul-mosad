@@ -57,6 +57,7 @@ test('אירועים: מורה מקצועי מדווח על תלמיד בכית�
   await click(page, `[data-act="ev-cls"][data-c="${CLASSES[2]}"]`);
   await click(page, '[data-act="ev-stu"][data-id="s9"]');
   await click(page, '[data-act="ev-type"][data-t="e3"]');
+  await click(page, '[data-act="ev-lv"][data-n="2"]');
   await page.fill('#ev-note', 'בדיקה אוטומטית: דיבר בחוצפה');
   await click(page, '[data-act="ev-save"]');
   await settle(page);
