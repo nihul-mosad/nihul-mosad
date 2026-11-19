@@ -2029,6 +2029,31 @@ a.tel{color:inherit;text-decoration:none}a.tel:hover{color:var(--accent);text-de
 .bi-tb{border-collapse:collapse;width:100%}.bi-tb th,.bi-tb td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}.bi-tb td:first-child,.bi-tb th:first-child{text-align:start}
 .bi-h{font-variant-numeric:tabular-nums;font-weight:600}
 .bi-tr{display:block;max-width:100%;height:auto;color:var(--muted)}
+.lt-link{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 0 10px;background:none;font:inherit;color:inherit;cursor:pointer;text-align:start}
+.lt-link:hover{border-color:var(--accent,#2B4C9B)}.lt-go{margin-inline-start:auto;color:var(--accent,#2B4C9B);font-weight:500;font-size:14px}
+.lt-hchip{background:none;border:0;font:inherit;color:inherit;cursor:pointer;padding:0}
+.lt-cmp.one{grid-template-columns:1fr}
+.lt-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.lt-sum>div{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px}.lt-sum i{width:14px;height:14px;border-radius:50%;background:var(--lt);flex:none}
+.lt-sum b{font-size:22px}.lt-sum span{font-size:13px;color:var(--muted)}
+.lt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.lt-tile{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto auto;column-gap:10px;row-gap:2px;align-items:center;text-align:start;font:inherit;color:inherit;background:var(--card,#fff);border:1px solid var(--line);border-inline-start:6px solid var(--lt);border-radius:12px;padding:10px 12px;cursor:pointer}
+.lt-tile:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}.lt-tile>i{grid-row:1/4;width:22px;height:22px;border-radius:50%;background:var(--lt)}
+.lt-tile b{font-size:15.5px}.lt-tile span{font-size:13.5px}.lt-tile small{font-size:12.5px;color:var(--muted)}
+.lt-tile em{font-style:normal;margin-inline-start:6px;font-size:12px}.lt-tile em.up{color:var(--present,#13843A)}.lt-tile em.dn{color:var(--absent,#C2272C)}
+.ltpole{display:inline-flex;flex-direction:column;gap:10px;background:#20283A;padding:14px 12px;border-radius:30px}
+.ltpole i{width:44px;height:44px;border-radius:50%;background:#3A4357}.ltpole i[data-on]{background:var(--c);box-shadow:0 0 22px 4px var(--c)}
+.ltpole.big{gap:2.2vh;padding:2.4vh 2vh;border-radius:6vh}.ltpole.big i{width:11vh;height:11vh}
+.lt-sv{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start}.lt-sv-p{display:flex;justify-content:center;padding:18px}
+@media (max-width:700px){.lt-sv{grid-template-columns:1fr}.lt-sv-p .ltpole{flex-direction:row;padding:10px 14px}.lt-sv-p .ltpole i{width:38px;height:38px}.lt-sum{grid-template-columns:1fr 1fr}}
+.ltp{position:fixed;inset:0;z-index:2000;background:var(--bg,#F6F4EE);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4vh 4vw;overflow:auto}
+.ltp-x{position:absolute;top:2vh;inset-inline-end:2vw}
+.ltp-in{display:flex;align-items:center;gap:6vw;max-width:1200px;width:100%;justify-content:center}
+.ltp-t h1{font-size:clamp(34px,6vw,80px);margin:0 0 1vh}.ltp-c{font-size:clamp(28px,4.4vw,58px);font-weight:800;margin-bottom:3vh}
+.ltp-w h3{font-size:clamp(20px,2.6vw,34px);margin:0 0 1vh}.ltp-w ul{margin:0;padding-inline-start:1.2em}.ltp-w li,.ltp-w p{font-size:clamp(18px,2.2vw,30px);line-height:1.5;margin:.4vh 0}
+.ltp-n{font-size:clamp(18px,2.2vw,30px);margin-top:3vh}
+.ltp-nav{position:absolute;bottom:3vh;left:4vw;right:4vw;display:flex;justify-content:space-between}
+@media (max-width:700px){.ltp-in{flex-direction:column;gap:3vh;text-align:center}.ltp-in .ltpole{flex-direction:row;gap:3vw;padding:3vw;border-radius:12vw}.ltp-in .ltpole i{width:16vw;height:16vw;max-width:9vh;max-height:9vh}}
 </style>
 <style id="aura-readability-fix">
 /* תיקון קריאות לשכבת העיצוב (באג): צבעי המצב של העיצוב (צהוב #F5B800, ירוק #22B04B) בהירים מדי לטקסט על רקע בהיר
@@ -2136,6 +2161,8 @@ const ICO={
  assist:'<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15v4"/><path d="M17 17h4"/>',
  reports:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
  analytics:'<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>',
+ eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+ light:'<rect x="8" y="2" width="8" height="20" rx="4"/><circle cx="12" cy="7" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="17" r="1.6"/>',
  classbi:'<path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/>',
  staff:'<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>',
  settings:'<path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/>',
@@ -2667,7 +2694,7 @@ const S={tab:'dash',me:null,config:{name:'המוסד',classes:[],logo:'',users:[
   msgGroup:'all',msgText:'',msgTo:'both',importPreview:null,focus:null,
   repFrom:daysAgo(30),repTo:iso(new Date()),repCls:''};
 
-const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['students','תלמידים'],['rem','מיפוי'],['mark','נוכחות'],['events','אירועים'],['grades','ציונים'],['schedule','מערכת שעות'],['duty','תורנויות'],['tasks','משימות'],['meetings','ישיבות צוות'],['daylog','יומן יומי'],['assist','עוזר אישי'],['reports','דוחות וניתוחים'],['classbi','תמונת מצב כיתות'],['staff','צוות'],['settings','הגדרות']];
+const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['light','רמזור'],['students','תלמידים'],['rem','מיפוי'],['mark','נוכחות'],['events','אירועים'],['grades','ציונים'],['schedule','מערכת שעות'],['duty','תורנויות'],['tasks','משימות'],['meetings','ישיבות צוות'],['daylog','יומן יומי'],['assist','עוזר אישי'],['reports','דוחות וניתוחים'],['classbi','תמונת מצב כיתות'],['staff','צוות'],['settings','הגדרות']];
 const isAdmin=()=>S.me&&S.me.role==='admin';
 function homeroomOf(t){const h=S.config.homeroom||{};return S.config.classes.filter(c=>t&&h[c]===t);}
 const myClasses=()=>isAdmin()?S.config.classes:Array.from(new Set((S.me.cls?[S.me.cls]:[]).concat(homeroomOf(S.me.teacher))));
@@ -2689,7 +2716,7 @@ function tasksInView(){
 }
 function myLessonIds(){const o={};myLessonAll().forEach(l=>o[l.id]=1);return o;}
 function myLessonStudents(){const ok={};myLessonAll().forEach(l=>lessonStudents(l).list.forEach(s=>ok[s.id]=1));return S.students.filter(s=>ok[s.id]);}
-const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','students','rem','mark','events','grades','schedule','duty','tasks','meetings','reports']:['rem','mark','events','grades','schedule','duty','tasks','meetings','reports']).indexOf(t[0])>-1&&(t[0]!=='rem'||isRemT()||myClasses().length)).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
+const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','light','students','rem','mark','events','grades','schedule','duty','tasks','meetings','reports']:['rem','mark','events','grades','schedule','duty','tasks','meetings','reports']).indexOf(t[0])>-1&&(t[0]!=='rem'||isRemT()||myClasses().length)&&(t[0]!=='light'||ltTabOk())).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
 const domains=()=>S.config.domains&&S.config.domains.length?S.config.domains:SEED_DOMAINS;
 
 /* ---- שליפות ---- */
@@ -2790,7 +2817,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=76;
+const APP_VER=77;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -2899,7 +2926,7 @@ function remPopup(r){
 /* רענון נתונים: הנתונים נטענים בכניסה, ומתעדכנים מחדש מהשרת כשחוזרים לאפליקציה, כל 5 דקות במסכי הסיכום, ובלחיצה על "רענון".
    כך לוח הבקרה, הניתוחים והדוחות מראים גם מה שמורים אחרים סימנו בינתיים. */
 let DATA_AT=0,DATA_BUSY=false;
-const LIVE_TABS={dash:1,classbi:1,analytics:1,reports:1,events:1,daylog:1,review:1,grades:1};
+const LIVE_TABS={dash:1,classbi:1,light:1,analytics:1,reports:1,events:1,daylog:1,review:1,grades:1};
 async function refreshData(manual){
   if(DATA_BUSY||!S.me||!S.inst||S.legacy||!FS)return;
   if(S.dirty||S.ldirty||S.evc||S.exEdit||S.mtEdit||S.remc||S.dutyEdit||S.remDirty){if(manual)toast('יש שינויים שלא נשמרו. שמרו קודם ואז רעננו.');return;}
@@ -3769,7 +3796,7 @@ function viewCard360(s){
    '<section class="au-banner s3-hero">'+
      '<span class="s3-av">'+esc(ini)+'</span>'+
      '<div class="s3-id"><h2>'+esc(s.name)+'</h2><div class="s3-chips"><span>'+esc(s.cls||'')+'</span>'+(homeroom?'<span>מחנך: '+esc(homeroom)+'</span>':'')+
-       (last?'<span class="tag" data-s="'+last.light+'">רמזור '+LIGHTNAME[last.light]+' · '+shortDate(last.date)+'</span>':'<span>ללא תמונת מצב</span>')+(ltPolicy().on?'<span>התנהגות: '+ltBadge(autoLight(s.id),1)+'</span>':'')+'</div>'+
+       (last?'<span class="tag" data-s="'+last.light+'">רמזור '+LIGHTNAME[last.light]+' · '+shortDate(last.date)+'</span>':'<span>ללא תמונת מצב</span>')+(ltPolicy().on?'<button class="lt-hchip" data-act="lt-stu" data-id="'+s.id+'">התנהגות: '+ltBadge(autoLight(s.id),1)+'</button>':'')+'</div>'+
        '<div class="s3-par">'+(s.father?'<span>אב: '+esc(s.father)+(s.fatherPhone?' · <a class="ltr" href="tel:'+esc(s.fatherPhone)+'">'+esc(s.fatherPhone)+'</a>':'')+'</span>':'')+
          (s.mother?'<span>אם: '+esc(s.mother)+(s.motherPhone?' · <a class="ltr" href="tel:'+esc(s.motherPhone)+'">'+esc(s.motherPhone)+'</a>':'')+'</span>':'')+'</div></div>'+
      '<div class="s3-acts">'+acts.map((a,i)=>'<button class="btn" '+(i===0?'data-v="primary" ':'')+'data-act="'+a[0]+'" data-id="'+s.id+'">'+a[1]+'</button>').join('')+
@@ -3792,7 +3819,7 @@ function viewCard360(s){
      '<div class="au-c s3-evs"><h3>אירועים לפי שבוע <small>– 8 שבועות</small></h3><div class="s3-evleg"><span><i style="background:var(--ch-present)"></i>לשבח</span><span><i style="background:var(--ch-1)"></i>לשיפור</span></div>'+
        '<div role="img" aria-label="'+esc('אירועים לפי שבוע: '+wEv.map((x,i)=>(i===7?'השבוע':'לפני '+(7-i))+' '+x.p+' לשבח '+x.n+' לשיפור').join(', '))+'">'+SVG('0 0 '+EW+' '+EH,eg)+'</div>'+
        (types.length?'<div class="s3-types">'+types.map(k=>'<span class="tag" data-s="'+(byType[k].pos?'present':'late')+'">'+esc(k)+' · '+byType[k].n+'</span>').join('')+'</div>':'')+'</div>'+
-     '<div class="au-c s3-dom"><h3>תמונת מצב אישית <small>'+(last?'– עודכן '+last.date.slice(8,10)+'.'+last.date.slice(5,7):'')+'</small></h3>'+ltCardBlock(s.id,last)+
+     '<div class="au-c s3-dom"><h3>תמונת מצב אישית <small>'+(last?'– עודכן '+last.date.slice(8,10)+'.'+last.date.slice(5,7):'')+'</small></h3>'+ltCardLink(s.id)+
        (last?doms.map(x=>'<div class="s3-d"><span class="n">'+esc(x.d.name)+'</span><div class="tr"><i style="width:'+((x.now||0)/5*100)+'%"></i></div><b>'+(x.now||'—')+'</b>'+
          (x.now&&x.was?(x.now>x.was?'<em data-s="good">▲</em>':x.now<x.was?'<em data-s="bad">▼</em>':'<em>=</em>'):'<em></em>')+spark(x.hist)+'</div>').join('')+
          (last.note?'<p class="s3-note">“'+esc(last.note)+'”</p>':''):'<div class="empty">עוד לא נרשמה תמונת מצב.</div>')+
@@ -7684,7 +7711,7 @@ function ltCardBlock(sid,last){
   /* אירוע חמור שעוד לא טופל — מוצג בנפרד מהרמזור המצטבר; שבח לא סוגר אותו */
   const sev=S.events.filter(e=>e.sid===sid&&e.kind!=='pos'&&e.sev>=3&&!e.handled).sort((a,b)=>a.date<b.date?1:-1);
   const wins=S.events.filter(e=>e.sid===sid&&e.kind==='pos').sort((a,b)=>(a.date+(a.time||''))<(b.date+(b.time||''))?1:-1).slice(0,4);
-  return '<div class="lt-cmp"><div><span class="note">הערכת המחנך (ידני)</span>'+(last?'<span class="tag" data-s="'+last.light+'">'+LIGHTNAME[last.light]+' · '+shortDate(last.date)+'</span>':'<span class="note">אין</span>')+'</div>'+
+  return '<div class="lt-cmp'+(last===false?' one':'')+'">'+(last===false?'':'<div><span class="note">הערכת המחנך (ידני)</span>'+(last?'<span class="tag" data-s="'+last.light+'">'+LIGHTNAME[last.light]+' · '+shortDate(last.date)+'</span>':'<span class="note">אין</span>')+'</div>')+
     '<div><span class="note">רמזור התנהגות (אוטומטי · '+P.days+' יום)</span>'+ltBadge(L,1)+'<span class="note">'+L.score+' נק׳'+(L.redLine?' · קו אדום':'')+'</span></div></div>'+
     (sev.length?'<div class="lt-sev" role="note"><b>אירוע חמור פתוח · דורש בירור</b>'+sev.slice(0,3).map(e=>'<span>'+esc((e.typeName||'אירוע')+evLvTxt(e))+' · '+shortDate(e.date)+'</span>').join('')+
       '<span class="note">נפרד מהרמזור. נסגר רק כשמסמנים "טופל" באירועים — דיווח שבח לא סוגר אותו.</span></div>':'')+
@@ -7890,6 +7917,63 @@ function biLearn(f,cls){
       (watch.length?table(['תלמיד','כיתה','רמזור','ממוצע','קודם'],watch.slice(0,15).map(w=>['<button class="link" data-act="card" data-id="'+w.s.id+'">'+esc(w.s.name)+'</button>',esc(w.s.cls),
         '<span class="tag" data-s="'+w.r.light+'">'+LIGHTNAME[w.r.light]+'</span>',w.a==null?'—':r1(w.a),w.b==null?'—':r1(w.b)+(w.drop?' <em style="color:var(--absent)">▼</em>':'')])):'<div class="empty">אין תלמידים לתשומת לב בתקופה.</div>')+'</div>';
 }
+/* ===== לשונית "רמזור" (v77) — הרמזור האקלימי בנפרד מהלמידה =====
+   מחנך: תמונת מצב של הכיתה שלו; מנהל: כל כיתה. לכל תלמיד דף רמזור נקי, ו"מצב הצגה לתלמיד" בלי שום תוספות.
+   כרטיס התלמיד הכללי מציג רק קישור לכאן. */
+function ltClasses(){return isAdmin()?S.config.classes.slice():myClasses();}
+function ltTabOk(){return isAdmin()||(myClasses().length>0&&ltPolicy().on);}
+function ltSevOpen(sid){return S.events.filter(e=>e.sid===sid&&e.kind!=='pos'&&e.sev>=3&&!e.handled);}
+function ltClassRows(c,P){
+  return S.students.filter(s=>s.cls===c&&canSeeStudent(s.id)).map(s=>({s:s,L:autoLight(s.id,P),W:autoLight(s.id,P,daysAgo(7)),sev:ltSevOpen(s.id).length}));
+}
+function ltPole(i,big){return '<div class="ltpole'+(big?' big':'')+'" aria-hidden="true">'+[3,2,1,0].map(k=>'<i style="--c:'+LT_COLORS[k]+'"'+(k===i?' data-on="1"':'')+'></i>').join('')+'</div>';}
+function viewLight(){
+  const P=ltPolicy();
+  if(S.ltStu){const s=studentById(S.ltStu);if(s&&canSeeStudent(s.id))return ltStudentView(s,P);S.ltStu=null;S.ltPres=false;}
+  const cls=ltClasses();
+  if(!cls.length)return '<div class="empty">הרמזור מוצג למחנכי כיתות ולמנהל.</div>';
+  const f=S.ltf=S.ltf||{cls:cls[0],sort:'need'};if(cls.indexOf(f.cls)<0)f.cls=cls[0];
+  const rows=ltClassRows(f.cls,P),cnt=[0,0,0,0];rows.forEach(r=>cnt[r.L.i]++);
+  if(f.sort==='need')rows.sort((a,b)=>b.L.i-a.L.i||b.L.score-a.L.score||String(a.s.name).localeCompare(String(b.s.name),'he'));
+  else rows.sort((a,b)=>String(a.s.name).localeCompare(String(b.s.name),'he'));
+  const better=rows.filter(r=>r.L.i<r.W.i).length,worse=rows.filter(r=>r.L.i>r.W.i).length,sev=rows.filter(r=>r.sev).length;
+  const tile=r=>{const tr=r.L.i<r.W.i?'<em class="up" title="השתפר מלפני שבוע">▲</em>':r.L.i>r.W.i?'<em class="dn" title="ירד מלפני שבוע">▼</em>':'';
+    const pos=r.L.evs.filter(e=>e.kind==='pos').length;
+    return '<button class="lt-tile" data-act="lt-stu" data-id="'+r.s.id+'" style="--lt:'+r.L.lv.c+'"><i></i><b>'+esc(r.s.name)+'</b>'+
+      '<span>'+esc(r.L.lv.n)+(r.L.lv.d?' · '+esc(r.L.lv.d):'')+tr+'</span>'+
+      '<small>'+r.L.score+' נק׳'+(pos?' · '+pos+' שבח':'')+(r.sev?' · <b class="lt-red">חמור פתוח</b>':'')+'</small></button>';};
+  return '<div class="head"><div><h2>רמזור התנהגות</h2><div class="sub">'+esc(f.cls)+' · '+rows.length+' תלמידים · לפי '+P.days+' הימים האחרונים</div></div></div>'+
+    (P.on?'':'<div class="warn" style="margin-bottom:12px">הרמזור כבוי — המחנכים לא רואים אותו. מפעילים בהגדרות › רמזור התנהגות.</div>')+
+    (cls.length>1?'<div class="seg" style="margin-bottom:12px;flex-wrap:wrap">'+cls.map(c=>'<button data-act="lt-cls" data-id="'+esc(c)+'" data-on="'+(f.cls===c?1:0)+'">'+esc(c)+'</button>').join('')+'</div>':'')+
+    '<div class="card"><div class="lt-sum">'+P.levels.map((l,i)=>'<div style="--lt:'+l.c+'"><i></i><b>'+cnt[i]+'</b><span>'+esc(l.n)+(l.d?' · '+esc(l.d):'')+'</span></div>').join('')+'</div>'+
+      biBar(P.levels.map((l,i)=>({v:cnt[i],c:l.c,n:l.n})),rows.length)+
+      '<p class="note" style="margin:8px 0 0">מלפני שבוע: '+better+' השתפרו · '+worse+' ירדו'+(sev?' · <b class="lt-red">'+sev+' עם אירוע חמור פתוח</b>':'')+'</p></div>'+
+    '<div class="row" style="justify-content:space-between;margin:4px 0 10px"><div class="seg">'+[['need','לפי צורך'],['name','לפי שם']].map(x=>'<button data-act="lt-sort" data-id="'+x[0]+'" data-on="'+(f.sort===x[0]?1:0)+'">'+x[1]+'</button>').join('')+'</div>'+
+      '<span class="note">לחיצה על תלמיד פותחת את הרמזור שלו</span></div>'+
+    (rows.length?'<div class="lt-grid">'+rows.map(tile).join('')+'</div>':'<div class="empty">אין תלמידים בכיתה.</div>');
+}
+function ltStudentView(s,P){
+  const L=autoLight(s.id,P),list=ltClassRows(s.cls,P).map(r=>r.s).sort((a,b)=>String(a.name).localeCompare(String(b.name),'he')),k=list.findIndex(x=>x.id===s.id);
+  const prev=list[k-1],next=list[k+1];
+  if(S.ltPres){
+    const wins=L.evs.filter(e=>e.kind==='pos');
+    return '<div class="ltp" role="dialog" aria-label="הרמזור של '+esc(s.name)+'"><button class="btn ltp-x" data-act="lt-pres">סגירה ✕</button>'+
+      '<div class="ltp-in">'+ltPole(L.i,1)+'<div class="ltp-t"><h1>'+esc(s.name)+'</h1><div class="ltp-c" style="color:'+L.lv.c+'">'+esc(L.lv.n)+(L.lv.d?' · '+esc(L.lv.d):'')+'</div>'+
+        '<div class="ltp-w"><h3>👍 הדברים הטובים שלי</h3>'+(wins.length?'<ul>'+wins.slice(0,5).map(e=>'<li>'+esc(e.typeName||'שבח')+(e.note?' — '+esc(e.note):'')+'</li>').join('')+'</ul>':'<p>עוד לא נרשמו בשבועיים האחרונים — זה הזמן להתחיל!</p>')+'</div>'+
+        (L.lv.next?'<p class="ltp-n"><b>הצעד הבא:</b> '+esc(L.lv.next)+'</p>':'')+'</div></div>'+
+      '<div class="ltp-nav">'+(prev?'<button class="btn" data-act="lt-stu" data-id="'+prev.id+'">→ '+esc(prev.name)+'</button>':'<span></span>')+(next?'<button class="btn" data-act="lt-stu" data-id="'+next.id+'">'+esc(next.name)+' ←</button>':'<span></span>')+'</div></div>';
+  }
+  return '<div class="row noprint" style="justify-content:space-between;margin-bottom:8px"><button class="btn sm" data-v="ghost" data-act="lt-back">→ חזרה לכיתה '+esc(s.cls)+'</button>'+
+      '<div class="row" style="gap:6px">'+(prev?'<button class="btn sm" data-v="ghost" data-act="lt-stu" data-id="'+prev.id+'" title="התלמיד הקודם">→ '+esc(prev.name)+'</button>':'')+(next?'<button class="btn sm" data-v="ghost" data-act="lt-stu" data-id="'+next.id+'" title="התלמיד הבא">'+esc(next.name)+' ←</button>':'')+'</div></div>'+
+    '<div class="head"><div><h2>'+esc(s.name)+'</h2><div class="sub">'+esc(s.cls)+' · רמזור התנהגות</div></div>'+
+      '<div class="row"><button class="btn" data-v="primary" data-act="lt-pres">'+icon('eye')+' מצב הצגה לתלמיד</button><button class="btn" data-act="card" data-id="'+s.id+'">לכרטיס המלא</button></div></div>'+
+    '<div class="lt-sv"><div class="card lt-sv-p">'+ltPole(L.i)+'</div><div class="card">'+ltCardBlock(s.id,false)+'</div></div>';
+}
+/* בכרטיס הכללי: רק שורה קצרה עם קישור לרמזור */
+function ltCardLink(sid){
+  if(!ltPolicy().on)return '';const L=autoLight(sid);
+  return '<button class="lt-link" data-act="lt-stu" data-id="'+sid+'"><span class="note">רמזור התנהגות</span>'+ltBadge(L,1)+'<span class="lt-go">פתיחה ←</span></button>';
+}
 function viewSettings(){
   return '<div class="head"><h2>הגדרות</h2></div>'+
   '<div class="card"><h3>שם המוסד ולוגו</h3>'+
@@ -7969,7 +8053,7 @@ function printHead(){
 }
 
 /* ===== שלב 2א: תפריט בקבוצות + חיפוש כללי (Ctrl+K) + שורות תלמיד לחיצות ===== */
-const NAV_GROUPS=[['יום־יום',['dash','mark','events','tasks','duty','daylog']],['תלמידים',['students','review','rem','grades']],['צוות',['staff','meetings','schedule']],['ניהול',['reports','classbi','analytics','assist','settings','console']]];
+const NAV_GROUPS=[['יום־יום',['dash','mark','events','tasks','duty','daylog']],['תלמידים',['students','review','light','rem','grades']],['צוות',['staff','meetings','schedule']],['ניהול',['reports','classbi','analytics','assist','settings','console']]];
 function navHTML(){
   const tabs=tabsFor(),seen={},out=[],btn=t=>'<button data-tab="'+t[0]+'" data-on="'+(S.tab===t[0]||(t[0]==='reports'&&S.tab==='analytics')?1:0)+'">'+t[1]+'</button>';
   if(tabs.length<=7)return tabs.map(btn).join('');
@@ -8049,7 +8133,7 @@ function render(){
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
     themeSwitch()+'<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
-    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,duty:viewDuty,rem:viewRem,bdays:viewBirthdays,analytics:viewAnalytics,classbi:viewClassBI,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,assist:viewAssist,account:viewAccount,import:viewImport,card:viewCard};
+    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,duty:viewDuty,rem:viewRem,bdays:viewBirthdays,analytics:viewAnalytics,classbi:viewClassBI,light:viewLight,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,assist:viewAssist,account:viewAccount,import:viewImport,card:viewCard};
   if(S.inst&&!isAdmin()&&['card','account','bdays','rcard'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
   if(S.tab==='tasks')dmMarkRead();
   const v=map[S.tab]||viewDash;
@@ -8316,6 +8400,11 @@ document.getElementById('main').addEventListener('click',async function(e){
     window.scrollTo(0,0);return render();
   }
   if(a==='lt-preview'){const keep=S.config.lightPolicy;S.config.lightPolicy=ltRead();const html=ltSettingsCard();S.config.lightPolicy=keep;const c=document.getElementById('lt-card');if(c)c.outerHTML=html;return;}
+  if(a==='lt-stu'){S.ltStu=id;S.tab='light';S.ltMsg=null;window.scrollTo(0,0);return render();}
+  if(a==='lt-back'){S.ltStu=null;S.ltPres=false;return render();}
+  if(a==='lt-pres'){S.ltPres=!S.ltPres;return render();}
+  if(a==='lt-cls'){S.ltf.cls=id;return render();}
+  if(a==='lt-sort'){S.ltf.sort=id;return render();}
   if(a==='lt-msg'){S.ltMsg=S.ltMsg&&S.ltMsg.sid===id?null:{sid:id,text:ltParentText(id)};return render();}
   if(a==='lt-copy'){const t=(document.getElementById('lt-msg-t')||{}).value||'';try{await navigator.clipboard.writeText(t);toast('ההודעה הועתקה');}catch(x){toast('לא הצלחתי להעתיק — סמנו את הטקסט והעתיקו');}return;}
   if(a==='lt-wa'){const t=(document.getElementById('lt-msg-t')||{}).value||'',st=studentById(id),h=st?waHref(contactPhone(st),t):'';if(!h)return toast('אין מספר טלפון של הורה');window.open(h,'_blank','noopener');logAct('רמזור להורים (וואטסאפ)',st.name);return;}
