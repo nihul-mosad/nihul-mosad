@@ -25,8 +25,8 @@ test('כרטיס: מילה, למה זה הצבע, ימי חלון, ייתכן כ
   const sid = await page.evaluate(prep);
   const sc = await page.evaluate(sid => autoLight(sid).score, sid);
   assert.equal(sc, 7); // 2+2+3 = 7, שבח 1 לא מגיע לקיזוז — כמו קודם
-  await page.evaluate(sid => { S.cardId = sid; S.tab = 'card'; render(); }, sid);
-  const t = await page.textContent('.s3-dom');
+  await page.evaluate(sid => { S.ltStu = sid; S.tab = 'light'; render(); }, sid);
+  const t = await page.textContent('#main');
   assert.match(t, /נדרש ליווי/);
   assert.match(t, /אירוע חמור פתוח/);
   assert.match(t, /הצעד הבא: שיחה אישית עם המחנך השבוע/);
@@ -36,7 +36,7 @@ test('כרטיס: מילה, למה זה הצבע, ימי חלון, ייתכן כ
   assert.match(w, /ימים קלנדריים/); assert.equal((w.match(/ייתכן כפול/g) || []).length, 3); // 2 תגיות + הסבר
   // שבח לא סוגר אירוע חמור
   await page.evaluate(sid => { const s = studentById(sid); for (let i = 0; i < 6; i++) S.events.push({ id: 'pp' + i, sid, sname: s.name, cls: s.cls, type: 'p1', typeName: 'צל"ש', kind: 'pos', sev: 1, date: daysAgo(0) }); render(); }, sid);
-  assert.match(await page.textContent('.s3-dom'), /אירוע חמור פתוח/);
+  assert.match(await page.textContent('#main'), /אירוע חמור פתוח/);
   assert.deepEqual(page.errors, []);
   await page.context().close();
 });

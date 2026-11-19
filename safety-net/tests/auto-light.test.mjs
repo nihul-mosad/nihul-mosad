@@ -40,7 +40,7 @@ test('הגדרות: המנהל משנה שמות/ספים/נקודות, תצוג
   assert.equal(await page.$$eval('#lt-card .lt-lv > div', x => x.length), 4);
   // כבוי כברירת מחדל: הכרטיס לא מציג
   await page.evaluate(() => { S.tab = 'card'; S.cardId = S.students[0].id; render(); });
-  assert.equal(await page.$('.lt-cmp'), null);
+  assert.equal(await page.$('.lt-link'), null);
   await page.evaluate(() => { S.tab = 'settings'; render(); });
   await page.check('#lt-on'); await page.fill('#lt-n2', 'כתום'); await page.fill('#lt-f1', '3');
   await page.fill('[data-ltw="e1"]', '5'); await page.check('[data-ltr="e6"]');
@@ -50,8 +50,11 @@ test('הגדרות: המנהל משנה שמות/ספים/נקודות, תצוג
   const P = await page.evaluate(() => S.config.lightPolicy);
   assert.equal(P.on, true); assert.equal(P.levels[1].from, 3); assert.equal(P.levels[2].n, 'כתום'); assert.equal(P.w.e1, 5); assert.equal(P.red.e6, true);
   await page.evaluate(() => { S.tab = 'card'; S.cardId = S.students[0].id; render(); });
-  assert.ok(await page.$('.lt-cmp')); assert.ok(await page.$('.s3-hero .lt-b'));
-  assert.match(await page.textContent('.lt-cmp'), /הערכת המחנך/);
+  assert.ok(await page.$('.lt-link')); assert.ok(await page.$('.s3-hero .lt-b'));
+  assert.equal(await page.$('.lt-cmp'), null, 'פירוט הרמזור לא בכרטיס הכללי');
+  await page.click('.lt-link');
+  assert.equal(await page.evaluate(() => S.tab), 'light');
+  assert.ok(await page.$('.lt-cmp.one')); assert.doesNotMatch(await page.textContent('.lt-cmp'), /הערכת המחנך/);
   assert.deepEqual(page.errors, []);
   await page.context().close();
 });
@@ -61,7 +64,7 @@ test('הרשאות: מורה לא רואה את הגדרות הרמזור; מח�
   await login(page, server.url, 'teacherA');
   const r = await page.evaluate(() => { S.config.lightPolicy = { on: true };
     const tabs = tabsFor().map(t => t[0]); const sid = myStudents()[0].id; S.tab = 'card'; S.cardId = sid; render();
-    return { settings: tabs.includes('settings'), block: !!document.querySelector('.lt-cmp') }; });
+    return { settings: tabs.includes('settings'), block: !!document.querySelector('.lt-link') }; });
   assert.equal(r.settings, false);
   assert.equal(r.block, true);
   assert.deepEqual(page.errors, []);

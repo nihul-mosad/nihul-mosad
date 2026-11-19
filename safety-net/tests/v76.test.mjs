@@ -35,7 +35,7 @@ test('ארכיון: העברה מסתירה מכל מקום, לא מוחקת מ�
   assert.equal(await page.evaluate(() => S.evArch.length), before);
   assert.equal(await countSrv(), srv0, 'נמחק מהשרת');
   // לא מופיע: כרטיס, רמזור, לוח בקרה
-  const r = await page.evaluate(sid => { const L = autoLight(sid); S.cardId = sid; S.tab = 'card'; render(); const card = document.getElementById('main').textContent; S.tab = 'dash'; render(); return { score: L.score, card, dash: document.getElementById('main').textContent }; }, sid);
+  const r = await page.evaluate(sid => { const L = autoLight(sid); S.cardId = sid; S.tab = 'card'; render(); const card = document.getElementById('main').textContent; S.ltStu = sid; S.tab = 'light'; render(); const lv = document.getElementById('main').textContent; S.tab = 'dash'; render(); return { score: L.score, card: card + lv, dash: document.getElementById('main').textContent }; }, sid);
   assert.equal(r.score, 0); assert.doesNotMatch(r.card, /עזר לחבר/); assert.doesNotMatch(r.dash, /אלימות פיזית/);
   // אירוע חדש אחרי הארכיון — מופיע, והשמירה לא מוחקת את הארכיון
   await page.evaluate(sid => { const s = studentById(sid); S.events.push({ id: 'new1', sid, sname: s.name, cls: s.cls, type: 'p1', typeName: 'צל"ש', kind: 'pos', sev: 1, date: daysAgo(3), ts: Date.now() + 1000, tk: '' }); return save(K.events, S.events); }, sid);
@@ -61,7 +61,7 @@ test('רמזור להורים: הודעה מוכנה (ניתנת לעריכה), 
   const page = await newPage(browser, { width: 390, height: 844, mobile: true });
   await login(page, server.url, 'teacherA');
   const sid = await page.evaluate(seedEv);
-  await page.evaluate(sid => { window.__open = []; window.open = u => window.__open.push(u); window.print = () => { window.__printed = document.getElementById('lt-print-root') && document.getElementById('lt-print-root').textContent; }; S.cardId = sid; S.tab = 'card'; render(); }, sid);
+  await page.evaluate(sid => { window.__open = []; window.open = u => window.__open.push(u); window.print = () => { window.__printed = document.getElementById('lt-print-root') && document.getElementById('lt-print-root').textContent; }; S.ltStu = sid; S.tab = 'light'; render(); }, sid);
   await page.click('[data-act="lt-msg"]');
   const t = await page.inputValue('#lt-msg-t');
   assert.match(t, /תמונת מצב ההתנהגות/); assert.match(t, /עזר לחבר/); assert.match(t, /נושאים לחיזוק/); assert.doesNotMatch(t, /נק׳/);
