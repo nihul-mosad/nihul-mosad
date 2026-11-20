@@ -2054,6 +2054,8 @@ a.tel{color:inherit;text-decoration:none}a.tel:hover{color:var(--accent);text-de
 .ltp-n{font-size:clamp(18px,2.2vw,30px);margin-top:3vh}
 .ltp-nav{position:absolute;bottom:3vh;left:4vw;right:4vw;display:flex;justify-content:space-between}
 @media (max-width:700px){.ltp-in{flex-direction:column;gap:3vh;text-align:center}.ltp-in .ltpole{flex-direction:row;gap:3vw;padding:3vw;border-radius:12vw}.ltp-in .ltpole i{width:16vw;height:16vw;max-width:9vh;max-height:9vh}}
+.pr-ins{margin:0;padding-inline-start:1.2em;line-height:1.7}.pr-h{margin:14px 0 6px;font-size:15px}
+@media print{.pr-sec{break-inside:auto}.pr-sec h3{break-after:avoid}}
 </style>
 <style id="aura-readability-fix">
 /* תיקון קריאות לשכבת העיצוב (באג): צבעי המצב של העיצוב (צהוב #F5B800, ירוק #22B04B) בהירים מדי לטקסט על רקע בהיר
@@ -2817,7 +2819,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=77;
+const APP_VER=78;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -2926,7 +2928,7 @@ function remPopup(r){
 /* רענון נתונים: הנתונים נטענים בכניסה, ומתעדכנים מחדש מהשרת כשחוזרים לאפליקציה, כל 5 דקות במסכי הסיכום, ובלחיצה על "רענון".
    כך לוח הבקרה, הניתוחים והדוחות מראים גם מה שמורים אחרים סימנו בינתיים. */
 let DATA_AT=0,DATA_BUSY=false;
-const LIVE_TABS={dash:1,classbi:1,light:1,analytics:1,reports:1,events:1,daylog:1,review:1,grades:1};
+const LIVE_TABS={dash:1,periodic:1,classbi:1,light:1,analytics:1,reports:1,events:1,daylog:1,review:1,grades:1};
 async function refreshData(manual){
   if(DATA_BUSY||!S.me||!S.inst||S.legacy||!FS)return;
   if(S.dirty||S.ldirty||S.evc||S.exEdit||S.mtEdit||S.remc||S.dutyEdit||S.remDirty){if(manual)toast('יש שינויים שלא נשמרו. שמרו קודם ואז רעננו.');return;}
@@ -7974,6 +7976,140 @@ function ltCardLink(sid){
   if(!ltPolicy().on)return '';const L=autoLight(sid);
   return '<button class="lt-link" data-act="lt-stu" data-id="'+sid+'"><span class="note">רמזור התנהגות</span>'+ltBadge(L,1)+'<span class="lt-go">פתיחה ←</span></button>';
 }
+/* ===== דוח תקופתי (v78) — לבחירת טווח, להדפסה ולהעלאה למודל AI לניתוח לעומק =====
+   כל המספרים מחושבים מהנתונים הקיימים באותו רגע (כמו לוח הבקרה). אפשרות להסתיר שמות (קודים) לפני העלאה ל-AI. */
+function prYearStart(){const n=new Date(),y=n.getMonth()+1>=8?n.getFullYear():n.getFullYear()-1;return y+'-08-01';}
+function prDefaults(){const t=iso(new Date());return {from:addDaysIso(t,-29),to:t,cls:'',anon:true,arch:false,sec:{att:1,tch:1,ev:1,lt:1,rev:1,stu:1}};}
+function prPct(a,b){return b?Math.round(a/b*1000)/10:null;}
+function prWeek(d){const x=new Date(d+'T12:00:00');x.setDate(x.getDate()-x.getDay());return iso(x);}
+const PR_WD=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+function prCompute(f){
+  const today=iso(new Date()),cls=f.cls?[f.cls]:S.config.classes.slice(),inC=c=>cls.indexOf(c)>-1;
+  const days=Math.round((new Date(f.to)-new Date(f.from))/864e5)+1,pTo=addDaysIso(f.from,-1),pFrom=addDaysIso(pTo,-(days-1));
+  const stu=S.students.filter(s=>inC(s.cls)).sort((a,b)=>S.config.classes.indexOf(a.cls)-S.config.classes.indexOf(b.cls)||String(a.name).localeCompare(String(b.name),'he'));
+  // קודים במקום שמות
+  const code={},cc={};stu.forEach(s=>{const k=S.config.classes.indexOf(s.cls)+1;cc[k]=(cc[k]||0)+1;code[s.id]='תלמיד '+k+'-'+String(cc[k]).padStart(2,'0');});
+  const nm=s=>f.anon?(code[s.id]||'תלמיד'):s.name;
+  const tch={},tchN=t=>{if(!f.anon)return t;if(!tch[t])tch[t]='מורה '+(Object.keys(tch).length+1);return tch[t];};
+  const R={f:f,cls:cls,days:days,prev:{from:pFrom,to:pTo},stu:stu,nm:nm,ins:[]};
+  // --- נוכחות ---
+  const attOf=(a,b)=>attLogAll(a,b).filter(r=>inC(r.cls));
+  const sum=recs=>{const c={present:0,late:0,absent:0,excused:0,n:0};recs.forEach(r=>{if(c[r.v]!=null){c[r.v]++;c.n++;}});c.pct=prPct(c.present+c.late,c.n);return c;};
+  const recs=attOf(f.from,f.to),A=sum(recs),Ap=sum(attOf(pFrom,pTo));
+  const dates=Array.from(new Set(recs.map(r=>r.d))).sort();
+  const byCls=cls.map(c=>({c:c,s:sum(recs.filter(r=>r.cls===c))}));
+  const wk={};recs.forEach(r=>{(wk[prWeek(r.d)]=wk[prWeek(r.d)]||[]).push(r);});
+  const byWeek=Object.keys(wk).sort().map(w=>({w:w,s:sum(wk[w])}));
+  const byWd=[0,1,2,3,4,5].map(d=>({d:d,s:sum(recs.filter(r=>dow(r.d)===d))})).filter(x=>x.s.n);
+  const perStu={};recs.forEach(r=>{const p=perStu[r.sid]||(perStu[r.sid]={present:0,late:0,absent:0,excused:0,n:0});if(p[r.v]!=null){p[r.v]++;p.n++;}});
+  R.att={A:A,Ap:Ap,dates:dates,byCls:byCls,byWeek:byWeek,byWd:byWd,perStu:perStu};
+  // --- התמדת מורים בסימון (רק ימים שבהם נרשמה נוכחות; היום עצמו לא נספר) ---
+  const T={};dates.filter(d=>d<today).forEach(ds=>markableLessons(ds).forEach(l=>{if(!l.teacher||!(l.classes||[l.cls]).some(inC))return;const q=lessonReported(ds,l);if(q.skip||!q.mk.n)return;const t=T[l.teacher]||(T[l.teacher]={n:0,d:0});t.n++;if(q.rep)t.d++;}));
+  R.tch=Object.keys(T).map(t=>({t:tchN(t),n:T[t].n,d:T[t].d,p:prPct(T[t].d,T[t].n)})).sort((a,b)=>a.p-b.p);
+  // --- אירועים ---
+  const pool=f.arch?S.events.concat(S.evArch||[]):S.events,evIn=(a,b)=>pool.filter(e=>e.date>=a&&e.date<=b&&inC(e.cls));
+  const ev=evIn(f.from,f.to),evp=evIn(pFrom,pTo),pos=ev.filter(e=>e.kind==='pos'),neg=ev.filter(e=>e.kind!=='pos');
+  const cnt=(a,k)=>{const o={};a.forEach(e=>{const x=k(e);o[x]=(o[x]||0)+1;});return Object.entries(o).sort((x,y)=>y[1]-x[1]);};
+  const ewk={};ev.forEach(e=>{const w=prWeek(e.date);const o=ewk[w]||(ewk[w]={p:0,n:0});e.kind==='pos'?o.p++:o.n++;});
+  R.ev={n:ev.length,pos:pos.length,neg:neg.length,pPos:evp.filter(e=>e.kind==='pos').length,pNeg:evp.filter(e=>e.kind!=='pos').length,
+    posT:cnt(pos,e=>e.typeName||'שבח'),negT:cnt(neg,e=>(e.typeName||'אירוע')+evLvTxt(e)),
+    byCls:cls.map(c=>({c:c,p:pos.filter(e=>e.cls===c).length,n:neg.filter(e=>e.cls===c).length})),
+    byWeek:Object.keys(ewk).sort().map(w=>({w:w,p:ewk[w].p,n:ewk[w].n})),
+    lv:[1,2,3].map(n=>neg.filter(e=>e.lv===n).length),sev:neg.filter(e=>e.sev>=3).length,sevOpen:neg.filter(e=>e.sev>=3&&!e.handled).length,
+    reporters:new Set(ev.map(e=>e.byUid||e.by)).size,posStu:new Set(pos.map(e=>e.sid)).size,negStu:new Set(neg.map(e=>e.sid)).size,per:{}};
+  ev.forEach(e=>{const p=R.ev.per[e.sid]||(R.ev.per[e.sid]={p:0,n:0});e.kind==='pos'?p.p++:p.n++;});
+  // --- רמזור אקלימי (לפי כללי הרמזור, בתחילת התקופה ובסופה) ---
+  const P=ltPolicy(),L0={},L1={};stu.forEach(s=>{L0[s.id]=autoLight(s.id,P,f.from);L1[s.id]=autoLight(s.id,P,f.to);});
+  R.lt={P:P,L0:L0,L1:L1,dist:cls.map(c=>{const d=[0,0,0,0];stu.filter(s=>s.cls===c).forEach(s=>d[L1[s.id].i]++);return {c:c,d:d};}),
+    up:stu.filter(s=>L1[s.id].i<L0[s.id].i).length,down:stu.filter(s=>L1[s.id].i>L0[s.id].i).length};
+  // --- תמונות מצב (למידה) ---
+  const D=domains(),avg=r=>{if(!r||!r.scores)return null;const v=D.map(d=>r.scores[d.id]).filter(Boolean);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;};
+  const rvIn=S.reviews.filter(r=>r.date>=f.from&&r.date<=f.to&&inC((studentById(r.studentId)||{}).cls));
+  const last={};stu.forEach(s=>{const r=reviewsOf(s.id).filter(x=>x.date<=f.to);last[s.id]=r.length?r[r.length-1]:null;});
+  const deltas=[];stu.forEach(s=>{const all=reviewsOf(s.id).filter(x=>x.date>=f.from&&x.date<=f.to);if(!all.length)return;const prev=reviewsOf(s.id).filter(x=>x.date<all[0].date).slice(-1)[0];const a=avg(all[all.length-1]),b=avg(prev);if(a!=null&&b!=null)deltas.push(a-b);});
+  const dAvg=(list,id)=>{const v=list.map(r=>r&&r.scores&&r.scores[id]).filter(Boolean);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;};
+  R.rev={n:rvIn.length,stuN:new Set(rvIn.map(r=>r.studentId)).size,lights:['green','yellow','red'].map(k=>rvIn.filter(r=>r.light===k).length),
+    byCls:cls.map(c=>{const ids=stu.filter(s=>s.cls===c).map(s=>s.id),rs=rvIn.filter(r=>ids.indexOf(r.studentId)>-1),lr=ids.map(i=>last[i]).filter(Boolean);
+      return {c:c,n:rs.length,cov:new Set(rs.map(r=>r.studentId)).size,of:ids.length,dom:D.map(d=>dAvg(lr,d.id))};}),
+    D:D,last:last,avg:avg,delta:deltas.length?deltas.reduce((a,b)=>a+b,0)/deltas.length:null,deltaN:deltas.length,
+    up:deltas.filter(x=>x>=.5).length,down:deltas.filter(x=>x<=-.5).length};
+  // --- תובנות אוטומטיות ---
+  const I=R.ins,sg=x=>(x>0?'+':'')+x;
+  if(A.n){I.push('הנוכחות המשוקללת בתקופה: '+A.pct+'%'+(Ap.n?' ('+sg(Math.round((A.pct-Ap.pct)*10)/10)+' נק׳ אחוז לעומת התקופה הקודמת, '+Ap.pct+'%)':'')+'.');
+    const lw=byWd.slice().sort((a,b)=>a.s.pct-b.s.pct)[0];if(lw&&byWd.length>2)I.push('היום עם הנוכחות הנמוכה ביותר: יום '+PR_WD[lw.d]+' ('+lw.s.pct+'%).');
+    if(byCls.length>1){const o=byCls.filter(x=>x.s.n).sort((a,b)=>a.s.pct-b.s.pct);if(o.length>1)I.push('פער בין הכיתות: מ־'+o[0].s.pct+'% ('+o[0].c+') עד '+o[o.length-1].s.pct+'% ('+o[o.length-1].c+').');}
+    const low=Object.values(perStu).filter(p=>p.n>=5&&prPct(p.present+p.late,p.n)<90).length;I.push(low+' תלמידים עם נוכחות מתחת ל־90% בתקופה.');}
+  if(R.tch.length){const lo=R.tch.filter(t=>t.p<70).length;I.push('התמדה בסימון נוכחות: '+R.tch.filter(t=>t.p>=90).length+' מורים ב־90% ומעלה'+(lo?', '+lo+' מתחת ל־70%':'')+'.');}
+  if(ev.length){I.push('אירועים: '+pos.length+' שבח מול '+neg.length+' לשיפור'+(evp.length?' (בתקופה הקודמת: '+R.ev.pPos+' מול '+R.ev.pNeg+')':'')+'.');
+    if(R.ev.posT[0])I.push('השבח הנפוץ: "'+R.ev.posT[0][0]+'" ('+R.ev.posT[0][1]+'). הנושא לשיפור הנפוץ: "'+(R.ev.negT[0]?R.ev.negT[0][0]+'" ('+R.ev.negT[0][1]+')':'—"')+'.');
+    if(R.ev.sevOpen)I.push(R.ev.sevOpen+' אירועים חמורים עדיין פתוחים (לא סומנו "טופל").');}
+  if(stu.length)I.push('רמזור התנהגות בסוף התקופה: '+P.levels.map((l,i)=>l.n+' '+R.lt.dist.reduce((a,x)=>a+x.d[i],0)).join(', ')+'. מתחילת התקופה: '+R.lt.up+' השתפרו, '+R.lt.down+' ירדו.');
+  if(rvIn.length)I.push('תמונות מצב: '+rvIn.length+' ל־'+R.rev.stuN+' תלמידים'+(R.rev.delta!=null?'; שינוי ממוצע לעומת התמונה הקודמת: '+sg(Math.round(R.rev.delta*100)/100)+' ('+R.rev.up+' עלו, '+R.rev.down+' ירדו בחצי נקודה ומעלה)':'')+'.');
+  return R;
+}
+/* מודל אחיד של חלקים → HTML (מסך/הדפסה) ו-Markdown (קובץ ל-AI) */
+function prSections(R){
+  const f=R.f,S2=[],t=(title,head,rows,note)=>({title:title,head:head,rows:rows,note:note}),pc=x=>x==null?'—':x+'%',r1=x=>x==null?'—':Math.round(x*100)/100;
+  if(f.sec.att){const A=R.att;
+    S2.push({h:'נוכחות',items:[
+      t('סיכום',['מדד','בתקופה','בתקופה הקודמת'],[['נוכחות משוקללת (נוכח+מאחר / כל הרישומים)',pc(A.A.pct),pc(A.Ap.pct)],['רישומי נוכחות',A.A.n,A.Ap.n],['חיסורים',A.A.absent,A.Ap.absent],['איחורים',A.A.late,A.Ap.late],['חיסור מוצדק',A.A.excused,A.Ap.excused],['ימי לימוד עם רישום',A.dates.length,'—']]),
+      t('לפי כיתה',['כיתה','רישומים','נוכחות','חיסורים','איחורים'],A.byCls.filter(x=>x.s.n).map(x=>[x.c,x.s.n,pc(x.s.pct),x.s.absent,x.s.late])),
+      t('לפי שבוע',['שבוע (מיום ראשון)','רישומים','נוכחות'],A.byWeek.map(x=>[x.w,x.s.n,pc(x.s.pct)])),
+      t('לפי יום בשבוע',['יום','רישומים','נוכחות'],A.byWd.map(x=>[PR_WD[x.d],x.s.n,pc(x.s.pct)]))]});}
+  if(f.sec.tch&&R.tch.length)S2.push({h:'התמדת מורים בסימון נוכחות',items:[t('',['מורה','שיעורים','סומנו','אחוז'],R.tch.map(x=>[x.t,x.n,x.d,pc(x.p)]),'שיעור נחשב "סומן" כשלפחות תלמיד אחד סומן בו או שסומן שהשיעור לא התקיים.')]});
+  if(f.sec.ev){const E=R.ev;
+    S2.push({h:'אירועי התנהגות',items:[
+      t('סיכום',['מדד','בתקופה','בתקופה הקודמת'],[['דיווחי שבח',E.pos,E.pPos],['דיווחים לשיפור',E.neg,E.pNeg],['תלמידים שקיבלו שבח',E.posStu,'—'],['תלמידים עם דיווח לשיפור',E.negStu,'—'],['חוצפה רמה 1 · 2 · 3',E.lv.join(' · '),'—'],['אירועים חמורים (פתוחים)',E.sev+' ('+E.sevOpen+')','—'],['מדווחים שונים',E.reporters,'—']]),
+      t('סוגי שבח',['סוג','כמות'],E.posT),t('סוגי אירועים לשיפור',['סוג','כמות'],E.negT),
+      t('לפי כיתה',['כיתה','שבח','לשיפור'],E.byCls.map(x=>[x.c,x.p,x.n])),t('לפי שבוע',['שבוע','שבח','לשיפור'],E.byWeek.map(x=>[x.w,x.p,x.n]))],
+      note:f.arch?'כולל אירועים שהועברו לארכיון.':'לא כולל אירועים שהועברו לארכיון.'});}
+  if(f.sec.lt){const L=R.lt,P=L.P;
+    S2.push({h:'רמזור התנהגות (אקלים)',items:[t('התפלגות בסוף התקופה ('+f.to+')',['כיתה'].concat(P.levels.map(l=>l.n)),L.dist.map(x=>[x.c].concat(x.d)),
+      'הרמזור מחושב לכל תאריך מאירועי '+P.days+' הימים שלפניו. ספים: '+P.levels.map(l=>l.n+' מ־'+l.from).join(', ')+'. כל '+P.posPer+' נק׳ שבח מקזזות נקודה (עד '+P.posCap+'). מתחילת התקופה: '+L.up+' השתפרו, '+L.down+' ירדו.')]});}
+  if(f.sec.rev){const V=R.rev;
+    S2.push({h:'תמונות מצב לימודיות (הערכת המורים)',items:[
+      t('סיכום',['מדד','ערך'],[['תמונות מצב בתקופה',V.n],['תלמידים שקיבלו',V.stuN+' מתוך '+R.stu.length],['ירוק · צהוב · אדום',V.lights.join(' · ')],['שינוי ממוצע לעומת התמונה הקודמת (1–5)',V.delta==null?'—':r1(V.delta)+' (על '+V.deltaN+' תלמידים)'],['עלו / ירדו בחצי נקודה ומעלה',V.up+' / '+V.down]]),
+      t('ממוצע לפי תחום וכיתה (התמונה האחרונה עד סוף התקופה)',['כיתה','כיסוי בתקופה'].concat(V.D.map(d=>d.name)),V.byCls.map(x=>[x.c,x.cov+'/'+x.of].concat(x.dom.map(r1))))]});}
+  if(f.sec.stu){const A=R.att.perStu,E=R.ev.per,V=R.rev;
+    S2.push({h:'פירוט לפי תלמיד',items:[t('',['תלמיד','כיתה','נוכחות','חיסורים','איחורים','שבח','לשיפור','רמזור התנהגות','תמונת מצב אחרונה','ממוצע (1–5)'],
+      R.stu.map(s=>{const a=A[s.id]||{n:0},e=E[s.id]||{p:0,n:0},lr=V.last[s.id],L=R.lt.L1[s.id];
+        return [R.nm(s),s.cls,a.n?pc(prPct(a.present+a.late,a.n)):'—',a.absent||0,a.late||0,e.p,e.n,L.lv.n,lr?LIGHTNAME[lr.light]+' ('+lr.date+')':'—',lr?r1(V.avg(lr)):'—'];}))]});}
+  return S2;
+}
+function prMarkdown(R){
+  const f=R.f,L=[],cell=x=>String(x==null?'':x).replace(/\|/g,'/').replace(/\n/g,' ');
+  L.push('# דוח תקופתי — '+(S.config.name||'')+'','','תקופה: '+f.from+' עד '+f.to+' ('+R.days+' ימים) · כיתות: '+R.cls.join(', ')+' · הופק: '+iso(new Date()),'תקופת השוואה: '+R.prev.from+' עד '+R.prev.to+' (אותו אורך, מיד לפני).'+(f.anon?' שמות התלמידים והמורים הוחלפו בקודים.':''),'',
+    '## הנחיה למודל','אתה יועץ פדגוגי מנוסה למנהל תלמוד תורה (בית ספר יסודי לבנים, כיתות א׳–ה׳). נתח את הנתונים שלהלן לעומק:',
+    '1. מגמות עיקריות ושינויים לעומת התקופה הקודמת.','2. נקודות חוזק שכדאי לחזק ולפרסם לצוות.','3. חריגים ודפוסים: כיתות, ימים בשבוע, תלמידים, סוגי אירועים.',
+    '4. קשרים בין נוכחות, התנהגות (אירועים ורמזור) ולמידה (תמונות מצב).','5. התמדת הצוות בדיווח ואיך לשפר אותה בלי להעמיס.',
+    '6. המלצות מעשיות לפי סדר עדיפות לשבועיים הקרובים, ומה למדוד כדי לדעת שזה עובד.','הסתמך רק על הנתונים. כשהמדגם קטן או שחסר מידע — ציין זאת ואל תסיק מסקנות חזקות.','',
+    '## הגדרות','- נוכחות משוקללת = (נוכח + מאחר) / כל רישומי הנוכחות (תלמיד × שיעור). חיסור מוצדק לא נחשב נוכחות.','- אירועים: דיווחי מורים לשבח או לשיפור; בחוצפה המורה מדרג 1–3.','- רמזור התנהגות: ירוק/צהוב/כתום/אדום, מחושב אוטומטית מהאירועים. תמונת מצב: הערכה ידנית של המורה (ירוק/צהוב/אדום ותחומים 1–5).','',
+    '## תובנות אוטומטיות');
+  R.ins.forEach(x=>L.push('- '+x));
+  prSections(R).forEach(sec=>{L.push('','## '+sec.h);if(sec.note)L.push('',sec.note);sec.items.forEach(it=>{if(it.title)L.push('','### '+it.title);L.push('');
+    if(!it.rows.length){L.push('_אין נתונים_');}else{L.push('| '+it.head.map(cell).join(' | ')+' |','|'+it.head.map(()=>' --- ').join('|')+'|');it.rows.forEach(r=>L.push('| '+r.map(cell).join(' | ')+' |'));}
+    if(it.note)L.push('',it.note);});});
+  return L.join('\n')+'\n';
+}
+function viewPeriodic(){
+  if(!isAdmin())return '<div class="empty">הדוח התקופתי זמין למנהל בלבד.</div>';
+  const f=S.prf=S.prf||prDefaults();if(f.from>f.to){const x=f.from;f.from=f.to;f.to=x;}
+  const R=prCompute(f),secs=prSections(R),today=iso(new Date());
+  const pre=[['7','שבוע'],['30','חודש'],['90','3 חודשים'],['year','מתחילת השנה']];
+  const SEC=[['att','נוכחות'],['tch','התמדת מורים'],['ev','אירועים'],['lt','רמזור'],['rev','תמונות מצב'],['stu','פירוט לפי תלמיד']];
+  return printHead()+repSwitch()+'<div class="head"><div><h2>דוח תקופתי</h2><div class="sub">מ־'+shortDate(f.from)+' עד '+shortDate(f.to)+' · '+(f.cls||'כל הכיתות')+' · השוואה לתקופה שלפני</div></div>'+
+    '<div class="row noprint"><button class="btn" data-v="primary" data-act="pr-md">הורדה לניתוח AI</button><button class="btn" data-act="pr-copy">העתקה</button><button class="btn" data-act="print">הדפסה</button></div></div>'+
+    '<div class="card noprint"><div class="row" style="gap:10px;flex-wrap:wrap">'+
+      '<label class="row" style="gap:6px">מתאריך <input class="inp" type="date" data-prf="from" value="'+f.from+'"></label><label class="row" style="gap:6px">עד <input class="inp" type="date" data-prf="to" value="'+f.to+'"></label>'+
+      '<span class="row" style="gap:4px">'+pre.map(p=>'<button class="btn sm" data-v="ghost" data-act="pr-range" data-id="'+p[0]+'">'+p[1]+'</button>').join('')+'</span>'+
+      '<label class="row" style="gap:6px">כיתה <select class="inp" data-prf="cls">'+opt('כל הכיתות','',f.cls)+S.config.classes.map(c=>opt(c,c,f.cls)).join('')+'</select></label></div>'+
+      '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:10px">'+SEC.map(x=>'<label class="row" style="gap:5px"><input type="checkbox" data-prs="'+x[0]+'"'+(f.sec[x[0]]?' checked':'')+'> '+x[1]+'</label>').join('')+'</div>'+
+      '<div class="row" style="gap:14px;flex-wrap:wrap;margin-top:10px"><label class="row" style="gap:5px"><input type="checkbox" data-prf="anon"'+(f.anon?' checked':'')+'> <b>הסתרת שמות</b> (קודים במקום שמות תלמידים ומורים — מומלץ לפני העלאה ל־AI)</label>'+
+      '<label class="row" style="gap:5px"><input type="checkbox" data-prf="arch"'+(f.arch?' checked':'')+'> לכלול אירועים מהארכיון</label></div></div>'+
+    '<div class="card"><h3>תובנות אוטומטיות</h3>'+(R.ins.length?'<ul class="pr-ins">'+R.ins.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<div class="empty">אין נתונים בתקופה.</div>')+'</div>'+
+    secs.map(sec=>'<div class="card pr-sec"><h3>'+esc(sec.h)+'</h3>'+(sec.note?'<p class="note">'+esc(sec.note)+'</p>':'')+sec.items.map(it=>(it.title?'<h4 class="pr-h">'+esc(it.title)+'</h4>':'')+
+      (it.rows.length?table(it.head,it.rows.map(r=>r.map(c=>esc(String(c))))):'<div class="note">אין נתונים.</div>')+(it.note?'<p class="note" style="margin-top:6px">'+esc(it.note)+'</p>':'')).join('')+'</div>').join('');
+}
 function viewSettings(){
   return '<div class="head"><h2>הגדרות</h2></div>'+
   '<div class="card"><h3>שם המוסד ולוגו</h3>'+
@@ -8055,7 +8191,7 @@ function printHead(){
 /* ===== שלב 2א: תפריט בקבוצות + חיפוש כללי (Ctrl+K) + שורות תלמיד לחיצות ===== */
 const NAV_GROUPS=[['יום־יום',['dash','mark','events','tasks','duty','daylog']],['תלמידים',['students','review','light','rem','grades']],['צוות',['staff','meetings','schedule']],['ניהול',['reports','classbi','analytics','assist','settings','console']]];
 function navHTML(){
-  const tabs=tabsFor(),seen={},out=[],btn=t=>'<button data-tab="'+t[0]+'" data-on="'+(S.tab===t[0]||(t[0]==='reports'&&S.tab==='analytics')?1:0)+'">'+t[1]+'</button>';
+  const tabs=tabsFor(),seen={},out=[],btn=t=>'<button data-tab="'+t[0]+'" data-on="'+(S.tab===t[0]||(t[0]==='reports'&&(S.tab==='analytics'||S.tab==='periodic'))?1:0)+'">'+t[1]+'</button>';
   if(tabs.length<=7)return tabs.map(btn).join('');
   NAV_GROUPS.forEach(function(g){const its=g[1].map(k=>tabs.find(t=>t[0]===k)).filter(Boolean);if(!its.length)return;its.forEach(t=>seen[t[0]]=1);
     out.push('<div class="nav-g" aria-hidden="true">'+g[0]+'</div>'+its.map(btn).join(''));});
@@ -8120,8 +8256,8 @@ document.addEventListener('click',function(e){
   if(!e.target.closest||e.target.closest('a,button,input,select,textarea,label,[data-act]'))return;
   const tr=e.target.closest('#main tr');if(!tr)return;const b=tr.querySelector('button[data-act="card"]');if(b)b.click();
 });
-function repSwitch(){if(!isAdmin())return '';const an=S.tab==='analytics';
-  return '<div class="seg rep-sw noprint" role="tablist" aria-label="דוחות וניתוחים"><button role="tab" data-act="tab-go" data-id="reports" data-on="'+(an?0:1)+'" aria-selected="'+!an+'">דוחות נוכחות</button><button role="tab" data-act="tab-go" data-id="analytics" data-on="'+(an?1:0)+'" aria-selected="'+an+'">ניתוחים ותובנות</button></div>';}
+function repSwitch(){if(!isAdmin())return '';const cur=S.tab==='analytics'||S.tab==='periodic'?S.tab:'reports';
+  return '<div class="seg rep-sw noprint" role="tablist" aria-label="דוחות וניתוחים">'+[['reports','דוחות נוכחות'],['analytics','ניתוחים ותובנות'],['periodic','דוח תקופתי']].map(x=>'<button role="tab" data-act="tab-go" data-id="'+x[0]+'" data-on="'+(cur===x[0]?1:0)+'" aria-selected="'+(cur===x[0])+'">'+x[1]+'</button>').join('')+'</div>';}
 function themeSwitch(){const m=THEME.get();return '<div class="thm" role="group" aria-label="מצב תצוגה">'+[['light','בהיר'],['dark','כהה'],['auto','אוטומטי']].map(t=>'<button type="button" data-theme-set="'+t[0]+'" aria-pressed="'+(m===t[0])+'" title="'+(t[0]==='auto'?'לפי הגדרת המחשב':'מצב '+t[1])+'">'+t[1]+'</button>').join('')+'</div>';}
 function render(){
   if(!S.me)return;
@@ -8133,7 +8269,7 @@ function render(){
   document.getElementById('who').innerHTML='<b>'+esc(S.me.user)+'</b>'+(isAdmin()?'מנהל':(myClasses().length?'מחנך '+esc(myClasses().join(', ')):'מורה'))+
     themeSwitch()+'<div style="margin-top:8px;display:grid;gap:6px">'+(S.inst?'<button class="btn sm" data-act="go-account" style="width:100%">החלפת סיסמה</button>':'')+'<button class="btn sm" data-act="logout" style="width:100%">יציאה</button></div>';
   const map={dash:viewDash,review:viewReview,students:viewStudents,mark:viewMark,tasks:viewTasks,
-    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,duty:viewDuty,rem:viewRem,bdays:viewBirthdays,analytics:viewAnalytics,classbi:viewClassBI,light:viewLight,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,assist:viewAssist,account:viewAccount,import:viewImport,card:viewCard};
+    reports:viewReports,staff:viewStaff,schedule:viewSchedule,settings:viewSettings,console:viewConsole,events:viewEvents,meetings:viewMeetings,duty:viewDuty,rem:viewRem,bdays:viewBirthdays,analytics:viewAnalytics,periodic:viewPeriodic,classbi:viewClassBI,light:viewLight,grades:viewGrades,rcard:viewReportCard,daylog:viewDaylog,assist:viewAssist,account:viewAccount,import:viewImport,card:viewCard};
   if(S.inst&&!isAdmin()&&['card','account','bdays','rcard'].indexOf(S.tab)<0&&!tabsFor().some(t=>t[0]===S.tab))S.tab=tabsFor()[0][0];
   if(S.tab==='tasks')dmMarkRead();
   const v=map[S.tab]||viewDash;
@@ -8409,6 +8545,10 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a==='lt-copy'){const t=(document.getElementById('lt-msg-t')||{}).value||'';try{await navigator.clipboard.writeText(t);toast('ההודעה הועתקה');}catch(x){toast('לא הצלחתי להעתיק — סמנו את הטקסט והעתיקו');}return;}
   if(a==='lt-wa'){const t=(document.getElementById('lt-msg-t')||{}).value||'',st=studentById(id),h=st?waHref(contactPhone(st),t):'';if(!h)return toast('אין מספר טלפון של הורה');window.open(h,'_blank','noopener');logAct('רמזור להורים (וואטסאפ)',st.name);return;}
   if(a==='lt-print'){ltPrint(id);return;}
+  if(a==='pr-range'){const t=iso(new Date());S.prf.to=t;S.prf.from=id==='year'?prYearStart():addDaysIso(t,-(+id-1));return render();}
+  if(a==='pr-md'||a==='pr-copy'){const md=prMarkdown(prCompute(S.prf));if(a==='pr-md'){download('דוח-תקופתי-'+S.prf.from+'-עד-'+S.prf.to+(S.prf.anon?'':'-עם-שמות')+'.md','\ufeff'+md,'text/markdown;charset=utf-8');toast('הקובץ ירד — אפשר להעלות אותו למודל AI');}
+    else{try{await navigator.clipboard.writeText(md);toast('הדוח הועתק — אפשר להדביק במודל AI');}catch(x){toast('לא הצלחתי להעתיק');}}
+    logAct('דוח תקופתי',S.prf.from+' עד '+S.prf.to+(S.prf.anon?' (בלי שמות)':' (עם שמות)'));return;}
   if(a==='bi-mode'){S.bif.mode=id;return render();}
   if(a==='bi-range'){S.bif.to=iso(new Date());S.bif.from=daysAgo(+id-1);return render();}
   if(a==='bi-print'){window.print();return;}
@@ -8586,6 +8726,8 @@ document.getElementById('main').addEventListener('change',function(e){
   if(el.dataset&&el.dataset.gapall){S.gapAll=el.checked?'1':'';return render();}
   if(el.dataset&&el.dataset.evf!==undefined){if(el.dataset.evf==='q')return;S.evf[el.dataset.evf]=el.value;return render();}
   if(el.dataset&&el.dataset.evaf!==undefined){S.evaf[el.dataset.evaf]=el.value;return render();}
+  if(el.dataset&&el.dataset.prf!==undefined){const k=el.dataset.prf;S.prf[k]=el.type==='checkbox'?el.checked:el.value;if((k==='from'||k==='to')&&!el.value)S.prf[k]=prDefaults()[k];return render();}
+  if(el.dataset&&el.dataset.prs!==undefined){S.prf.sec[el.dataset.prs]=el.checked?1:0;return render();}
   if(el.dataset&&el.dataset.bif!==undefined){if(el.value||el.dataset.bif==='cls')S.bif[el.dataset.bif]=el.value;return render();}
   if(el.id==='ev-time'&&S.evc){evCapture();const pn=perOfTime(S.evc.time);if(pn!==''){S.evc.period=pn;const sp=document.getElementById('ev-per');if(sp)sp.value=pn;}return;}
   if(el.id==='ev-date'||el.id==='ev-per'){evCapture();return;}
