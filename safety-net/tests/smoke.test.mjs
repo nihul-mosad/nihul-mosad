@@ -4,7 +4,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startServer, launch, newPage, login } from './helpers.mjs';
 
-const ADMIN_TABS = ['dash', 'classbi', 'light', 'review', 'students', 'rem', 'mark', 'events', 'grades', 'schedule', 'duty', 'tasks',
+const ADMIN_TABS = ['dash', 'classbi', 'light', 'priv', 'review', 'students', 'rem', 'mark', 'events', 'grades', 'schedule', 'duty', 'tasks',
   'meetings', 'daylog', 'assist', 'reports', 'analytics', 'staff', 'settings'];
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -16,7 +16,7 @@ async function openTab(page, tab) {
   return page.evaluate(() => document.getElementById('main').innerText);
 }
 
-test('מנהל: כל 19 המסכים נפתחים בלי שגיאה', async () => {
+test('מנהל: כל 20 המסכים נפתחים בלי שגיאה', async () => {
   const page = await newPage(browser);
   await login(page, server.url, 'admin');
   const nav = await page.evaluate(() => tabsFor().map(t => t[0]));
