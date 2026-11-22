@@ -93,13 +93,13 @@ test('שעון נוכחות: אורח ומורה לא קוראים ולא כות
     await assertFails(db.collection(B + 'clockguard').get());
   }
 });
-test('שעון נוכחות: המנהל מנהל קודים, מתקן החתמות ומאשר בקשות; גם הוא לא יוצר בקשה בשם עובד', async () => {
+test('שעון נוכחות: המנהל מנהל קודים, מתקן החתמות ומאשר בקשות; ומזין היעדרות בשם עובד', async () => {
   const db = as(USERS.admin.uid);
   await assertSucceeds(db.doc(B + 'clockcodes/1234').set({ sid: 'S1', name: 'משה', active: true }));
   await assertSucceeds(db.doc(B + 'clockcodes/1234').get());
   await assertSucceeds(db.doc(B + 'punch/P1').set({ sid: 'S1', type: 'in', t: 1, src: 'manual' }));
   await assertSucceeds(db.collection(B + 'punch').get());
-  await assertFails(db.collection(B + 'absreq').add({ sid: 'S1', status: 'pending' }));
+  await assertSucceeds(db.collection(B + 'absreq').add({ sid: 'S1', status: 'approved', src: 'manual' }));
   await env.withSecurityRulesDisabled(async ctx => { await ctx.firestore().doc(B + 'absreq/A1').set({ sid: 'S1', status: 'pending' }); });
   await assertSucceeds(db.doc(B + 'absreq/A1').update({ status: 'approved' }));
   await assertFails(db.doc(B + 'clockguard/G1').set({ fails: 0 }));

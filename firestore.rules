@@ -115,8 +115,7 @@ service cloud.firestore {
         allow read, write: if full(inst);
       }
       match /absreq/{id} {
-        allow read, update, delete: if full(inst);
-        allow create: if false;
+        allow read, write: if full(inst);   // העובדים מדווחים רק דרך השרת; המנהל יכול גם להזין היעדרות בשם עובד
       }
       match /clockguard/{k} {
         allow read, delete: if full(inst);
