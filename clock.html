@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1f2a5c">
+<title>שעון נוכחות</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;600;700&display=swap">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+<style>
+:root{--bg:#f3f5fb;--card:#fff;--ink:#1b2140;--mute:#5f6787;--line:#e1e5f0;--navy:#1f2a5c;--in:#1e7d4f;--in-bg:#e6f4ec;--out:#b4531a;--out-bg:#fbeee4;--err:#b3261e;--r:18px}
+@media (prefers-color-scheme:dark){:root{--bg:#10142a;--card:#1a2040;--ink:#eef0fa;--mute:#a3aacb;--line:#2c3460;--navy:#0b0f22;--in:#4cc489;--in-bg:#173a2a;--out:#f0a36b;--out-bg:#3d2716;--err:#ff8a80}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans Hebrew",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+header{background:var(--navy);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 18px 18px;text-align:center}
+header .top{display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;font-size:15px;opacity:.9}
+header img{width:28px;height:28px;border-radius:7px}
+#clk{font-size:56px;font-weight:700;letter-spacing:.02em;line-height:1.1;margin-top:8px;font-variant-numeric:tabular-nums;direction:ltr}
+#dates{font-size:15px;opacity:.85;margin-top:4px}
+main{flex:1;width:100%;max-width:460px;margin:0 auto;padding:18px 16px calc(24px + env(safe-area-inset-bottom))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px 18px;box-shadow:0 6px 22px -14px rgba(20,30,80,.35)}
+h2{font-size:20px;margin:0 0 4px}
+.sub{color:var(--mute);font-size:15px;margin:0 0 16px}
+.dots{display:flex;justify-content:center;gap:14px;margin:6px 0 18px;direction:ltr}
+.dots i{width:18px;height:18px;border-radius:50%;border:2px solid var(--mute);display:block;transition:background .15s}
+.dots i.on{background:var(--ink);border-color:var(--ink)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;direction:ltr}
+.pad button{font:inherit;font-size:26px;font-weight:600;height:62px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.pad button:active{transform:scale(.97)}
+.pad .ghost{background:transparent;border-color:transparent;font-size:16px;color:var(--mute)}
+label.rem{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:15px;color:var(--mute)}
+label.rem input{width:20px;height:20px}
+.big{display:grid;gap:12px;margin-top:6px}
+.big button{font:inherit;font-size:24px;font-weight:700;height:84px;border-radius:16px;border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px}
+.big .in{background:var(--in-bg);color:var(--in);border-color:var(--in)}
+.big .out{background:var(--out-bg);color:var(--out);border-color:var(--out)}
+.big button.next{box-shadow:0 0 0 4px var(--card),0 0 0 7px currentColor}
+.big button[disabled]{opacity:.55}
+.status{font-size:16px;margin:0 0 14px;padding:10px 12px;border-radius:12px;background:var(--bg)}
+.today{margin:16px 0 0;padding:0;list-style:none;font-size:15px;color:var(--mute)}
+.today li{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px dashed var(--line)}
+.today li:last-child{border-bottom:0}
+.links{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+.lnk{font:inherit;font-size:15px;background:none;border:0;color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px 2px}
+.err{color:var(--err);font-weight:600;min-height:22px;margin:10px 0 0;text-align:center;font-size:15px}
+.done{text-align:center;padding:8px 0}
+.done .ok{width:84px;height:84px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center}
+.done .ok svg{width:48px;height:48px}
+.done b{display:block;font-size:24px}
+.done span{display:block;color:var(--mute);margin-top:6px;font-size:16px}
+.btn{font:inherit;font-size:17px;font-weight:600;height:52px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;width:100%;margin-top:14px}
+.btn.pri{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
+.chips button{font:inherit;font-size:15px;padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.row .fld{min-width:0}
+.fld{display:block;font-size:14px;color:var(--mute);margin-bottom:12px}
+.fld input,.fld textarea{display:block;width:100%;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none;min-height:46px;margin-top:4px;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px}
+.fld textarea{min-height:70px;resize:vertical}
+.busy{pointer-events:none;opacity:.6}
+#dlg{position:fixed;inset:0;background:rgba(10,14,35,.55);display:none;align-items:flex-end;justify-content:center;padding:16px;z-index:9}
+#dlg.on{display:flex}
+#dlg .card{width:100%;max-width:440px}
+#dlg p{font-size:17px;margin:0 0 6px}
+.hidden{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><img src="icons/icon-192.png" alt=""><span id="instName">שעון נוכחות</span></div>
+  <div id="clk" aria-live="off">--:--</div>
+  <div id="dates"></div>
+</header>
+<main><div class="card" id="view"></div></main>
+<div id="dlg" role="dialog" aria-modal="true"><div class="card"><p id="dlgTxt"></p><button class="btn pri" id="dlgYes">כן, לרשום</button><button class="btn" id="dlgNo">ביטול</button></div></div>
+<script>
+'use strict';
+/* שעון נוכחות לצוות. הדף לא מתחבר למערכת ולא רואה שום נתון של המוסד:
+   הוא שולח לשרת (clockPunch) רק קוד מוסד, קוד נוכחות ופעולה, ומקבל בחזרה את שם העובד וההחתמות שלו מהיום. */
+const FB_CONFIG={apiKey:"AIzaSyC1T3SBl84VJ9iMhXTgxpO2N0Vcw5VJpdk",authDomain:"nihul-mosad.firebaseapp.com",projectId:"nihul-mosad",
+  storageBucket:"nihul-mosad.firebasestorage.app",messagingSenderId:"930039998457",appId:"1:930039998457:web:8d22bbc56c2feec9b2ff28"};
+const FN_REGION='europe-west1';
+const REASONS=['מחלה','חופשה','מילואים','אירוע משפחתי','השתלמות','אחר'];
+const qs=new URLSearchParams(location.search);
+const INST=String(qs.get('i')||qs.get('inst')||'').trim().toLowerCase();
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ls={get:k=>{try{return localStorage.getItem(k);}catch(e){return null;}},set:(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}},del:k=>{try{localStorage.removeItem(k);}catch(e){}}};
+const KEY='clk:'+INST;
+const DEV=(()=>{let d=ls.get('clk:dev');if(!d){const a=new Uint8Array(9);(window.crypto||{}).getRandomValues?crypto.getRandomValues(a):a.forEach((_,i)=>a[i]=Math.random()*256|0);d=Array.from(a,b=>b.toString(16).padStart(2,'0')).join('');ls.set('clk:dev',d);}return d;})();
+
+const ST={code:'',remember:true,me:null,view:'code',err:'',busy:false,done:null,abs:{reason:'',from:'',to:'',note:''}};
+
+/* ---------- שעה ותאריך עברי ---------- */
+function gem(n){const o=['','א','ב','ג','ד','ה','ו','ז','ח','ט'],t=['','י','כ','ל','מ','נ','ס','ע','פ','צ'],h=['','ק','ר','ש','ת'];
+  let s='';while(n>=400){s+='ת';n-=400;}if(n>=100){s+=h[Math.floor(n/100)];n%=100;}if(n===15)s+='טו';else if(n===16)s+='טז';else{s+=t[Math.floor(n/10)];s+=o[n%10];}
+  return s.length>1?s.slice(0,-1)+'״'+s.slice(-1):s+'׳';}
+function hebDate(d){
+  try{const p=new Intl.DateTimeFormat('he-u-ca-hebrew',{day:'numeric',month:'long',year:'numeric'}).formatToParts(d);
+    const day=+p.find(x=>x.type==='day').value,mon=p.find(x=>x.type==='month').value,yr=+p.find(x=>x.type==='year').value;
+    return gem(day)+' '+(/^ב/.test(mon)?'':'ב')+mon+' '+gem(yr%1000);}catch(e){return '';}
+}
+const DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+function tick(){const d=new Date();$('clk').textContent=d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  $('dates').textContent='יום '+DAYS[d.getDay()]+' · '+hebDate(d)+' · '+d.toLocaleDateString('he-IL');}
+tick();setInterval(tick,1000);
+const isoToday=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+
+/* ---------- שרת ---------- */
+let FN=null;
+function server(data){
+  data=Object.assign({inst:INST,dev:DEV},data);
+  if(window.__CLOCK_FN__)return window.__CLOCK_FN__(data);           // בדיקות אוטומטיות בלבד
+  if(!FN){if(typeof firebase==='undefined')return Promise.reject({code:'unavailable'});
+    const app=firebase.apps.length?firebase.app():firebase.initializeApp(FB_CONFIG);FN=app.functions(FN_REGION).httpsCallable('clockPunch',{timeout:20000});}
+  return FN(data).then(r=>r.data);
+}
+function errText(e){const c=String((e&&e.code)||'').replace(/^functions\//,'');
+  if(/unavailable|internal|deadline|network/.test(c)&&!(e&&e.message&&/[א-ת]/.test(e.message)))return 'אין חיבור לשרת. בדקו שיש אינטרנט ונסו שוב';
+  return (e&&e.message&&/[א-ת]/.test(e.message))?e.message:'משהו השתבש. נסו שוב';}
+async function call(data){
+  ST.busy=true;ST.err='';render();
+  try{const r=await server(data);ST.busy=false;render();return r;}
+  catch(e){ST.busy=false;ST.err=errText(e);const c=String((e&&e.code)||'');
+    if(/permission-denied/.test(c)&&ls.get(KEY)){ls.del(KEY);}             // קוד שמור שבוטל
+    render();return null;}
+}
+
+/* ---------- זרימה ---------- */
+async function signIn(code){
+  const r=await call({code:code,action:'who'});
+  if(!r){ST.code='';return render();}
+  ST.me=Object.assign({code:code},r);if(ST.remember)ls.set(KEY,code);else ls.del(KEY);
+  ST.view='main';ST.code='';render();
+}
+async function punch(type,force){
+  const r=await call({code:ST.me.code,action:type,force:!!force});if(!r)return;
+  ST.me=Object.assign(ST.me,r);
+  if(r.confirm){return ask(r.confirm,()=>punch(type,true));}
+  ST.done={type:type,hm:r.hm,dup:!!r.dup};ST.view='done';render();
+  try{navigator.vibrate&&navigator.vibrate(60);}catch(e){}
+}
+async function sendAbs(){
+  const a=ST.abs;
+  if(!a.reason){ST.err='בחרו סיבה';return render();}
+  if(!a.from){ST.err='בחרו תאריך';return render();}
+  if(a.reason==='אחר'&&!a.note.trim()){ST.err='כתבו בקצרה מה הסיבה';return render();}
+  const r=await call({code:ST.me.code,action:'abs',reason:a.reason,from:a.from,to:a.to||a.from,note:a.note});if(!r)return;
+  ST.done={type:'abs'};ST.view='done';ST.abs={reason:'',from:'',to:'',note:''};render();
+}
+function signOut(){ls.del(KEY);ST.me=null;ST.code='';ST.err='';ST.view='code';render();}
+function ask(txt,yes){$('dlgTxt').textContent=txt;$('dlg').classList.add('on');
+  $('dlgYes').onclick=()=>{$('dlg').classList.remove('on');yes();};$('dlgNo').onclick=()=>$('dlg').classList.remove('on');$('dlgYes').focus();}
+function key(k){if(ST.busy)return;ST.err='';
+  if(k==='del')ST.code=ST.code.slice(0,-1);else if(/^\d$/.test(k)&&ST.code.length<4)ST.code+=k;
+  render();if(ST.code.length===4)signIn(ST.code);}
+
+/* ---------- תצוגה ---------- */
+const ICON_OK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+function vCode(){
+  const dots=[0,1,2,3].map(i=>'<i class="'+(i<ST.code.length?'on':'')+'"></i>').join('');
+  const keys=['1','2','3','4','5','6','7','8','9','','0','del'].map(k=>k===''?'<span></span>':
+    '<button type="button" data-k="'+k+'"'+(k==='del'?' class="ghost" aria-label="מחיקה">מחיקה':'>'+k)+'</button>').join('');
+  return '<h2>הקישו את קוד הנוכחות</h2><p class="sub">4 ספרות, קיבלתם אותו מהמנהל</p>'+
+    '<div class="dots" aria-label="'+ST.code.length+' מתוך 4 ספרות">'+dots+'</div><div class="pad">'+keys+'</div>'+
+    '<label class="rem"><input type="checkbox" id="rem"'+(ST.remember?' checked':'')+'> לזכור אותי בטלפון הזה</label>';
+}
+function vMain(){
+  const m=ST.me,last=m.today[m.today.length-1];
+  const st=!last?'עוד לא החתמת היום':(last.type==='in'?'נכנסת היום ב-<b>'+esc(last.hm)+'</b>':'יצאת היום ב-<b>'+esc(last.hm)+'</b>');
+  const next=m.inside?'out':'in';
+  const list=m.today.length?'<ul class="today">'+m.today.map(p=>'<li><span>'+(p.type==='in'?'כניסה':'יציאה')+'</span><b>'+esc(p.hm)+'</b></li>').join('')+'</ul>':'';
+  return '<h2>שלום '+esc(m.name)+'</h2><p class="status">'+st+'</p>'+
+    '<div class="big"><button type="button" class="in'+(next==='in'?' next':'')+'" data-act="in">כניסה</button>'+
+    '<button type="button" class="out'+(next==='out'?' next':'')+'" data-act="out">יציאה</button></div>'+list+
+    '<div class="links"><button type="button" class="lnk" data-act="abs">דיווח היעדרות</button><button type="button" class="lnk" data-act="signout">לא אני — החלפת עובד</button></div>';
+}
+function vDone(){
+  const d=ST.done;
+  if(d.type==='abs')return '<div class="done"><div class="ok" style="background:var(--in-bg);color:var(--in)">'+ICON_OK+'</div><b>הדיווח נשלח</b><span>המנהל יראה אותו ויאשר</span></div><button class="btn pri" data-act="back">חזרה</button>';
+  const c=d.type==='in'?'in':'out';
+  return '<div class="done"><div class="ok" style="background:var(--'+c+'-bg);color:var(--'+c+')">'+ICON_OK+'</div><b>'+(d.type==='in'?'הכניסה':'היציאה')+' נרשמה</b><span>'+(d.dup?'כבר נרשמה קודם, ':'')+'בשעה '+esc(d.hm)+'</span></div>'+
+    '<button class="btn pri" data-act="back">סיום</button>';
+}
+function vAbs(){
+  const a=ST.abs;if(!a.from)a.from=isoToday();
+  return '<h2>דיווח היעדרות</h2><p class="sub">הדיווח יגיע למנהל לאישור</p>'+
+    '<div class="chips" role="group" aria-label="סיבה">'+REASONS.map(r=>'<button type="button" data-reason="'+esc(r)+'" aria-pressed="'+(a.reason===r)+'">'+esc(r)+'</button>').join('')+'</div>'+
+    '<div class="row"><label class="fld">מתאריך<input type="date" id="absFrom" value="'+esc(a.from)+'"></label><label class="fld">עד תאריך<input type="date" id="absTo" value="'+esc(a.to||a.from)+'"></label></div>'+
+    '<label class="fld">הערה'+(a.reason==='אחר'?' (חובה)':' (לא חובה)')+'<textarea id="absNote" maxlength="300">'+esc(a.note)+'</textarea></label>'+
+    '<button class="btn pri" data-act="sendabs">שליחה</button><button class="btn" data-act="back">ביטול</button>';
+}
+function render(){
+  let h;
+  if(!INST)h='<h2>הקישור לא שלם</h2><p class="sub">בקשו מהמנהל את הקישור המלא לשעון הנוכחות.</p>';
+  else h=ST.view==='main'?vMain():ST.view==='done'?vDone():ST.view==='abs'?vAbs():vCode();
+  const v=$('view');v.innerHTML=h+(INST?'<p class="err" role="alert">'+esc(ST.err)+'</p>':'');v.classList.toggle('busy',ST.busy);
+  if(ST.me&&ST.me.instName)$('instName').textContent=ST.me.instName;
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b||ST.busy)return;
+  if(b.dataset.k)return key(b.dataset.k);
+  if(b.dataset.reason){ST.abs.reason=b.dataset.reason;ST.err='';return render();}
+  const a=b.dataset.act;
+  if(a==='in'||a==='out')return punch(a);
+  if(a==='abs'){ST.view='abs';ST.err='';return render();}
+  if(a==='signout')return signOut();
+  if(a==='back'){ST.view='main';ST.err='';return render();}
+  if(a==='sendabs')return sendAbs();
+});
+document.addEventListener('input',e=>{const t=e.target;
+  if(t.id==='absFrom'){ST.abs.from=t.value;if(!ST.abs.to||ST.abs.to<t.value){ST.abs.to=t.value;const x=$('absTo');if(x)x.value=t.value;}}
+  else if(t.id==='absTo')ST.abs.to=t.value;else if(t.id==='absNote')ST.abs.note=t.value;});
+document.addEventListener('change',e=>{if(e.target.id==='rem'){ST.remember=e.target.checked;if(!ST.remember)ls.del(KEY);}});
+document.addEventListener('keydown',e=>{if(ST.view!=='code'||$('dlg').classList.contains('on'))return;
+  if(/^\d$/.test(e.key))key(e.key);else if(e.key==='Backspace')key('del');});
+
+const saved=ls.get(KEY);
+render();
+if(INST&&saved&&/^\d{4}$/.test(saved))signIn(saved);
+</script>
+</body>
+</html>
