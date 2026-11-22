@@ -107,6 +107,20 @@ service cloud.firestore {
         allow read, write: if full(inst)
           || (isMember(inst) && (mem(inst).get('rem', false) == true || c in mem(inst).get('classes', [])));
       }
+      // שעון נוכחות לצוות: דף הנוכחות כותב רק דרך השרת (clockPunch). בדפדפן — רק המנהל
+      match /clockcodes/{code} {
+        allow read, write: if full(inst);
+      }
+      match /punch/{id} {
+        allow read, write: if full(inst);
+      }
+      match /absreq/{id} {
+        allow read, write: if full(inst);   // העובדים מדווחים רק דרך השרת; המנהל יכול גם להזין היעדרות בשם עובד
+      }
+      match /clockguard/{k} {
+        allow read, delete: if full(inst);
+        allow create, update: if false;
+      }
       match /assist/{uid}/{document=**} {
         allow read, write: if signedIn() && request.auth.uid == uid && full(inst);
       }

@@ -53,3 +53,30 @@ exports.studentSummary = onCall({
     throw e instanceof HttpsError ? e : new HttpsError('internal', 'שגיאה בשרת');
   }
 });
+
+// שעון נוכחות לצוות: נקרא מדף הנוכחות (clock.html) בלי התחברות.
+// הזיהוי הוא בקוד נוכחות של 4 ספרות, והשרת נועל אחרי ניסיונות שגויים. ראו clock.js
+const { clock } = require('./clock');
+const crypto = require('crypto');
+exports.clockPunch = onCall({
+  region: 'europe-west1', timeoutSeconds: 20, memory: '256MiB', maxInstances: 3, concurrency: 20
+}, async (request) => {
+  const db = admin.firestore();
+  try {
+    return await clock({ data: request.data, ip: request.rawRequest && request.rawRequest.ip }, {
+      getDoc: async p => { const s = await db.doc(p).get(); return s.exists ? s.data() : null; },
+      setDoc: (p, d, merge) => db.doc(p).set(d, merge ? { merge: true } : undefined),
+      addDoc: async (c, d) => (await db.collection(c).add(d)).id,
+      query: async (c, filters) => {
+        let q = db.collection(c);
+        filters.forEach(f => { q = q.where(f[0], '==', f[1]); });
+        return (await q.get()).docs.map(x => Object.assign({ id: x.id }, x.data()));
+      },
+      hash: s => crypto.createHash('sha256').update(s).digest('hex'),
+      now: () => Date.now()
+    });
+  } catch (e) {
+    if (e && e.code && !(e instanceof HttpsError)) throw new HttpsError(e.code, e.message);
+    throw e instanceof HttpsError ? e : new HttpsError('internal', 'שגיאה בשרת');
+  }
+});

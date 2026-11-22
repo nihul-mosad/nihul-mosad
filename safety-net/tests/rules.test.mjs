@@ -80,3 +80,27 @@ test('סיכומים ששותפו (sums): מנהל כותב; מחנך הכיתה
   await assertFails(as(USERS.teacherA.uid).collection(B + 'sums').get());
   await assertFails(anon().doc(idA).get());
 });
+
+// שעון נוכחות לצוות: הדפדפן לא כותב החתמות ולא רואה קודים — רק המנהל, והשרת (clockPunch) כותב בעצמו
+test('שעון נוכחות: אורח ומורה לא קוראים ולא כותבים קודים, החתמות ובקשות היעדרות', async () => {
+  for (const db of [anon(), as(USERS.teacherA.uid)]) {
+    await assertFails(db.doc(B + 'clockcodes/1234').get());
+    await assertFails(db.doc(B + 'clockcodes/1234').set({ sid: 'X', name: 'מזויף' }));
+    await assertFails(db.collection(B + 'punch').get());
+    await assertFails(db.collection(B + 'punch').add({ sid: 'X', type: 'in', t: 1 }));
+    await assertFails(db.collection(B + 'absreq').add({ sid: 'X', status: 'approved' }));
+    await assertFails(db.collection(B + 'absreq').get());
+    await assertFails(db.collection(B + 'clockguard').get());
+  }
+});
+test('שעון נוכחות: המנהל מנהל קודים, מתקן החתמות ומאשר בקשות; ומזין היעדרות בשם עובד', async () => {
+  const db = as(USERS.admin.uid);
+  await assertSucceeds(db.doc(B + 'clockcodes/1234').set({ sid: 'S1', name: 'משה', active: true }));
+  await assertSucceeds(db.doc(B + 'clockcodes/1234').get());
+  await assertSucceeds(db.doc(B + 'punch/P1').set({ sid: 'S1', type: 'in', t: 1, src: 'manual' }));
+  await assertSucceeds(db.collection(B + 'punch').get());
+  await assertSucceeds(db.collection(B + 'absreq').add({ sid: 'S1', status: 'approved', src: 'manual' }));
+  await env.withSecurityRulesDisabled(async ctx => { await ctx.firestore().doc(B + 'absreq/A1').set({ sid: 'S1', status: 'pending' }); });
+  await assertSucceeds(db.doc(B + 'absreq/A1').update({ status: 'approved' }));
+  await assertFails(db.doc(B + 'clockguard/G1').set({ fails: 0 }));
+});
