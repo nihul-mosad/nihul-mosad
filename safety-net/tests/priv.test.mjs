@@ -9,6 +9,7 @@ after(async () => { await browser.close(); server.srv.close(); });
 
 // שיעור פרטני של המורה המחובר, ביום של היום, בשיעור הראשון
 const mkPriv = () => {
+  S.config.feats = Object.assign({}, S.config.feats, { priv: 'all' }); // v80: יומן פרטני פתוח לצוות רק אחרי שהמנהל פתח
   const c = S.config.classes[0], st = S.students.filter(s => s.cls === c).slice(0, 2), d = dow(iso(new Date())) > 5 ? 0 : dow(iso(new Date()));
   const l = { id: 'PV1', day: d, period: 1, subject: 'קריאה', teacher: S.me.teacher, classes: [c], type: 'private', students: st.map(s => s.id) };
   S.timetable = S.timetable.filter(x => x.id !== 'PV1').concat([l]);
@@ -81,7 +82,7 @@ test('"לא התקיים" מוציא מהרשימה לדיווח; מנהל רו�
 test('לא התקיים — מסומן ויוצא מ"לדיווח"', async () => {
   const page = await newPage(browser, { width: 390, height: 844, mobile: true });
   await login(page, server.url, 'teacherA');
-  await page.evaluate(() => { const c = S.config.classes[0]; const l = { id: 'PV3', day: dow(daysAgo(7)) > 5 ? 0 : dow(daysAgo(7)), period: 1, subject: 'קריאה', teacher: S.me.teacher, classes: [c], type: 'private', students: [] };
+  await page.evaluate(() => { S.config.feats = { priv: 'all' }; const c = S.config.classes[0]; const l = { id: 'PV3', day: dow(daysAgo(7)) > 5 ? 0 : dow(daysAgo(7)), period: 1, subject: 'קריאה', teacher: S.me.teacher, classes: [c], type: 'private', students: [] };
     S.timetable = S.timetable.concat([l]); S.tab = 'priv'; S.pvc = null; render(); });
   const before = await page.$$eval('[data-act="pv-skip"]', x => x.length);
   assert.ok(before >= 1);
