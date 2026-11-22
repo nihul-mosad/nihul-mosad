@@ -2832,7 +2832,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=81;
+const APP_VER=82;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -7345,6 +7345,70 @@ function staffRoster(){
   return Object.values(P).map(p=>Object.assign(p,{hr:homeroomOf(p.name),subjects:Object.keys(p.subjects),classes:Object.keys(p.classes)}))
     .sort((a,b)=>(b.hr.length-a.hr.length)||(b.lessons-a.lessons)||a.name.localeCompare(b.name,'he'));
 }
+/* ===== הסרת איש צוות מכל המקומות (v82) =====
+   מסיר: כניסה למערכת, כרטיס עובד, קוד נוכחות. מחליף/מסיר: שיעורים במערכת השעות, מחנך כיתה, תורנויות.
+   לא נוגע בהיסטוריה (נוכחות עבר, אירועים, פרוטוקולים) — היא תיעוד של מה שהיה. */
+function rmDutyCells(name,user){
+  const d=S.duty||S.config.duty;if(!d||!d.cells)return [];
+  const out=[];Object.keys(d.cells).forEach(sl=>{const row=d.cells[sl]||{};Object.keys(row).forEach(day=>{const c=row[day];if(!c)return;
+    if((user&&c.u===user.id)||dutyNameMatch(c.n,name))out.push({sl:sl,day:day});});});
+  return out;
+}
+function rmInfo(name){
+  const R=staffRoster(),p=R.find(x=>x.name===name);if(!p)return null;
+  const lessons=S.timetable.filter(l=>String(l.teacher||'').trim()===name);
+  const hr=Object.keys(S.config.homeroom||{}).filter(c=>String(S.config.homeroom[c]||'').trim()===name);
+  const others=R.filter(x=>x.name!==name).map(x=>x.name);
+  return {p:p,lessons:lessons,hr:hr,duty:rmDutyCells(name,p.user),others:others,self:!!(p.user&&S.me&&p.user.id===S.me.id)};
+}
+function rmCard(){
+  const name=S.rmStaff,I=rmInfo(name);if(!I){S.rmStaff=null;return '';}
+  const sel=(id,opts)=>'<select class="inp" id="'+id+'"><option value="">— לבחור —</option>'+opts+I.others.map(n=>'<option value="'+esc(n)+'">מעבר ל'+esc(n)+'</option>').join('')+'</select>';
+  const li=(ok,txt)=>'<li style="margin:6px 0">'+(ok?'✓ ':'• ')+txt+'</li>';
+  const subj={};I.lessons.forEach(l=>{subj[l.subject||'שיעור']=(subj[l.subject||'שיעור']||0)+1;});
+  let h='<div class="card" id="rmCard" style="border-color:var(--absent)"><h3>הסרת איש צוות: '+esc(name)+'</h3>';
+  if(I.self)return h+'<p>אי אפשר להסיר את עצמך.</p><button class="btn" data-act="staff-rm-x">סגירה</button></div>';
+  h+='<p class="note" style="margin-bottom:10px">ההיסטוריה נשמרת: דוחות נוכחות קודמים, אירועים, פרוטוקולים וסימוני שיעורים שכבר נעשו. רק מה שפעיל מכאן והלאה משתנה.</p><ul style="list-style:none;padding:0;margin:0 0 12px">'+
+    li(true,I.p.user?'הכניסה למערכת (<b>'+esc(I.p.user.user)+'</b>) תימחק — הוא לא יוכל להיכנס יותר.':'אין לו כניסה למערכת.')+
+    li(true,I.p.rec?'כרטיס העובד יוסר מרשימת הצוות.':'אין לו כרטיס עובד.')+
+    li(true,'קוד הנוכחות שלו יבוטל (אם יש).')+'</ul>';
+  if(I.lessons.length)h+='<label class="field"><span><b>'+I.lessons.length+' שיעורים במערכת השעות</b> ('+esc(Object.keys(subj).map(k=>k+' '+subj[k]).join(', '))+')</span>'+sel('rmTT','<option value="__del">למחוק את השיעורים</option>')+'</label>';
+  if(I.hr.length)h+='<label class="field"><span><b>מחנך של '+esc(I.hr.join(', '))+'</b></span>'+sel('rmHR','<option value="__del">להשאיר בלי מחנך</option>')+'</label>';
+  if(I.duty.length)h+='<label class="field"><span><b>'+I.duty.length+' תורנויות בשבוע</b></span>'+sel('rmDuty','<option value="__del">לרוקן את המשבצות</option>')+'</label>';
+  return h+'<div class="row" style="margin-top:12px"><button class="btn" data-v="danger" data-act="staff-rm-go">הסרה סופית</button><button class="btn" data-v="ghost" data-act="staff-rm-x">ביטול</button></div></div>';
+}
+async function staffRemove(){
+  const name=S.rmStaff,I=rmInfo(name);if(!I||I.self)return;
+  const v=id=>{const e=document.getElementById(id);return e?e.value:'';};
+  const tt=v('rmTT'),hr=v('rmHR'),du=v('rmDuty');
+  if((I.lessons.length&&!tt)||(I.hr.length&&!hr)||(I.duty.length&&!du))return toast('צריך לבחור מה לעשות בכל שורה');
+  if(!confirm('להסיר את '+name+' מהמערכת? אי אפשר לבטל את מחיקת הכניסה.'))return;
+  const done=[];
+  try{
+    // 1. כניסה למערכת
+    if(I.p.user){const u=I.p.user,b=FS.batch();b.delete(FS.doc('insts/'+S.inst+'/members/'+u.id));b.delete(FS.doc('logins/'+S.inst+'_'+ukey(u.user)));await b.commit();await reloadMembers();done.push('כניסה');}
+    // 2. קוד נוכחות (לפי מזהה העובד)
+    if(I.p.rec&&FS){const q=await FS.collection('insts/'+S.inst+'/clockcodes').where('sid','==',I.p.rec.id).get();
+      const docs=q.docs.filter(d=>(d.data()||{}).sid===I.p.rec.id);
+      if(docs.length){const b=FS.batch();docs.forEach(d=>b.delete(d.ref));await b.commit();done.push('קוד נוכחות');}
+      if(S.sc)S.sc.codes=(S.sc.codes||[]).filter(c=>c.sid!==I.p.rec.id);}
+    // 3. מערכת שעות
+    if(I.lessons.length){const ids={};I.lessons.forEach(l=>ids[l.id]=1);
+      S.timetable=tt==='__del'?S.timetable.filter(l=>!ids[l.id]):S.timetable.map(l=>ids[l.id]?Object.assign({},l,{teacher:tt}):l);
+      await save(K.timetable,S.timetable);done.push(I.lessons.length+' שיעורים');}
+    // 4. מחנך + 5. תורנויות (שניהם בהגדרות המוסד)
+    if(I.hr.length){S.config.homeroom=Object.assign({},S.config.homeroom||{});I.hr.forEach(c=>{if(hr==='__del')delete S.config.homeroom[c];else S.config.homeroom[c]=hr;});done.push('מחנך');}
+    if(I.duty.length){if(!S.duty)await loadDuty();const d=JSON.parse(JSON.stringify(S.duty||S.config.duty));
+      const nu=du==='__del'?null:(dutyUsers().find(x=>x.name===du)||{}).id||'';
+      rmDutyCells(name,I.p.user).forEach(x=>{if(du==='__del')delete d.cells[x.sl][x.day];else d.cells[x.sl][x.day]={n:du,u:nu};});
+      if(!(await saveDuty(d)))throw new Error('duty');done.push('תורנויות');}
+    else if(I.hr.length)await save(K.config,S.config);
+    // 6. כרטיס עובד — אחרון, כדי שאם משהו נכשל באמצע אפשר יהיה לנסות שוב
+    if(I.p.rec){S.staff=S.staff.filter(s=>s.id!==I.p.rec.id);await save(K.staff,S.staff);done.push('כרטיס');}
+    logAct('הסרת איש צוות',name+' · '+done.join(', '));
+    S.rmStaff=null;S.editStaff=null;toast(name+' הוסר מהמערכת');return render();
+  }catch(e){toast('ההסרה נעצרה באמצע ('+(done.join(', ')||'שום דבר לא הוסר')+'). אפשר לנסות שוב: '+(e.message==='duty'?'שמירת התורנויות נכשלה':fbErr(e)));return render();}
+}
 function viewStaff(){
   const R=staffRoster(),hours=S.staff.reduce((a,s)=>a+(Number(s.hours)||0),0),noRec=R.filter(p=>!p.rec),withUser=R.filter(p=>p.user).length;
   const sen=st=>{if(!st)return '—';const y=(Date.now()-new Date(st))/31557600000;return y<1?'פחות משנה':Math.floor(y)+' שנים';};
@@ -7361,7 +7425,7 @@ function viewStaff(){
       '</div>'+(p?'<p class="note" style="margin:4px 0 12px">'+(p.hr.length?'מחנך '+esc(p.hr.join(', '))+' · ':'')+(p.lessons?p.lessons+' שיעורים בשבוע במערכת השעות · ':'')+(p.user?'נכנס למערכת כ"'+esc(p.user.user)+'"':'אין כניסה למערכת')+'. את אלה משנים במערכת השעות ובהגדרות.</p>':'')+
       '<div class="row"><button class="btn" data-v="primary" data-act="staff-save">שמירה</button>'+
       '<button class="btn" data-v="ghost" data-act="staff-cancel">ביטול</button>'+
-      (e.id?'<button class="btn" data-v="danger" style="margin-right:auto" data-act="staff-del" data-id="'+e.id+'">הסרה מרשימת הצוות</button>':'')+'</div></div>';
+      (e.id&&isAdmin()?'<button class="btn" data-v="danger" style="margin-right:auto" data-act="staff-rm" data-name="'+esc(String(e.name||'').trim())+'">הסרה מהמערכת…</button>':'')+'</div></div>';
   }
   const rows=R.map(function(p){
     const r=p.rec||{},enc=encodeURIComponent(p.name);
@@ -7372,10 +7436,11 @@ function viewStaff(){
       r.phone?'<a class="ltr tel" href="tel:'+esc(String(r.phone).replace(/[^\d+]/g,''))+'">'+esc(r.phone)+'</a>':'<span class="note">—</span>',
       esc(r.hours||'—'),'<span class="note">'+sen(r.start)+'</span>',
       '<div class="row" style="gap:6px;flex-wrap:nowrap">'+(p.rec?'<button class="btn sm" data-v="ghost" data-act="staff-edit" data-id="'+r.id+'">עריכה</button>':'<button class="btn sm" data-v="ghost" data-act="staff-new" data-name="'+esc(p.name)+'">השלמת פרטים</button>')+
-        (p.user?'<button class="btn sm" data-v="ghost" data-act="staff-user" data-id="'+p.user.id+'">הרשאה</button>':(isAdmin()?'<button class="btn sm" data-v="ghost" data-act="staff-login" data-name="'+esc(p.name)+'">יצירת כניסה</button>':''))+'</div>'];
+        (p.user?'<button class="btn sm" data-v="ghost" data-act="staff-user" data-id="'+p.user.id+'">הרשאה</button>':(isAdmin()?'<button class="btn sm" data-v="ghost" data-act="staff-login" data-name="'+esc(p.name)+'">יצירת כניסה</button>':''))+
+        (isAdmin()&&!(p.user&&S.me&&p.user.id===S.me.id)?'<button class="btn sm" data-v="ghost" style="color:var(--absent)" data-act="staff-rm" data-name="'+esc(p.name)+'">הסרה</button>':'')+'</div>'];
   });
   return printHead()+'<div class="head"><div><h2>צוות</h2><div class="sub">'+R.length+' אנשי צוות · '+withUser+' עם כניסה למערכת'+(hours?' · '+hours+' שעות שבועיות':'')+'</div></div>'+
-    '<button class="btn" data-v="primary" data-act="staff-new">הוספת איש צוות</button></div>'+form+
+    '<button class="btn" data-v="primary" data-act="staff-new">הוספת איש צוות</button></div>'+(S.rmStaff?rmCard():'')+form+
     (noRec.length?'<div class="card staff-hint"><div class="row" style="justify-content:space-between;gap:10px"><span>'+noRec.length+' מורים מופיעים במערכת השעות או במשתמשים ועדיין בלי כרטיס עובד (טלפון, שעות, ותק).</span>'+
       '<button class="btn sm" data-act="staff-import">יצירת כרטיסים לכולם</button></div></div>':'')+
     '<div class="card">'+(R.length?table(['שם','תפקיד','מחנך / שיעורים','כניסה למערכת','טלפון','שעות','ותק',''],rows)
@@ -8231,7 +8296,9 @@ const scHm=m=>m==null?'':String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%6
 const scDur=m=>!m?'0:00':Math.floor(m/60)+':'+String(m%60).padStart(2,'0');
 function scMonthDays(ym){const out=[];let d=ym+'-01';while(d.slice(0,7)===ym){out.push(d);d=addDaysIso(d,1);}return out;}
 function scCodeOf(sid){return scS().codes.find(c=>c.sid===sid&&c.active!==false)||null;}
-function scStaff(){return (S.staff||[]).filter(s=>s&&s.id&&s.name).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'he'));}
+function scStaff(){const L=(S.staff||[]).filter(s=>s&&s.id&&s.name).slice(),ids={};L.forEach(s=>ids[s.id]=1);
+  ((S.sc&&S.sc.punches)||[]).forEach(p=>{if(p.sid&&!ids[p.sid]){ids[p.sid]=1;L.push({id:p.sid,name:p.name||'עובד לשעבר',role:'לא ברשימת הצוות',former:true});}});
+  return L.sort((a,b)=>String(a.name).localeCompare(String(b.name),'he'));}
 
 async function scLoad(force){
   const sc=scS();if(sc.loading)return;
@@ -8350,7 +8417,7 @@ function scMonthView(){
     '<p class="note" style="margin-top:10px">שעות צפויות: לפי מערכת השעות (מהשיעור הראשון עד האחרון), או שעות קבועות שהגדרת לעובד. איחור או יציאה מוקדמת נספרים מעל '+SC_GRACE+' דקות. ימים שסומנו "אין לימודים" בנוכחות התלמידים לא נספרים כחיסור.</p></div>';
 }
 function scEmpView(){
-  const sc=scS(),st=(S.staff||[]).find(s=>s.id===sc.emp);if(!st){sc.emp=null;return scMonthView();}
+  const sc=scS(),st=scStaff().find(s=>s.id===sc.emp);if(!st){sc.emp=null;return scMonthView();}
   const s=scMonth(st,sc.month),today=iso(new Date());
   const days=s.days.filter(r=>r.ps.length||r.abs||r.pend||(r.ex&&!r.future));
   const rows=days.map(r=>[shortDate(r.date)+' <span class="note">'+DAYS[dow(r.date)]+'</span>',r.ex?'⁦'+r.ex.from+'–'+r.ex.to+'⁩':'—',
@@ -8389,7 +8456,7 @@ function scAbsView(){
       '<button class="btn sm" data-v="ghost" data-act="sc-aundo" data-id="'+a.id+'">החזרה לממתין</button>'])):'<div class="empty">עדיין אין.</div>')+'</div>';
 }
 function scCodesView(){
-  const sc=scS(),list=scStaff(),dn=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳'];
+  const sc=scS(),list=scStaff().filter(s=>!s.former),dn=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳'];
   let h='<div class="card"><h3>הפעלה</h3><div class="row" style="justify-content:space-between;align-items:center;gap:10px">'+
     '<div style="flex:1;min-width:220px">'+(sc.on?'<b style="color:var(--present)">השעון פעיל</b> — העובדים יכולים להחתים.':'<b>השעון כבוי</b> — הדף פתוח, אבל לא מקבל החתמות. אפשר להנפיק קודים ולבדוק בעצמך לפני שמפעילים.')+'</div>'+
     '<button class="btn" data-v="'+(sc.on?'danger':'primary')+'" data-act="sc-on" data-to="'+(sc.on?0:1)+'">'+(sc.on?'כיבוי השעון':'הפעלת השעון')+'</button></div>'+
@@ -8854,6 +8921,9 @@ document.getElementById('main').addEventListener('click',async function(e){
     const prev=S.staff.slice();S.staff=S.staff.concat(add);save(K.staff,S.staff);render();undoToast('נוצרו '+add.length+' כרטיסי עובד.',()=>{S.staff=prev;save(K.staff,S.staff);render();});return;}
   if(a==='staff-user'){S.tab='settings';S.editUser=Object.assign({},S.config.users.find(u=>u.id===id));render();const f=document.getElementById('u-user');if(f)f.scrollIntoView({block:'center'});return;}
   if(a==='staff-login'){S.tab='settings';S.editUser={user:'',role:'teacher',cls:'',teacher:el.dataset.name||''};render();const f=document.getElementById('u-user');if(f){f.scrollIntoView({block:'center'});f.focus();}return;}
+  if(a==='staff-rm'){if(!isAdmin())return;S.rmStaff=el.dataset.name;S.editStaff=null;render();const x=document.getElementById('rmCard');if(x)x.scrollIntoView({block:'center'});return;}
+  if(a==='staff-rm-x'){S.rmStaff=null;return render();}
+  if(a==='staff-rm-go')return staffRemove();
   if(a==='staff-edit'){S.editStaff=Object.assign({},S.staff.find(s=>s.id===id));return render();}
   if(a==='staff-cancel'){S.editStaff=null;return render();}
   if(a==='staff-save'){
