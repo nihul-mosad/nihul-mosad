@@ -2705,6 +2705,10 @@ const S={tab:'dash',me:null,config:{name:'המוסד',classes:[],logo:'',users:[
 
 const ALL_TABS=[['dash','לוח בקרה'],['review','תמונת מצב'],['light','רמזור'],['students','תלמידים'],['rem','מיפוי'],['mark','נוכחות'],['events','אירועים'],['grades','ציונים'],['schedule','מערכת שעות'],['priv','שעות פרטניות'],['duty','תורנויות'],['tasks','משימות'],['meetings','ישיבות צוות'],['daylog','יומן יומי'],['assist','עוזר אישי'],['reports','דוחות וניתוחים'],['classbi','תמונת מצב כיתות'],['staff','צוות'],['settings','הגדרות']];
 const isAdmin=()=>S.me&&S.me.role==='admin';
+/* תכונות חדשות: המנהל רואה תמיד; הצוות רואה רק אחרי שהמנהל פתח בהגדרות (ברירת מחדל: רק המנהל) */
+const FEATS=[['priv','יומן שעות פרטניות','הלשונית "שעות פרטניות", הכפתור "יומן פרטני: מה עשינו" בתוך השיעור, ו"מה עשו בשיעורים הפרטניים" בכרטיס התלמיד']];
+const featAll=k=>((S.config&&S.config.feats)||{})[k]==='all';
+const feat=k=>isAdmin()||featAll(k);
 function homeroomOf(t){const h=S.config.homeroom||{};return S.config.classes.filter(c=>t&&h[c]===t);}
 const myClasses=()=>isAdmin()?S.config.classes:Array.from(new Set((S.me.cls?[S.me.cls]:[]).concat(homeroomOf(S.me.teacher))));
 function myLessonAll(){return S.timetable.filter(l=>l.teacher&&l.teacher===S.me.teacher);}
@@ -2725,7 +2729,7 @@ function tasksInView(){
 }
 function myLessonIds(){const o={};myLessonAll().forEach(l=>o[l.id]=1);return o;}
 function myLessonStudents(){const ok={};myLessonAll().forEach(l=>lessonStudents(l).list.forEach(s=>ok[s.id]=1));return S.students.filter(s=>ok[s.id]);}
-const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','light','students','rem','mark','events','grades','schedule','duty','tasks','meetings','reports','priv']:['rem','mark','events','grades','schedule','duty','tasks','meetings','reports','priv']).indexOf(t[0])>-1&&(t[0]!=='priv'||pvTabOk())&&(t[0]!=='rem'||isRemT()||myClasses().length)&&(t[0]!=='light'||ltTabOk())).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
+const tabsFor=()=>!S.inst?[['console','מסוף המערכת']]:S.owner?ALL_TABS.concat([['console','מסוף המערכת']]):isAdmin()?ALL_TABS:ALL_TABS.filter(t=>(myClasses().length?['dash','review','light','students','rem','mark','events','grades','schedule','duty','tasks','meetings','reports','priv']:['rem','mark','events','grades','schedule','duty','tasks','meetings','reports','priv']).indexOf(t[0])>-1&&(t[0]!=='priv'||(feat('priv')&&pvTabOk()))&&(t[0]!=='rem'||isRemT()||myClasses().length)&&(t[0]!=='light'||ltTabOk())).map(t=>t[0]==='schedule'?['schedule','המערכת שלי']:t);
 const domains=()=>S.config.domains&&S.config.domains.length?S.config.domains:SEED_DOMAINS;
 
 /* ---- שליפות ---- */
@@ -2826,7 +2830,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=79;
+const APP_VER=80;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -4858,7 +4862,7 @@ function viewMarkLesson(l){
   const done=list.filter(s=>D[s.id]).length;
   return '<div class="head"><div><h2>'+esc(l.subject||'(ללא מקצוע)')+(l.type==='private'?' · פרטני':'')+'</h2><div class="sub">'+
     esc((l.classes||[]).join(', '))+' · שיעור '+l.period+' ('+perLabel(l.period)+') · '+dual(S.markDate)+(l.teacher?' · '+esc(l.teacher):'')+'</div></div>'+
-    '<div class="row">'+(l.type==='private'?'<button class="btn" data-act="pv-new" data-lid="'+l.id+'" data-d="'+S.markDate+'">יומן פרטני: מה עשינו</button>':'')+'<button class="btn" data-v="ghost" data-act="lm-back">חזרה לשיעורים</button></div></div>'+
+    '<div class="row">'+(l.type==='private'&&feat('priv')?'<button class="btn" data-act="pv-new" data-lid="'+l.id+'" data-d="'+S.markDate+'">יומן פרטני: מה עשינו</button>':'')+'<button class="btn" data-v="ghost" data-act="lm-back">חזרה לשיעורים</button></div></div>'+
     '<div class="card">'+(list.length?'<div class="row" style="margin-bottom:8px"><button class="btn sm" data-act="lm-all">סימון הכול כנוכחים</button><span class="note">'+done+' מתוך '+list.length+' סומנו</span></div>'+
       list.map(s=>'<div class="mark"><div class="mark-name">'+esc(s.name)+'<em>'+esc(s.cls)+'</em></div><div class="seg">'+
         STATUSES.map(x=>'<button data-act="lm-set" data-id="'+s.id+'" data-s="'+x[0]+'" data-on="'+(D[s.id]===x[0]?1:0)+'">'+x[1]+'</button>').join('')+'</div>'+
@@ -8164,6 +8168,7 @@ function pvRow(p,admin){
       ((p.acts||[]).length?'<div class="note">'+esc(p.acts.join(' · '))+'</div>':'')+(p.topic?'<div><b>נושא:</b> '+esc(p.topic)+'</div>':'')+(p.note?'<div class="pv-note">'+esc(p.note)+'</div>':''))+'</div>';
 }
 function viewPriv(){
+  if(!feat('priv'))return '<div class="empty">המסך הזה עדיין לא פתוח לצוות.</div>';
   if(!pvTabOk())return '<div class="empty">אין לך שעות פרטניות במערכת השעות.</div>';
   if(S.pvc)return '<div class="head"><div><h2>שעות פרטניות</h2></div></div>'+pvForm();
   return isAdmin()?pvAdmin():pvTeacher();
@@ -8205,12 +8210,24 @@ function pvAdmin(){
 }
 function pvCapture(){const c=S.pvc;if(!c)return;const t=document.getElementById('pv-topic'),n=document.getElementById('pv-note');if(t)c.topic=t.value;if(n)c.note=n.value;}
 function pvCardSection(s){
+  if(!feat('priv'))return '';
   const list=(S.pv||[]).filter(p=>!p.skip&&(p.sids||[]).indexOf(s.id)>-1).sort((a,b)=>b.date>a.date?1:-1).slice(0,5);
   if(!list.length)return '';
   return '<h4 class="pr-h">מה עשו בשיעורים הפרטניים (אחרונים)</h4>'+list.map(p=>'<div class="pv-mini"><b>'+shortDate(p.date)+'</b> · '+esc(p.by||'')+(p.acts&&p.acts.length?' · '+esc(p.acts.join(', ')):'')+(p.topic?' · '+esc(p.topic):'')+(p.note?'<div class="note">'+esc(p.note)+'</div>':'')+'</div>').join('');
 }
+function featCard(){
+  return '<div class="card" id="featCard"><h3>תכונות חדשות: מי רואה</h3>'+
+    '<p class="note" style="margin-bottom:12px">תכונה חדשה מגיעה קודם רק אליך, כדי שתוכל לבדוק אותה. הצוות רואה אותה רק אחרי שתבחר "כל הצוות". אפשר להחזיר ל"רק אני" בכל רגע.</p>'+
+    FEATS.map(f=>{const all=featAll(f[0]);
+      return '<div class="row" style="justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)">'+
+        '<div style="flex:1;min-width:200px"><b>'+esc(f[1])+'</b> '+(all?'<em class="bd" style="font-style:normal;color:var(--present)">פתוח לכל הצוות</em>':'<em class="bd" style="font-style:normal">רק אני</em>')+'<div class="note">'+esc(f[2])+'</div></div>'+
+        '<div class="row" style="gap:6px" role="group" aria-label="'+esc(f[1])+'">'+
+          '<button class="btn sm" data-v="'+(all?'ghost':'primary')+'" data-act="feat-set" data-k="'+f[0]+'" data-to="admin" aria-pressed="'+!all+'">רק אני</button>'+
+          '<button class="btn sm" data-v="'+(all?'primary':'ghost')+'" data-act="feat-set" data-k="'+f[0]+'" data-to="all" aria-pressed="'+all+'">כל הצוות</button></div></div>';}).join('')+
+  '</div>';
+}
 function viewSettings(){
-  return '<div class="head"><h2>הגדרות</h2></div>'+
+  return '<div class="head"><h2>הגדרות</h2></div>'+featCard()+
   '<div class="card"><h3>שם המוסד ולוגו</h3>'+
     '<div class="row" style="margin-bottom:14px"><input class="inp" id="cfgName" style="flex:1;min-width:180px" value="'+esc(S.config.name)+'">'+
     '<button class="btn" data-v="primary" data-act="save-name">שמירת השם</button></div>'+
@@ -8635,6 +8652,7 @@ document.getElementById('main').addEventListener('click',async function(e){
     window.scrollTo(0,0);return render();
   }
   if(a==='lt-preview'){const keep=S.config.lightPolicy;S.config.lightPolicy=ltRead();const html=ltSettingsCard();S.config.lightPolicy=keep;const c=document.getElementById('lt-card');if(c)c.outerHTML=html;return;}
+  if(/^pv-/.test(a)&&!feat('priv'))return;
   if(a==='pv-new'){const lid=el.dataset.lid||'',d=el.dataset.d||iso(new Date()),l=S.timetable.find(x=>x.id===lid);
     if(S.tab!=='priv')goTab('priv');S.pvc=pvDefaults({date:d,lid:lid,sids:l?(l.students||[]).slice():[]});window.scrollTo(0,0);return render();}
   if(a==='pv-cancel'){S.pvc=null;return render();}
@@ -8811,6 +8829,9 @@ document.getElementById('main').addEventListener('click',async function(e){
       S.instList=null;S.console=null;logAct('מוסד חדש',code);toast('המוסד נוצר. קוד: '+code+' · משתמש: '+au);return render();
     }catch(e){return toast(fbErr(e));}
   }
+  if(a==='feat-set'){const k=el.dataset.k,to=el.dataset.to==='all'?'all':'admin',f=FEATS.find(x=>x[0]===k);if(!f||!isAdmin())return;
+    const prev=Object.assign({},S.config.feats||{});S.config.feats=Object.assign({},prev,{[k]:to});await save(K.config,S.config);logAct(to==='all'?'תכונה נפתחה לצוות':'תכונה הוחזרה לבדיקה',f[1]);render();
+    undoToast(to==='all'?'"'+f[1]+'" פתוח עכשיו לכל הצוות':'"'+f[1]+'" מוסתר עכשיו מהצוות',async()=>{S.config.feats=prev;await save(K.config,S.config);render();});return;}
   if(a==='save-name'){S.config.name=document.getElementById('cfgName').value.trim()||'המוסד';save(K.config,S.config);toast('השם עודכן');return render();}
   if(a==='add-cls'){
     const v=document.getElementById('newCls').value.trim();
