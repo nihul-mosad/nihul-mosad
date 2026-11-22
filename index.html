@@ -8570,7 +8570,7 @@ function printHead(){
 }
 
 /* ===== שלב 2א: תפריט בקבוצות + חיפוש כללי (Ctrl+K) + שורות תלמיד לחיצות ===== */
-const NAV_GROUPS=[['יום־יום',['dash','mark','events','tasks','duty','daylog']],['תלמידים',['students','review','light','rem','grades']],['צוות',['staff','sclock','meetings','schedule','priv']],['ניהול',['reports','classbi','analytics','assist','settings','console']]];
+const NAV_GROUPS=[['יום־יום',['dash','mark','events','tasks','duty','daylog']],['תלמידים',['students','review','light','rem','grades']],['צוות',['staff','meetings','schedule','priv']],['ניהול',['sclock','reports','classbi','analytics','assist','settings','console']]];
 function navHTML(){
   const tabs=tabsFor(),seen={},out=[],btn=t=>'<button data-tab="'+t[0]+'" data-on="'+(S.tab===t[0]||(t[0]==='reports'&&(S.tab==='analytics'||S.tab==='periodic'))?1:0)+'">'+t[1]+'</button>';
   if(tabs.length<=7)return tabs.map(btn).join('');
