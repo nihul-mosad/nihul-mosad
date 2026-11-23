@@ -9,7 +9,8 @@ after(async () => { await browser.close(); server.srv.close(); });
 
 const seed = () => {
   const c = S.config.classes[0], st = S.students.filter(x => x.cls === c), l = S.timetable.find(x => (x.classes || []).includes(c)) || { id: 'L1' };
-  const d1 = daysAgo(3), d2 = daysAgo(40);
+  let d1 = daysAgo(3); const d2 = daysAgo(40);
+  if (l.day != null) while (dow(d1) !== l.day) d1 = addDaysIso(d1, -1); // יום שבו השיעור באמת מתקיים (אחרת הבדיקה תלויה ביום בשבוע)
   S.latt = {}; S.att = {};
   S.latt[d1] = {}; st.forEach((s, i) => S.latt[d1][l.id + ':' + s.id] = i === 0 ? 'absent' : i === 1 ? 'late' : 'present');
   S.latt[d2] = {}; st.forEach(s => S.latt[d2][l.id + ':' + s.id] = 'present');

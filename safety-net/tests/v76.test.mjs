@@ -80,7 +80,7 @@ test('תמונת מצב כיתות: רק למנהל; אקלים ולמידה; ס
   const page = await newPage(browser, { width: 1366, height: 768 });
   await login(page, server.url, 'admin');
   await page.evaluate(seedEv);
-  assert.ok(await page.$('.nav button[data-tab="classbi"]'));
+  assert.ok(await page.$('.nav [data-tab="classbi"]'));
   await page.evaluate(() => { S.tab = 'classbi'; render(); });
   let t = await page.textContent('#main');
   assert.match(t, /התפלגות הצבעים לפי כיתה/); assert.match(t, /מגמה לפי שבועות/); assert.match(t, /אלימות פיזית/);
@@ -93,6 +93,6 @@ test('תמונת מצב כיתות: רק למנהל; אקלים ולמידה; ס
   await page.context().close();
   const p2 = await newPage(browser, { width: 1366, height: 768 });
   await login(p2, server.url, 'teacherA');
-  assert.equal(await p2.$('.nav button[data-tab="classbi"]'), null);
+  assert.equal(await p2.$('.nav [data-tab="classbi"]'), null);
   await p2.context().close();
 });

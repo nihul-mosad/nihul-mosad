@@ -34,7 +34,7 @@ for (const scheme of ['light', 'dark']) test('מראה (' + scheme + '): בלי 
   }
   assert.deepEqual(bad, []);
   const r = await page.evaluate(() => (S.tab = 'dash', render(), { same: ICONS === ICO, deco: getComputedStyle(document.body, '::before').display,
-    navIcons: tabsFor().every(t => !!ICO[t[0]]), activeIcon: getComputedStyle(document.querySelector('.nav button[data-on="1"]'), '::before').display }));
+    navIcons: tabsFor().every(t => !!ICO[t[0]]), activeIcon: getComputedStyle(document.querySelector('.nav [data-tab][data-on="1"]'), '::before').display }));
   assert.equal(r.same, true);
   assert.equal(r.deco, 'none');
   assert.equal(r.navIcons, true, 'לשונית בלי אייקון');

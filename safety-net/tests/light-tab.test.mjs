@@ -26,8 +26,8 @@ test('מחנך: לשונית רמזור עם תמונת הכיתה; לפי צו�
   await login(page, server.url, 'teacherA');
   const ids = await page.evaluate(seed);
   await page.evaluate(() => render());
-  assert.ok(await page.$('.nav button[data-tab="light"]'));
-  await page.click('.nav button[data-tab="light"]');
+  assert.ok(await page.$('.nav [data-tab="light"]'));
+  await page.click('.nav [data-tab="light"]');
   const t = await page.textContent('#main');
   assert.match(t, /רמזור התנהגות/); assert.match(t, /חמור פתוח/);
   assert.equal(await page.$eval('.lt-tile', el => el.dataset.id), ids[0]);
@@ -69,6 +69,6 @@ test('כרטיס כללי: רמזור הלמידה במקומו, הרמזור ה
   const p2 = await newPage(browser, { width: 1366, height: 768 });
   await login(p2, server.url, 'teacherMath');
   await p2.evaluate(() => { S.config.lightPolicy = { on: true }; render(); });
-  assert.equal(await p2.$('.nav button[data-tab="light"]'), null);
+  assert.equal(await p2.$('.nav [data-tab="light"]'), null);
   await p2.context().close();
 });
