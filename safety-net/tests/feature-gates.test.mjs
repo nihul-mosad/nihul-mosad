@@ -12,7 +12,7 @@ const addPriv = () => {
   S.timetable = S.timetable.filter(x => x.id !== 'PVG').concat([{ id: 'PVG', day: 0, period: 1, subject: 'קריאה', teacher: S.me.teacher, classes: [c], type: 'private', students: st.map(s => s.id) }]);
   render();
 };
-const navTabs = page => page.$$eval('.nav button[data-tab]', b => b.map(x => x.dataset.tab));
+const navTabs = page => page.$$eval('.nav [data-tab]', b => b.map(x => x.dataset.tab));
 
 test('מורה עם שעה פרטנית: בלי אישור המנהל לא רואה את היומן; אחרי "כל הצוות" — רואה', async () => {
   const page = await newPage(browser);

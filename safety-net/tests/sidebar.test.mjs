@@ -20,7 +20,7 @@ for (const [w, h] of [[1338, 602], [1440, 900], [1024, 700]]) {
       const side = document.getElementById('side'), sd = side.getBoundingClientRect();
       const brand = document.querySelector('.brand').getBoundingClientRect();
       const kids = [...document.querySelectorAll('.brand > *')].filter(e => e.getBoundingClientRect().height).map(e => e.getBoundingClientRect());
-      const btns = [...document.querySelectorAll('#nav button')];
+      const btns = [...document.querySelectorAll('#nav [data-tab]')];
       const wave = getComputedStyle(side, '::after');
       const who = document.getElementById('who');
       // הגל חייב לבוא אחרי כל התוכן ולא לצוף מעליו
@@ -43,7 +43,7 @@ for (const [w, h] of [[1338, 602], [1440, 900], [1024, 700]]) {
     // בדיקה ויזואלית: כל כפתור בתפריט, אחרי גלילה אליו, הוא האלמנט העליון בנקודת המרכז שלו
     const covered = await page.evaluate(async () => {
       const out = [];
-      for (const b of document.querySelectorAll('#nav button, #who button')) {
+      for (const b of document.querySelectorAll('#nav [data-tab], #who button')) {
         b.scrollIntoView({ block: 'center' }); await new Promise(r => requestAnimationFrame(r));
         const x = b.getBoundingClientRect(); const top = document.elementFromPoint(x.left + x.width / 2, x.top + x.height / 2);
         if (!top || !(b === top || b.contains(top))) out.push(b.textContent.trim());

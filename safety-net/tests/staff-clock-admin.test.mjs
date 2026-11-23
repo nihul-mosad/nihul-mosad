@@ -14,7 +14,7 @@ const waitMain = (page, re) => page.waitForFunction(r => new RegExp(r).test(docu
 test('מורה לא רואה את "נוכחות צוות"', async () => {
   const page = await newPage(browser);
   await login(page, server.url, 'teacherA');
-  const tabs = await page.$$eval('.nav button[data-tab]', b => b.map(x => x.dataset.tab));
+  const tabs = await page.$$eval('.nav [data-tab]', b => b.map(x => x.dataset.tab));
   assert.ok(!tabs.includes('sclock'));
   await page.evaluate(() => { S.tab = 'sclock'; render(); });
   assert.notEqual(await page.evaluate(() => S.tab), 'sclock', 'גם בכניסה ישירה — מועבר ללשונית אחרת');
@@ -32,7 +32,7 @@ test('מנהל: קודים, הפעלה, חישוב יום וחודש, אישור
   }, USERS.teacherA.teacher);
   await page.evaluate(() => goTab('sclock'));
   await waitMain(page, /כבוי/);
-  assert.ok((await page.$$eval('.nav button[data-tab]', b => b.map(x => x.dataset.tab))).includes('sclock'));
+  assert.ok((await page.$$eval('.nav [data-tab]', b => b.map(x => x.dataset.tab))).includes('sclock'));
 
   // קודים לכולם והפעלה
   await page.click('[data-act="sc-view"][data-v="codes"]');

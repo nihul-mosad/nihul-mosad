@@ -11,7 +11,7 @@ test('תפריט: מנהל רואה קבוצות, וכל לשונית מופיע
   const page = await newPage(browser, { width: 1366, height: 768 });
   await login(page, server.url, 'admin');
   const r = await page.evaluate(() => ({ groups: [...document.querySelectorAll('#nav .nav-g')].map(g => g.textContent),
-    btns: [...document.querySelectorAll('#nav button[data-tab]')].map(b => b.dataset.tab), tabs: tabsFor().map(t => t[0]) }));
+    btns: [...document.querySelectorAll('#nav [data-tab]')].map(b => b.dataset.tab), tabs: tabsFor().map(t => t[0]) }));
   assert.deepEqual(r.groups.slice(0, 4), ['יום־יום', 'תלמידים', 'צוות', 'ניהול']);
   assert.deepEqual(r.btns.slice().sort(), r.tabs.slice().sort());
   assert.deepEqual(page.errors, []);
@@ -71,7 +71,7 @@ test('דוחות וניתוחים: לשונית אחת בתפריט ומתג ב�
   await page.evaluate(() => { S.tab = 'reports'; render(); });
   await page.click('.rep-sw [data-id="analytics"]');
   assert.equal(await page.evaluate(() => S.tab), 'analytics');
-  assert.equal(await page.$eval('#nav button[data-tab="reports"]', b => b.dataset.on), '1');
+  assert.equal(await page.$eval('#nav [data-tab="reports"]', b => b.dataset.on), '1');
   await page.click('.rep-sw [data-id="reports"]');
   assert.equal(await page.evaluate(() => S.tab), 'reports');
   assert.deepEqual(page.errors, []);
@@ -86,6 +86,31 @@ test('"בטל" במקום חלון אישור: הסרת כיתה בהגדרות 
   assert.equal(await page.evaluate(() => S.config.classes.length), before.length - 1);
   await page.click('#toast .undo');
   assert.deepEqual(await page.evaluate(() => S.config.classes), before);
+  assert.deepEqual(page.errors, []);
+  await page.context().close();
+});
+
+// v83: הלשוניות הן קישורים — אפשר לפתוח בכרטיסייה חדשה, והכתובת #tab פותחת את הלשונית
+test('לשוניות כקישורים: href לכל לשונית, Ctrl+לחיצה לא מחליף מסך, וכתובת עם #tab נפתחת ישר בלשונית', async () => {
+  const page = await newPage(browser, { width: 1280, height: 800 });
+  await login(page, server.url, 'admin');
+  const hrefs = await page.$$eval('#nav a[data-tab]', a => a.map(x => [x.dataset.tab, x.getAttribute('href')]));
+  assert.ok(hrefs.length > 5 && hrefs.every(([t, h]) => h === '#' + t), 'לכל לשונית קישור #שם');
+  const before = await page.evaluate(() => S.tab);
+  const ctx = page.context(), popup = ctx.waitForEvent('page', { timeout: 5000 }).catch(() => null);
+  await page.click('#nav a[data-tab="staff"]', { modifiers: ['Control'] });
+  const np = await popup;
+  assert.equal(await page.evaluate(() => S.tab), before, 'Ctrl+לחיצה לא מחליף את המסך הנוכחי');
+  if (np) { assert.match(np.url(), /#staff$/); await np.close(); }
+  await page.click('#nav a[data-tab="staff"]');
+  assert.equal(await page.evaluate(() => S.tab), 'staff');
+  assert.match(page.url(), /#staff$/);
+  // טעינה מחדש של הכתובת — נכנס ישר ל"צוות"
+  await page.reload();
+  await page.waitForFunction(() => typeof S !== 'undefined' && S.me && S.inst, null, { timeout: 15000 });
+  assert.equal(await page.evaluate(() => S.tab), 'staff');
+  // לשונית שאין למשתמש הרשאה אליה — לא נפתחת מהכתובת
+  assert.equal(await page.evaluate(() => { location.hash = '#nosuchtab'; return hashTab(); }), '');
   assert.deepEqual(page.errors, []);
   await page.context().close();
 });

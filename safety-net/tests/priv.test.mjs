@@ -22,9 +22,9 @@ test('מורה: לשונית שעות פרטניות, דיווח מלא נשמר
   const k = await page.evaluate(mkPriv);
   const evBefore = await page.evaluate(() => S.events.length);
   await page.evaluate(() => render());
-  assert.ok(await page.$('.nav button[data-tab="priv"]'));
+  assert.ok(await page.$('.nav [data-tab="priv"]'));
   await page.waitForTimeout(400);
-  await page.click('.nav button[data-tab="priv"]');
+  await page.click('.nav [data-tab="priv"]');
   await page.waitForFunction(() => /השעות הפרטניות שלי/.test(document.getElementById('main').textContent), null, { timeout: 5000 });
   await page.evaluate(lid => { S.pvc = pvDefaults({ date: daysAgo(7), lid: '', sids: [] }); render(); }, k.lid);
   await page.evaluate(lid => { const l = S.timetable.find(x => x.id === lid); S.pvc.date = (() => { let d = iso(new Date()); for (let i = 0; i < 7; i++) { if (dow(d) === l.day) return d; d = addDaysIso(d, -1); } return d; })(); render(); }, k.lid);
@@ -75,7 +75,7 @@ test('"לא התקיים" מוציא מהרשימה לדיווח; מנהל רו�
   const p2 = await newPage(browser, { width: 1366, height: 900 });
   await login(p2, server.url, 'teacherMath');
   await p2.evaluate(() => { S.timetable = S.timetable.filter(l => l.type !== 'private'); render(); });
-  assert.equal(await p2.$('.nav button[data-tab="priv"]'), null);
+  assert.equal(await p2.$('.nav [data-tab="priv"]'), null);
   await p2.context().close();
 });
 
