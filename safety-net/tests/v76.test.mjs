@@ -96,3 +96,35 @@ test('תמונת מצב כיתות: רק למנהל; אקלים ולמידה; ס
   assert.equal(await p2.$('.nav [data-tab="classbi"]'), null);
   await p2.context().close();
 });
+
+// v84: חיפוש לפי שם תלמיד בתוך הארכיון
+test('ארכיון: חיפוש לפי שם תלמיד (גם חלק מהשם), לחיצה על שם מסננת, ניקוי מחזיר הכול', async () => {
+  const page = await newPage(browser, { width: 1366, height: 768 });
+  await login(page, server.url, 'admin');
+  const names = await page.evaluate(() => {
+    const st = S.students.slice(0, 3), mk = (s, i) => ({ id: 'ax' + i, sid: s.id, sname: s.name, cls: s.cls, type: 'p1', typeName: 'צל"ש', kind: 'pos', sev: 1, date: daysAgo(10 + i), ts: Date.now() - i });
+    S.evArch = [mk(st[0], 1), mk(st[0], 2), mk(st[1], 3), mk(st[2], 4)]; S.evaf = null;
+    S.tab = 'events'; S.evArchView = true; render();
+    return st.map(s => s.name);
+  });
+  const rows = () => page.$$eval('#main table tbody tr', r => r.length);
+  assert.equal(await rows(), 4);
+  // הקלדה: חלק מהשם, והמיקוד נשאר בתיבה
+  const part = names[0].split(' ').slice(-1)[0];
+  await page.fill('#evaq', part);
+  await page.waitForFunction(n => document.querySelectorAll('#main table tbody tr').length === n, names.filter(n => n.indexOf(part) > -1).length >= 1 ? (await page.evaluate(p => S.evArch.filter(e => e.sname.indexOf(p) > -1).length, part)) : 0);
+  assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'evaq', 'המיקוד נשאר בתיבת החיפוש');
+  assert.match(await page.textContent('#main'), /מתוך 4/);
+  // ניקוי
+  await page.click('[data-act="evaf-clear"]');
+  assert.equal(await rows(), 4);
+  // לחיצה על שם בטבלה
+  await page.click('[data-act="evaf-name"][data-n="' + names[1] + '"]');
+  assert.equal(await rows(), 1);
+  assert.equal(await page.inputValue('#evaq'), names[1]);
+  // אין תוצאות
+  await page.fill('#evaq', 'שםשלאקיים');
+  await page.waitForFunction(() => /לא נמצאו אירועים לחיפוש הזה/.test(document.getElementById('main').textContent));
+  assert.deepEqual(page.errors, []);
+  await page.context().close();
+});
