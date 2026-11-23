@@ -2833,7 +2833,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=83;
+const APP_VER=84;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -4778,6 +4778,8 @@ async function evAction(a,el){
     if(S.config.evTypes[S.config.evTypes.length-1].kind==='pos')S.config.evTypes[S.config.evTypes.length-1].sev=1;
     save(K.config,S.config);toast('נוסף');return render();
   }
+  if(a==='evaf-clear'){S.evaf={cls:'',q:''};return render();}
+  if(a==='evaf-name'){S.evaf=Object.assign({},S.evaf,{q:el.dataset.n||''});window.scrollTo(0,0);return render();}
   if(a==='ev-arch-view'){S.evArchView=!S.evArchView;S.evc=null;return render();}
   if(a==='ev-arch'){if(!isAdmin())return;const n=S.events.length;if(!n)return;
     if(!confirm('להעביר '+n+' אירועים לארכיון?\nהם לא יימחקו, אבל לא יוצגו יותר בכרטיסים, בלוח הבקרה, ברמזור ובדוחות — רק בדף הארכיון. אפשר להחזיר.'))return;
@@ -7847,9 +7849,10 @@ function evIsArch(e,A){return !!A&&(e.ts?e.ts<=A.ts:String(e.date||'')<=A.date);
 function evSplit(){const A=S.config.evArch,all=(S.events||[]).concat(S.evArch||[],S.pv||[]);S.events=[];S.evArch=[];S.pv=[];all.forEach(e=>(e.kind==='pv'?S.pv:evIsArch(e,A)?S.evArch:S.events).push(e));}
 function evAllForSave(){return (S.events||[]).concat(S.evArch||[],S.pv||[]);}
 function viewEvArchive(){
-  const A=S.config.evArch,f=S.evaf=S.evaf||{cls:''},arc=S.evArch||[];
+  const A=S.config.evArch,f=S.evaf=S.evaf||{cls:'',q:''},arc=S.evArch||[],qn=ckNorm(f.q||'');
+  const evName=e=>(studentById(e.sid)||{}).name||e.sname||'';
   const clsOpts=Array.from(new Set(arc.map(e=>e.cls))).filter(Boolean).sort((a,b)=>S.config.classes.indexOf(a)-S.config.classes.indexOf(b));
-  const list=arc.filter(e=>!f.cls||e.cls===f.cls).sort((a,b)=>(b.date+(b.time||''))>(a.date+(a.time||''))?1:-1);
+  const list=arc.filter(e=>(!f.cls||e.cls===f.cls)&&(!qn||ckNorm(evName(e)).indexOf(qn)>-1)).sort((a,b)=>(b.date+(b.time||''))>(a.date+(a.time||''))?1:-1);
   const log=(S.config.evArchLog||[]).slice(-5).reverse();
   return '<div class="head"><div><h2>ארכיון אירועים</h2><div class="sub">'+(A?'עד '+shortDate(A.date)+' · '+arc.length+' אירועים · לא מוצגים בכרטיסים, בלוח הבקרה, ברמזור ובדוחות':'הארכיון ריק')+'</div></div>'+
     '<div class="row"><button class="btn" data-act="ev-arch-view">חזרה לאירועים</button></div></div>'+
@@ -7857,9 +7860,13 @@ function viewEvArchive(){
       '<div class="row"><button class="btn" data-v="primary" data-act="ev-arch"'+(S.events.length?'':' disabled')+'>העברת '+S.events.length+' אירועים לארכיון</button>'+
       (A?'<button class="btn" data-v="ghost" data-act="ev-unarch">החזרת כל האירועים מהארכיון</button>':'')+'</div>'+
       (log.length?'<p class="note" style="margin:10px 0 0">'+log.map(x=>(x.undo?'הוחזר מהארכיון':'הועבר לארכיון')+' · '+shortDate(x.date)+' · '+esc(x.by||'')+(x.n!=null?' · '+x.n+' אירועים':'')).join('<br>')+'</p>':'')+'</div>'+
-    '<div class="card">'+(clsOpts.length>1?'<div class="row" style="margin-bottom:10px"><select class="inp" data-evaf="cls">'+opt('כל הכיתות','',f.cls)+clsOpts.map(c=>opt(c,c,f.cls)).join('')+'</select><span class="note">'+list.length+' אירועים</span></div>':'')+
-      (list.length?table(['תאריך','תלמיד','כיתה','מה היה','תיאור','מי דיווח'],list.map(e=>[shortDate(e.date),esc((studentById(e.sid)||{}).name||e.sname||''),esc(e.cls||''),
-        '<span class="tag" data-s="'+(e.kind==='pos'?'present':e.sev>=3?'absent':'late')+'">'+esc((e.typeName||'אירוע')+evLvTxt(e))+'</span>',esc(e.note||''),esc(e.by||'')])):'<div class="empty">אין אירועים בארכיון.</div>')+'</div>';
+    '<div class="card">'+(arc.length?'<div class="row" style="margin-bottom:10px;gap:8px;align-items:center;flex-wrap:wrap">'+
+        '<input class="inp" id="evaq" data-evaq="1" type="search" placeholder="חיפוש לפי שם תלמיד" aria-label="חיפוש לפי שם תלמיד" value="'+esc(f.q||'')+'" style="flex:1;min-width:180px;max-width:280px">'+
+        (clsOpts.length>1?'<select class="inp" data-evaf="cls" aria-label="כיתה">'+opt('כל הכיתות','',f.cls)+clsOpts.map(c=>opt(c,c,f.cls)).join('')+'</select>':'')+
+        (f.q||f.cls?'<button class="btn sm" data-v="ghost" data-act="evaf-clear">ניקוי</button>':'')+
+        '<span class="note">'+list.length+(list.length!==arc.length?' מתוך '+arc.length:'')+' אירועים</span></div>':'')+
+      (list.length?table(['תאריך','תלמיד','כיתה','מה היה','תיאור','מי דיווח'],list.map(e=>[shortDate(e.date),'<button class="lnk" data-act="evaf-name" data-n="'+esc(evName(e))+'" title="רק האירועים של התלמיד הזה">'+esc(evName(e))+'</button>',esc(e.cls||''),
+        '<span class="tag" data-s="'+(e.kind==='pos'?'present':e.sev>=3?'absent':'late')+'">'+esc((e.typeName||'אירוע')+evLvTxt(e))+'</span>',esc(e.note||''),esc(e.by||'')])):'<div class="empty">'+(arc.length?'לא נמצאו אירועים לחיפוש הזה.':'אין אירועים בארכיון.')+'</div>')+'</div>';
 }
 
 /* ===== תמונת מצב רמזור להורים: הודעה מוכנה (העתקה / וואטסאפ) והדפסה (v76) ===== */
@@ -8799,7 +8806,7 @@ document.getElementById('main').addEventListener('click',async function(e){
   if(a==='stx-open'){S.stx=S.stx||{cols:{},per:false};S.stxOn=true;return render();}
   if(a==='stx-close'){S.stx=null;return render();}
   if(a==='stx-run')return stxRun();
-  if(a.indexOf('ev-')===0||a.indexOf('evt-')===0||a==='goto-events')return evAction(a,el);
+  if(a.indexOf('ev-')===0||a.indexOf('evt-')===0||a.indexOf('evaf-')===0||a==='goto-events')return evAction(a,el);
   if(a.indexOf('as-')===0)return AC_ACTS.has(a)?acAction(a,el,id):asAction(a,el,id);
   if(/^(bulk-|cred-|join-|jr-)/.test(a)||a==='user-pin')return userAction(a,el);
   if(a.indexOf('con-')===0)return consoleAction(a,el);
@@ -9274,6 +9281,7 @@ document.getElementById('main').addEventListener('input',function(e){
   if(t.id&&t.id.indexOf('mp-')===0&&t.id!=='mp-cx'&&t.id!=='mp-ck'){S.remDirty=true;return;}
   if(t.dataset&&t.dataset.asq&&S.as){S.as.q=t.value;S.as.page=0;S.focus='asQ';return render();}
   if(t.dataset&&t.dataset.evq){evCapture();S.evc.q=t.value;S.focus='evq';return render();}
+  if(t.dataset&&t.dataset.evaq&&S.evaf){S.evaf.q=t.value;S.focus='evaq';return render();}
   if(t.dataset&&t.dataset.evf==='q'){S.evf.q=t.value;S.focus='evfq';return render();}
   if(t.id==='ev-note'&&S.evc){S.evc.note=t.value;return;}
   if(t.id==='lt-msg-t'&&S.ltMsg){S.ltMsg.text=t.value;return;}
