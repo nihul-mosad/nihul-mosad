@@ -2848,7 +2848,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=85;
+const APP_VER=86;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -5064,7 +5064,7 @@ function viewSchedule(){
   }
   if(S.ttMode==='teacher'&&!S.ttTeacher)S.ttTeacher=teachersList()[0]||'';
   const head='<div class="head"><div><h2>מערכת שעות</h2><div class="sub">'+S.timetable.length+' שיעורים בשבוע · '+teachersList().length+' מורים</div></div>'+
-    '<div class="row"><button class="btn" data-act="tt-pick-file">ייבוא מקובץ</button><input type="file" id="ttFile" accept=".xlsx,.xls" style="display:none">'+
+    '<div class="row"><button class="btn" data-act="tt-export">'+icon('download')+' ייצוא לאקסל</button><button class="btn" data-act="tt-pick-file">ייבוא מקובץ</button><input type="file" id="ttFile" accept=".xlsx,.xls" style="display:none">'+
     '<button class="btn" data-act="tt-periods">מבנה יום</button></div></div>';
   const modes='<div class="seg" style="max-width:560px;margin-bottom:12px"><button data-act="tt-mode" data-m="class" data-on="'+(S.ttMode!=='teacher'&&S.ttMode!=='all'?1:0)+'">לפי כיתה</button>'+
     '<button data-act="tt-mode" data-m="teacher" data-on="'+(S.ttMode==='teacher'?1:0)+'">לפי מורה</button>'+
@@ -5178,6 +5178,56 @@ async function tsAct(a,el){
     const aoa=[hd].concat(D.rows.map(r=>[r].concat(T.cols==='none'?[]:D.cols.map(c=>D.cell[r+'\u0001'+c]||'')).concat([D.rt[r]]))).concat([['סה״כ'].concat(T.cols==='none'?[]:D.cols.map(c=>D.ct[c])).concat([D.total])]);
     const wb=X.utils.book_new();wb.Workbook={Views:[{RTL:true}]};const ws=X.utils.aoa_to_sheet(aoa);ws['!views']=[{RTL:true}];ws['!cols']=hd.map((x,i)=>({wch:i?10:16}));
     X.utils.book_append_sheet(wb,ws,'סיכום שעות');X.writeFile(wb,'סיכום שעות - '+TS_DIMS[T.rows]+(T.cols==='none'?'':' לפי '+TS_DIMS[T.cols])+'.xlsx');return;}
+}
+
+/* ================= ייצוא מערכת השעות לאקסל =================
+   ארבעה גיליונות: כיתות (טבלת שבוע לכל כיתה), מורים (טבלת שבוע לכל מורה),
+   מקצועות (שיעורים לכל מקצוע בכל כיתה, ומי מלמד), ומסכם (כל הימים והשיעורים מול כל הכיתות, ובסוף סיכום מורים). */
+async function ttExportXlsx(){
+  const L=(S.timetable||[]).slice();if(!L.length)return toast('אין שיעורים במערכת השעות');
+  let X;try{X=await loadSheetJS();}catch(e){return toast('לא הצלחתי לטעון את רכיב האקסל. בדקו את החיבור.');}
+  const P=periods(),usedDays=DAYS.map((d,i)=>i).filter(i=>L.some(l=>l.day===i)),dayIdx=usedDays.length?usedDays:[0,1,2,3,4];
+  const maxP=Math.max(...P.map(p=>p.n),...L.map(l=>l.period||0));
+  const pers=[];for(let n=1;n<=maxP;n++)if(P.some(p=>p.n===n)||L.some(l=>l.period===n))pers.push(n);
+  const plab=n=>{const p=P.find(x=>x.n===n);return 'שיעור '+n+(p&&p.start?' ('+p.start+(p.end?'–'+p.end:'')+')':'');};
+  const cls=(S.config.classes||[]).filter(c=>L.some(l=>(l.classes||[]).indexOf(c)>-1));
+  L.forEach(l=>(l.classes||[]).forEach(c=>{if(cls.indexOf(c)<0)cls.push(c);}));
+  const teachers=[...new Set(L.map(l=>l.teacher||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'he'));
+  const subjects=[...new Set(L.map(l=>String(l.subject||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'he'));
+  const typ=l=>l.type==='private'?' (פרטני)':'';
+  const wb=X.utils.book_new();wb.Workbook={Views:[{RTL:true}]};
+  const addSheet=(name,aoa,merges,widths)=>{const ws=X.utils.aoa_to_sheet(aoa);ws['!views']=[{RTL:true}];if(merges&&merges.length)ws['!merges']=merges;
+    ws['!cols']=widths||aoa.reduce((w,r)=>{r.forEach((v,i)=>{w[i]=Math.max(w[i]||8,Math.min(42,String(v==null?'':v).length+2));});return w;},[]).map(x=>({wch:x}));
+    X.utils.book_append_sheet(wb,ws,name);};
+  // טבלת שבוע (שיעורים × ימים) לבלוק אחד
+  const block=(title,pick,fmt,aoa,merges)=>{const r0=aoa.length,ncol=dayIdx.length+1;
+    aoa.push([title].concat(Array(ncol-1).fill('')));merges.push({s:{r:r0,c:0},e:{r:r0,c:ncol-1}});
+    aoa.push(['שיעור'].concat(dayIdx.map(d=>'יום '+DAYS[d])));
+    pers.forEach(n=>aoa.push([plab(n)].concat(dayIdx.map(d=>L.filter(l=>l.day===d&&l.period===n&&pick(l)).map(fmt).join(' | ')))));
+    const cnt=L.filter(pick).length;aoa.push(['סה״כ '+cnt+' שיעורים בשבוע'].concat(Array(ncol-1).fill('')));aoa.push([]);};
+  const wide=[{wch:22}].concat(dayIdx.map(()=>({wch:26})));
+  // 1. כיתות
+  {const aoa=[],m=[];cls.forEach(c=>block('כיתה: '+c+((S.config.homeroom||{})[c]?' · מחנך: '+S.config.homeroom[c]:''),l=>(l.classes||[]).indexOf(c)>-1,l=>(l.subject||'')+(l.teacher?' – '+l.teacher:'')+typ(l),aoa,m));addSheet('כיתות',aoa,m,wide);}
+  // 2. מורים
+  {const aoa=[],m=[];teachers.forEach(t=>block('מורה: '+t,l=>l.teacher===t,l=>(l.subject||'')+' – '+(l.classes||[]).join(', ')+typ(l),aoa,m));addSheet('מורים',aoa,m,wide);}
+  // 3. מקצועות: מקצוע × כיתה (מספר שיעורים), ומי מלמד
+  {const aoa=[['מקצוע'].concat(cls).concat(['סה״כ שיעורים','מורים'])];
+    subjects.forEach(sb=>{const ls=L.filter(l=>String(l.subject||'').trim()===sb);
+      aoa.push([sb].concat(cls.map(c=>ls.filter(l=>(l.classes||[]).indexOf(c)>-1).length||'')).concat([ls.length,[...new Set(ls.map(l=>l.teacher).filter(Boolean))].join(', ')]));});
+    aoa.push(['סה״כ'].concat(cls.map(c=>L.filter(l=>(l.classes||[]).indexOf(c)>-1).length)).concat([L.length,'']));
+    aoa.push([]);aoa.push(['שיעור המשותף לכמה כיתות נספר בכל אחת מהכיתות; בעמודת "סה״כ שיעורים" הוא נספר פעם אחת.']);
+    addSheet('מקצועות',aoa,null,[{wch:20}].concat(cls.map(()=>({wch:10}))).concat([{wch:14},{wch:40}]));}
+  // 4. מסכם: כל הימים והשיעורים מול כל הכיתות, ובסוף מורים
+  {const aoa=[['יום','שיעור'].concat(cls)],m=[];
+    dayIdx.forEach(d=>{const r0=aoa.length;pers.forEach(n=>aoa.push(['יום '+DAYS[d],plab(n)].concat(cls.map(c=>L.filter(l=>l.day===d&&l.period===n&&(l.classes||[]).indexOf(c)>-1).map(l=>(l.subject||'')+(l.teacher?' – '+l.teacher:'')+typ(l)).join(' | ')))));
+      if(pers.length>1)m.push({s:{r:r0,c:0},e:{r:aoa.length-1,c:0}});});
+    aoa.push([]);aoa.push(['סיכום מורים']);aoa.push(['מורה','שיעורים בשבוע','מקצועות','כיתות'].concat(dayIdx.map(d=>'יום '+DAYS[d])));
+    teachers.forEach(t=>{const ls=L.filter(l=>l.teacher===t);aoa.push([t,ls.length,[...new Set(ls.map(l=>l.subject).filter(Boolean))].join(', '),[...new Set([].concat(...ls.map(l=>l.classes||[])))].join(', ')].concat(dayIdx.map(d=>ls.filter(l=>l.day===d).length||'')));});
+    aoa.push([]);aoa.push(['סיכום כיתות']);aoa.push(['כיתה','שיעורים בשבוע','מחנך'].concat(dayIdx.map(d=>'יום '+DAYS[d])));
+    cls.forEach(c=>{const ls=L.filter(l=>(l.classes||[]).indexOf(c)>-1);aoa.push([c,ls.length,(S.config.homeroom||{})[c]||''].concat(dayIdx.map(d=>ls.filter(l=>l.day===d).length||'')));});
+    addSheet('מסכם',aoa,m,[{wch:11},{wch:20}].concat(cls.map(()=>({wch:26}))));}
+  X.writeFile(wb,'מערכת שעות - '+iso(new Date())+'.xlsx',{compression:true});
+  logAct('ייצוא מערכת שעות',L.length+' שיעורים');toast('הקובץ ירד');
 }
 function slotCard(){
   const sl=S.ttSlot,p=periods().find(x=>x.n===sl.period)||{n:sl.period};
@@ -5300,6 +5350,7 @@ function ttImportView(){
 function ttEnsureStaff(name){if(name&&!S.staff.some(x=>x.name===name)){S.staff=S.staff.concat([{id:uid(),name:name,role:'מורה',cls:'',phone:'',hours:'',start:''}]);return true;}return false;}
 async function ttAction(a,el){
   if(!isAdmin()&&a!=='tt-day')return;
+  if(a==='tt-export')return ttExportXlsx();
   if(a==='tt-mode'){S.ttMode=el.dataset.m;S.ttSlot=null;S.ttEdit=null;return render();}
   if(a==='tt-cls'){S.ttCls=el.dataset.c;S.ttSlot=null;S.ttEdit=null;return render();}
   if(a==='tt-teacher'){S.ttTeacher=el.dataset.t;S.ttSlot=null;S.ttEdit=null;return render();}
