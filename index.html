@@ -339,6 +339,21 @@ table.evtab td{font-size:14px}
 .seg button[data-on="1"]:not([data-s]){background:var(--accent)}
 .chip[data-on="1"]{background:var(--accent);color:#fff;border-color:var(--accent)}
 .tt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tsctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:10px}
+.tsctl label{display:flex;gap:6px;align-items:center;font-size:13.5px;color:var(--muted)}
+.tsflt{display:grid;gap:6px;margin-bottom:6px}
+.tsf{display:flex;flex-wrap:wrap;gap:5px;align-items:center}.tsf>span{font-size:13px;color:var(--muted);min-width:56px}
+.tsf .chip{font-size:12.5px;padding:3px 10px}
+table.tst{border-collapse:collapse;min-width:100%}
+table.tst th,table.tst td{border:1px solid var(--line);padding:6px 9px;text-align:center;font-size:14px;white-space:nowrap}
+table.tst thead th{background:var(--surface2);font-size:13px}
+table.tst tbody th,table.tst tfoot th{text-align:right;background:var(--surface2);position:sticky;right:0}
+table.tst td[data-act]{cursor:pointer}table.tst td.on{outline:2px solid var(--accent);outline-offset:-2px}
+table.tst .tot,table.tst tfoot td{font-weight:700;background:var(--surface2)}
+.tsdrill{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+.tscat{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px;margin-top:8px}
+.tscat label{display:flex;justify-content:space-between;gap:6px;align-items:center;font-size:13.5px}
+@media print{.tsctl,.tsflt{display:none}table.tst th,table.tst td{font-size:11px;padding:3px 5px}}
 table.mpt{border-collapse:collapse;width:100%;min-width:720px}
 table.mpt th{font-size:12.5px;color:var(--muted);font-weight:700;padding:8px 6px;border-bottom:1px solid var(--line);text-align:right}
 table.mpt td{border-bottom:1px solid var(--line);padding:7px 6px;font-size:14px}
@@ -2833,7 +2848,7 @@ function paintLogin(){
   document.getElementById('loginHint').textContent='';
 }
 /* מספר הגרסה (זהה למספר ב-sw.js) */
-const APP_VER=84;
+const APP_VER=85;
 document.querySelectorAll('.appver').forEach(e=>e.textContent='גרסה '+APP_VER);
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 /* ניתוק אוטומטי אחרי 30 דקות בלי פעילות, רק במכשיר שלא סומן בו "להישאר מחובר" (למשל מחשב בחדר המורים) */
@@ -5038,6 +5053,8 @@ function ttAllGrid(){
   }).join('');
   return '<div class="tt-wrap"><table class="tt ttall" style="min-width:'+Math.max(760,90+C.length*150+160)+'px">'+head+'<tbody>'+body+'</tbody></table></div>';
 }
+function hrCardOf(){const hr=S.config.homeroom||{};return isAdmin()?'<div class="card"><h3>מחנכי כיתות</h3><p class="note" style="margin-bottom:10px">המחנך רואה את כל מה שקורה בכיתה שלו, כולל נוכחות בכל השיעורים. מורה שאינו מחנך רואה רק את השיעורים שלו.</p><div class="grid g3">'+
+    S.config.classes.map(c=>'<label class="field"><span>'+esc(c)+'</span><select data-hr="'+esc(c)+'">'+opt('—','',hr[c]||'')+teachersList().map(t=>opt(t,t,hr[c]||'')).join('')+'</select></label>').join('')+'</div></div>':'';}
 function viewSchedule(){
   const P=periods(),sel=S.ttSlot;
   if(S.ttImport)return ttImportView();
@@ -5049,9 +5066,11 @@ function viewSchedule(){
   const head='<div class="head"><div><h2>מערכת שעות</h2><div class="sub">'+S.timetable.length+' שיעורים בשבוע · '+teachersList().length+' מורים</div></div>'+
     '<div class="row"><button class="btn" data-act="tt-pick-file">ייבוא מקובץ</button><input type="file" id="ttFile" accept=".xlsx,.xls" style="display:none">'+
     '<button class="btn" data-act="tt-periods">מבנה יום</button></div></div>';
-  const modes='<div class="seg" style="max-width:420px;margin-bottom:12px"><button data-act="tt-mode" data-m="class" data-on="'+(S.ttMode!=='teacher'&&S.ttMode!=='all'?1:0)+'">לפי כיתה</button>'+
+  const modes='<div class="seg" style="max-width:560px;margin-bottom:12px"><button data-act="tt-mode" data-m="class" data-on="'+(S.ttMode!=='teacher'&&S.ttMode!=='all'?1:0)+'">לפי כיתה</button>'+
     '<button data-act="tt-mode" data-m="teacher" data-on="'+(S.ttMode==='teacher'?1:0)+'">לפי מורה</button>'+
-    '<button data-act="tt-mode" data-m="all" data-on="'+(S.ttMode==='all'?1:0)+'">מבט כולל</button></div>';
+    '<button data-act="tt-mode" data-m="all" data-on="'+(S.ttMode==='all'?1:0)+'">מבט כולל</button>'+
+    '<button data-act="tt-mode" data-m="sum" data-on="'+(S.ttMode==='sum'?1:0)+'">סיכום שעות</button></div>';
+  if(S.ttMode==='sum')return head+(S.ttPeriods?periodsCard():'')+'<div class="card">'+modes+viewTtSum()+'</div>'+hrCardOf();
   const chips=S.ttMode==='all'?'':'<div class="row" style="margin-bottom:14px;gap:6px">'+(S.ttMode==='teacher'?
     (teachersList().map(t=>'<button class="chip" data-act="tt-teacher" data-t="'+esc(t)+'" data-on="'+(t===S.ttTeacher?1:0)+'">'+esc(t)+'</button>').join('')||'<span class="note">אין עדיין מורים. הוסיפו שיעור או אנשי צוות.</span>'):
     (S.config.classes.map(c=>'<button class="chip" data-act="tt-cls" data-c="'+esc(c)+'" data-on="'+(c===ttCurCls()?1:0)+'">'+esc(c)+'</button>').join('')||'<span class="note">אין כיתות. הוסיפו כיתות בהגדרות.</span>'))+'</div>';
@@ -5070,14 +5089,95 @@ function viewSchedule(){
       return '<div class="per" data-act="tt-slot" data-day="'+S.ttDay+'" data-p="'+p.n+'"'+(on?' style="background:var(--accent-soft)"':'')+'><div class="pc"><b>'+p.n+'</b>'+esc(p.start||'')+'</div><div class="ls">'+
         (ls.length?ls.map(lessonChip).join(''):'<span class="note">— אין שיעור · לחצו להוספה</span>')+'</div></div>';}).join('')+'</div>';
   const legend='<p class="note" style="margin-top:10px">לחצו על משבצת כדי להוסיף, לערוך או למחוק שיעור. <span style="color:var(--late);font-weight:700">כתום</span> = הוראה פרטנית · <span style="color:var(--absent);font-weight:700">מסגרת אדומה</span> = למורה יש שני שיעורים באותה שעה.</p>';
-  const hr=S.config.homeroom||{};
-  const hrCard=isAdmin()?'<div class="card"><h3>מחנכי כיתות</h3><p class="note" style="margin-bottom:10px">המחנך רואה את כל מה שקורה בכיתה שלו, כולל נוכחות בכל השיעורים. מורה שאינו מחנך רואה רק את השיעורים שלו.</p><div class="grid g3">'+
-    S.config.classes.map(c=>'<label class="field"><span>'+esc(c)+'</span><select data-hr="'+esc(c)+'">'+opt('—','',hr[c]||'')+teachersList().map(t=>opt(t,t,hr[c]||'')).join('')+'</select></label>').join('')+'</div></div>':'';
+  const hrCard=hrCardOf();
+  function _unusedHr(){const hr=S.config.homeroom||{};return isAdmin()?'<div class="card"><h3>מחנכי כיתות</h3><p class="note" style="margin-bottom:10px">המחנך רואה את כל מה שקורה בכיתה שלו, כולל נוכחות בכל השיעורים. מורה שאינו מחנך רואה רק את השיעורים שלו.</p><div class="grid g3">'+
+    S.config.classes.map(c=>'<label class="field"><span>'+esc(c)+'</span><select data-hr="'+esc(c)+'">'+opt('—','',hr[c]||'')+teachersList().map(t=>opt(t,t,hr[c]||'')).join('')+'</select></label>').join('')+'</div></div>':'';}
   if(!isAdmin())return '<div class="head"><div><h2>המערכת שלי</h2><div class="sub">'+esc(S.me.teacher||'')+' · '+S.timetable.filter(l=>l.teacher===S.me.teacher).length+' שיעורים בשבוע</div></div></div><div class="card">'+grid+mob+'</div>';
   if(S.ttMode==='all'){grid=ttAllGrid();mob='';}
   return head+(S.ttPeriods?periodsCard():'')+'<div class="card">'+modes+chips+grid+mob+legend+'</div>'+(sel?slotCard():'')+hrCard+
     '<div class="card"><h3>שנה חדשה</h3><p class="note" style="margin-bottom:10px">בתחילת שנה אפשר לרוקן את המערכת ולהזין מחדש (ידנית או מקובץ). התלמידים, הנוכחות והנתונים האחרים לא נמחקים.</p>'+
     '<button class="btn" data-v="danger" data-act="tt-clear">ריקון מערכת השעות</button></div>';
+}
+/* ================= מערכת שעות: סיכום שעות (טבלה דינמית) =================
+   מכל שיעור במערכת נוצרת "עובדה" לכל כיתה שבו (שיעור משותף לשתי כיתות נספר לכל אחת מהן).
+   כשהטבלה לא מפולחת לפי כיתה — שיעור משותף נספר פעם אחת. מדד: מספר שיעורים בשבוע, או זמן בשעות לפי מבנה היום. */
+const TS_DIMS={cls:'כיתה',subj:'מקצוע',cat:'תחום',teacher:'מורה',day:'יום',type:'סוג'};
+const TS_KODESH=/תורה|חומש|גמרא|גמ'|משנה|הלכה|תפילה|פרשה|פרשת|נביא|נ"ך|נך|חסידות|תניא|קודש|דינים|רש"י|מדרש|ניגון|אמונה|מנהגי|תהלים|אגדה|עיון|בקיאות|קריאה בתורה/;
+const TS_CHOL=/חשבון|הנדסה|שפה|לשון(?! הקודש)|עברית|קריאה|כתיבה|אנגלית|מדע|טבע|גאוגרפ|היסטור|ספורט|חינוך גופני|אומנות|אמנות|מוזיקה|מחשב|כישורי|מתמטיקה|הבעה|חברה|זהירות/;
+function tsCat(subj){const m=(S.config.subjCat||{})[subj];if(m)return m;const x=String(subj||'');if(/לשון הקודש/.test(x)||TS_KODESH.test(x))return 'קודש';if(TS_CHOL.test(x))return 'חול';return 'אחר';}
+function tsMins(n){const p=periods().find(x=>x.n===n);if(!p||!p.start||!p.end)return 0;const t=s=>{const m=String(s).match(/(\d+):(\d+)/);return m?+m[1]*60+ +m[2]:0;};return Math.max(0,t(p.end)-t(p.start));}
+function tsFacts(){
+  const out=[];
+  (S.timetable||[]).forEach(function(l,i){const cl=(l.classes&&l.classes.length)?l.classes:['ללא כיתה'],subj=String(l.subject||'ללא מקצוע').trim()||'ללא מקצוע';
+    cl.forEach(c=>out.push({lid:l.id||('i'+i),l:l,cls:c,subj:subj,cat:tsCat(subj),teacher:l.teacher||'ללא מורה',day:DAYS[l.day]||'',dayN:l.day,type:l.type==='private'?'פרטני':'כיתתי',mins:tsMins(l.period)}));});
+  return out;
+}
+function tsState(){return S.ttSum=S.ttSum||{rows:'cls',cols:'subj',meas:'n',f:{cls:[],subj:[],teacher:[],cat:[],type:[],day:[]},drill:null,sort:'name'};}
+function tsOrder(dim,vals){
+  if(dim==='cls'){const o=S.config.classes||[];return vals.sort((a,b)=>((o.indexOf(a)+1)||99)-((o.indexOf(b)+1)||99)||a.localeCompare(b,'he'));}
+  if(dim==='day')return vals.sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b));
+  if(dim==='cat'){const o=['קודש','חול','אחר'];return vals.sort((a,b)=>((o.indexOf(a)+1)||9)-((o.indexOf(b)+1)||9)||a.localeCompare(b,'he'));}
+  return vals.sort((a,b)=>a.localeCompare(b,'he'));
+}
+/* מחשב את הטבלה: מחזיר שורות, עמודות, ערכים וסיכומים, עם ספירה חד-פעמית של שיעור משותף כשאין פילוח לפי כיתה */
+function tsCompute(){
+  const T=tsState(),F=T.f;
+  let facts=tsFacts().filter(x=>Object.keys(F).every(k=>!F[k].length||F[k].indexOf(x[k])>-1));
+  const byCls=T.rows==='cls'||T.cols==='cls';
+  const val=xs=>{let a=xs;if(!byCls){const seen={};a=xs.filter(x=>seen[x.lid]?false:(seen[x.lid]=1));}return T.meas==='h'?a.reduce((s,x)=>s+x.mins,0)/60:a.length;};
+  const R=tsOrder(T.rows,[...new Set(facts.map(x=>x[T.rows]))]),C=T.cols==='none'?['סה״כ']:tsOrder(T.cols,[...new Set(facts.map(x=>x[T.cols]))]);
+  const cell={},rt={},ct={};
+  R.forEach(r=>{const fr=facts.filter(x=>x[T.rows]===r);rt[r]=val(fr);C.forEach(c=>{const v=val(T.cols==='none'?fr:fr.filter(x=>x[T.cols]===c));if(v)cell[r+'\u0001'+c]=v;});});
+  C.forEach(c=>ct[c]=val(T.cols==='none'?facts:facts.filter(x=>x[T.cols]===c)));
+  let rows=R.slice();if(T.sort==='total')rows.sort((a,b)=>rt[b]-rt[a]);
+  return {rows:rows,cols:C,cell:cell,rt:rt,ct:ct,total:val(facts),facts:facts,byCls:byCls};
+}
+const tsFmt=v=>{if(!v)return '';const T=tsState();return T.meas==='h'?(Math.round(v*4)/4).toString().replace(/\.0+$/,''):String(v);};
+function viewTtSum(){
+  const T=tsState(),all=tsFacts();
+  if(!all.length)return '<div class="empty">אין עדיין שיעורים במערכת השעות.</div>';
+  const D=tsCompute(),mx=Math.max(1,...Object.values(D.cell));
+  const sel=(k,v,opts)=>'<select class="inp" data-ts="'+k+'">'+opts.map(o=>opt(o[1],o[0],v)).join('')+'</select>';
+  const dimOpts=Object.keys(TS_DIMS).map(k=>[k,TS_DIMS[k]]);
+  let h='<div class="tsctl"><label>שורות '+sel('rows',T.rows,dimOpts)+'</label><label>עמודות '+sel('cols',T.cols,dimOpts.filter(o=>o[0]!==T.rows).concat([['none','רק סה״כ']]))+'</label>'+
+    '<label>מדד '+sel('meas',T.meas,[['n','מספר שיעורים'],['h','שעות (לפי מבנה היום)']])+'</label>'+
+    '<label>מיון '+sel('sort',T.sort,[['name','לפי הסדר'],['total','לפי סה״כ']])+'</label>'+
+    '<button class="btn sm" data-v="ghost" data-act="ts-swap" title="החלפת שורות ועמודות">⇄</button></div>';
+  // מסננים
+  h+='<div class="tsflt">'+['cls','cat','subj','teacher','type','day'].map(function(k){const vs=tsOrder(k,[...new Set(all.map(x=>x[k]))]);if(vs.length<2&&!T.f[k].length)return '';
+    return '<div class="tsf"><span>'+TS_DIMS[k]+':</span>'+vs.map(v=>'<button class="chip" data-act="ts-f" data-k="'+k+'" data-v="'+esc(v)+'"'+(T.f[k].indexOf(v)>-1?' data-on="1"':'')+'>'+esc(v)+'</button>').join('')+'</div>';}).join('')+
+    (Object.values(T.f).some(a=>a.length)?'<button class="btn sm" data-v="ghost" data-act="ts-clear">ניקוי סינון</button>':'')+'</div>';
+  const unit=T.meas==='h'?'שעות':'שיעורים';
+  h+='<p class="note" style="margin:6px 0">סה״כ <b>'+tsFmt(D.total)+'</b> '+unit+' בשבוע'+(D.byCls?' (שיעור משותף לכמה כיתות נספר לכל כיתה)':' (שיעור משותף לכמה כיתות נספר פעם אחת)')+'. לחיצה על תא מציגה את השיעורים עצמם.</p>';
+  h+='<div class="tt-wrap"><table class="tst"><thead><tr><th>'+TS_DIMS[T.rows]+'</th>'+(T.cols==='none'?'':D.cols.map(c=>'<th>'+esc(c)+'</th>').join(''))+'<th class="tot">סה״כ</th></tr></thead><tbody>'+
+    D.rows.map(r=>'<tr><th>'+esc(r)+'</th>'+(T.cols==='none'?'':D.cols.map(c=>{const v=D.cell[r+'\u0001'+c]||0,on=T.drill&&T.drill.r===r&&T.drill.c===c;
+      return '<td'+(v?' data-act="ts-drill" data-r="'+esc(r)+'" data-c="'+esc(c)+'" style="background:rgba(59,91,219,'+(0.06+0.32*v/mx).toFixed(2)+')"':'')+(on?' class="on"':'')+'>'+tsFmt(v)+'</td>';}).join(''))+
+      '<td class="tot" data-act="ts-drill" data-r="'+esc(r)+'" data-c="">'+tsFmt(D.rt[r])+'</td></tr>').join('')+
+    '</tbody><tfoot><tr><th>סה״כ</th>'+(T.cols==='none'?'':D.cols.map(c=>'<td data-act="ts-drill" data-r="" data-c="'+esc(c)+'">'+tsFmt(D.ct[c])+'</td>').join(''))+'<td class="tot">'+tsFmt(D.total)+'</td></tr></tfoot></table></div>';
+  if(T.drill){const dr=T.drill,ls=D.facts.filter(x=>(!dr.r||x[T.rows]===dr.r)&&(!dr.c||T.cols==='none'||x[T.cols]===dr.c));const seen={},uniq=D.byCls?ls:ls.filter(x=>seen[x.lid]?false:(seen[x.lid]=1));
+    uniq.sort((a,b)=>a.dayN-b.dayN||a.l.period-b.l.period);
+    h+='<div class="tsdrill"><div class="row" style="justify-content:space-between"><b>'+esc([dr.r,dr.c].filter(Boolean).join(' · '))+' — '+uniq.length+' שיעורים</b><button class="btn sm" data-v="ghost" data-act="ts-drill-x">סגירה</button></div>'+
+      '<table class="mpt" style="min-width:0;margin-top:6px"><tbody>'+uniq.map(x=>'<tr><td>יום '+esc(x.day)+'</td><td>שיעור '+x.l.period+' <span class="note">'+perLabel(x.l.period)+'</span></td><td><b>'+esc(x.subj)+'</b></td><td>'+esc(x.teacher)+'</td><td class="note">'+esc((x.l.classes||[]).join(', '))+(x.type==='פרטני'?' · פרטני':'')+'</td></tr>').join('')+'</tbody></table></div>';}
+  // תחום לכל מקצוע
+  const subs=tsOrder('subj',[...new Set(all.map(x=>x.subj))]);
+  h+='<details class="noprint" style="margin-top:12px"><summary class="note">שיוך מקצועות לתחום (קודש / חול / אחר)</summary><p class="note">השיוך נקבע אוטומטית לפי שם המקצוע. אפשר לתקן כאן, והוא נשמר.</p><div class="tscat">'+
+    subs.map(sb=>'<label><span>'+esc(sb)+'</span><select data-tscat="'+esc(sb)+'">'+['קודש','חול','אחר'].map(c=>opt(c,c,tsCat(sb))).join('')+'</select></label>').join('')+'</div></details>';
+  h+='<div class="row noprint" style="margin-top:12px"><button class="btn sm" data-act="ts-xlsx">'+icon('download')+' ייצוא לאקסל</button><button class="btn sm" data-v="ghost" data-act="ts-print">'+icon('printer')+' הדפסה</button></div>';
+  return h;
+}
+async function tsAct(a,el){
+  const T=tsState();
+  if(a==='ts-swap'){if(T.cols==='none')return;const x=T.rows;T.rows=T.cols;T.cols=x;T.drill=null;return render();}
+  if(a==='ts-f'){const k=el.dataset.k,v=el.dataset.v,arr=T.f[k],i=arr.indexOf(v);if(i>-1)arr.splice(i,1);else arr.push(v);T.drill=null;return render();}
+  if(a==='ts-clear'){Object.keys(T.f).forEach(k=>T.f[k]=[]);T.drill=null;return render();}
+  if(a==='ts-drill'){const d={r:el.dataset.r||'',c:el.dataset.c||''};T.drill=(T.drill&&T.drill.r===d.r&&T.drill.c===d.c)?null:d;return render();}
+  if(a==='ts-drill-x'){T.drill=null;return render();}
+  if(a==='ts-print'){window.print();return;}
+  if(a==='ts-xlsx'){const D=tsCompute();let X;try{X=await loadSheetJS();}catch(e){return toast('לא הצלחתי לטעון את רכיב האקסל');}
+    const hd=[TS_DIMS[T.rows]].concat(T.cols==='none'?[]:D.cols).concat(['סה״כ']);
+    const aoa=[hd].concat(D.rows.map(r=>[r].concat(T.cols==='none'?[]:D.cols.map(c=>D.cell[r+'\u0001'+c]||'')).concat([D.rt[r]]))).concat([['סה״כ'].concat(T.cols==='none'?[]:D.cols.map(c=>D.ct[c])).concat([D.total])]);
+    const wb=X.utils.book_new();wb.Workbook={Views:[{RTL:true}]};const ws=X.utils.aoa_to_sheet(aoa);ws['!views']=[{RTL:true}];ws['!cols']=hd.map((x,i)=>({wch:i?10:16}));
+    X.utils.book_append_sheet(wb,ws,'סיכום שעות');X.writeFile(wb,'סיכום שעות - '+TS_DIMS[T.rows]+(T.cols==='none'?'':' לפי '+TS_DIMS[T.cols])+'.xlsx');return;}
 }
 function slotCard(){
   const sl=S.ttSlot,p=periods().find(x=>x.n===sl.period)||{n:sl.period};
@@ -8796,6 +8896,7 @@ document.getElementById('main').addEventListener('click',function(e){
 document.getElementById('main').addEventListener('click',async function(e){
   const el=e.target.closest('[data-act]');if(!el)return;
   const a=el.dataset.act,id=el.dataset.id;
+  if(a.indexOf('ts-')===0){if(isAdmin())return tsAct(a,el);return;}
   if(a.indexOf('tt-')===0||a.indexOf('per-')===0)return ttAction(a,el);
   if(a.indexOf('lm-')===0||a==='mark-view')return markAction(a,el);
   if(a.indexOf('gap-')===0)return gapAction(a,el);
@@ -9200,6 +9301,8 @@ document.getElementById('main').addEventListener('click',async function(e){
 
 document.getElementById('main').addEventListener('change',function(e){
   const el=e.target;
+  if(el.dataset&&el.dataset.ts&&isAdmin()){const T=tsState();T[el.dataset.ts]=el.value;if(el.dataset.ts==='rows'&&T.cols===el.value)T.cols=Object.keys(TS_DIMS).find(k=>k!==el.value);T.drill=null;return render();}
+  if(el.dataset&&el.dataset.tscat&&isAdmin()){S.config.subjCat=Object.assign({},S.config.subjCat||{});S.config.subjCat[el.dataset.tscat]=el.value;save(K.config,S.config).then(render);return render();}
   if(el.id==='importFile'&&el.files&&el.files[0])return handleImportFile(el.files[0]);
   if(el.id==='dutyFile'&&el.files&&el.files[0]){const f=el.files[0];el.value='';dutyCapture();return dutyFile(f);}
   if(el.id==='scanFile'&&el.files&&el.files.length){const fs=Array.from(el.files);el.value='';return handleScanFiles(fs);}
